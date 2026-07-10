@@ -1,0 +1,25 @@
+# Build and gradle
+build/
+.gradle/
+*.apk
+*.idsig
+
+# IDE and system
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local config
+local.properties
+android-sdk/
+
+# Backup files
+*.bak
+
+# Logs
+build.log
+logcat_capture.txt
+
+# Python
+*.pyc

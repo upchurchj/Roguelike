@@ -1,0 +1,18 @@
+        gameView = findViewById(R.id.game_view);
+        if (gameView == null) {
+            Log.e(TAG, "GameView not found in layout");
+            finish();
+            return;
+        }
+
+        if (game != null) {
+            gameView.setGame(game);
+        }
+
+        if (game == null) {
+            Log.e(TAG, "Game instance is null after onCreate");
+            finish();
+            return;
+        }
+
+        gameView.setGameListener(this);
