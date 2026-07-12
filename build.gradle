@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.roguelike'
+    namespace 'com.knightlight.game'
     compileSdk 34
 
     defaultConfig {
-        applicationId 'com.example.roguelike'
+        applicationId 'com.knightlight.game'
         minSdk 29
         targetSdk 34
         versionCode 1
