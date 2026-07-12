@@ -1,0 +1,15 @@
+Categories:
+  - Games
+License: GPL-3.0-only
+SourceCode: https://github.com/upchurchj/Roguelike
+IssueTracker: https://github.com/upchurchj/Roguelike/issues
+Description: |
+  A turn-based roguelike with tactical combat. Defeat enemies, collect treasure, and reach 100 gold to win. Permadeath means every choice matters—how deep will you descend?
+Builds:
+  - versionName: '0.0.0'
+    versionCode: 1
+    commit: master
+    gradle:
+      - yes
+CurrentVersion: '1.0'
+CurrentVersionCode: 1

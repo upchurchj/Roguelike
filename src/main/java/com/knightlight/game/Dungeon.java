@@ -1,4 +1,4 @@
-package com.example.roguelike;
+package com.knightlight.game;
 
 import java.util.Random;
 

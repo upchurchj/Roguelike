@@ -1,4 +1,4 @@
-package com.example.roguelike;
+package com.knightlight.game;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -143,7 +143,7 @@ public class GameView extends View {
                 float left = x * tileSize, top = y * tileSize, right = left + tileSize, bottom = top + tileSize;
                 
                 // Cache getTile result to avoid redundant calls
-                int tile = dungeon.getTile(x, y);
+                char tile = dungeon.getTile(x, y);
                 Paint tilePaint;
                 if (tile == Dungeon.TILE_WALL) {
                     tilePaint = tileWallPaint;

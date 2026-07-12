@@ -16,7 +16,7 @@
         android:padding="8dp"
         android:background="#1a1a1a" />
 
-    <GameView
+    <com.knightlight.game.GameView
         android:id="@+id/game_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"

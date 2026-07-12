@@ -1,0 +1,9 @@
+KnightLight is a roguelike dungeon crawler featuring turn-based tactical combat. Navigate procedurally generated dungeons, battle enemies, and survive the depths.
+
+Features:
+• Turn-based combat system
+• Procedurally generated dungeons
+• Strategic gameplay
+• Free and open source
+
+The game is built in Java and is completely free to play.

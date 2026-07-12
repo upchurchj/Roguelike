@@ -2,23 +2,31 @@ plugins {
     id 'com.android.application' version '8.3.0'
 }
 
+
 android {
-    namespace 'com.knightlight.game'
     compileSdk 34
+    namespace "com.knightlight.game"
 
     defaultConfig {
         applicationId 'com.knightlight.game'
         minSdk 29
         targetSdk 34
         versionCode 1
-        versionName '1.0'
+        versionName '0.0.0'
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a"
         }
     }
 
+    signingConfigs {
+    }
+
     buildTypes {
         release {
+            // signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             debuggable false
         }
     }
@@ -31,7 +39,7 @@ android {
     sourceSets {
         main {
             java.srcDirs = ['src']
-                        res.srcDirs = ['src/main/res']
+            res.srcDirs = ['src/main/res']
             assets.srcDirs = ['assets']
         }
     }
@@ -44,7 +52,6 @@ repositories {
 
 dependencies {
     implementation fileTree(dir: 'lib', include: '*.jar')
-    // Exclude old Kotlin JDK libraries to prevent conflicts
     implementation('androidx.appcompat:appcompat:1.7.0') {
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
         exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'

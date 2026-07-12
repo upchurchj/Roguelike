@@ -1,4 +1,4 @@
-package com.example.roguelike;
+package com.knightlight.game;
 
 import java.io.Serializable;
 import android.util.Log;
@@ -18,6 +18,7 @@ public class Player implements Serializable {
         if (startX < 0 || startY < 0) {
             Log.w("Player", "Negative starting position: (" + startX + ", " + startY + ")");
         }
+        if (startX < 0 || startY < 0) throw new IllegalArgumentException("Negative coordinates not allowed");
         this.x = startX;
         this.y = startY;
         this.maxHealth = 30;

@@ -1,4 +1,4 @@
-package com.example.roguelike;
+package com.knightlight.game;
 
 import android.content.Intent;
 import android.os.Bundle;

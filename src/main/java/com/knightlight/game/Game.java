@@ -1,4 +1,4 @@
-package com.example.roguelike;
+package com.knightlight.game;
 
 import android.util.Log;
 import java.util.ArrayList;
@@ -10,7 +10,7 @@ public class Game {
     
     // Game constants
     private static final int ENEMY_HEALTH = 10;
-    private static final int ENEMY_ATTACK_POWER = 2;
+    private static final int ENEMY_ATTACK_POWER = 5;
     private static final int GOLD_PICKUP_AMOUNT = 10;
     private static final int GOLD_WIN_CONDITION = 100;
     private static final int SPAWN_ATTEMPTS = 100;
@@ -121,6 +121,10 @@ public class Game {
         }
 
         player.move(dx, dy);
+        if (player.getX() < 0 || player.getY() < 0 || player.getX() >= dungeon.getWidth() || player.getY() >= dungeon.getHeight() || dungeon.getTile(player.getX(), player.getY()) == Dungeon.TILE_WALL) {
+            player.move(-dx, -dy);
+            return;
+        }
         processTurn();
     }
 
