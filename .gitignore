@@ -24,3 +24,7 @@ logcat_capture.txt
 # Python
 *.pyc
 knightlight.jks
+logcat_output.txt
+logcat_capture.txt
+*.log
+patch_*.sh
