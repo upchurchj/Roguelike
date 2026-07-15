@@ -26,6 +26,7 @@ public class GameView extends View {
     public interface GameListener {
         void onGameOver(Game.GameState state);
         void onQuitRequested();
+    void onEncounter(Enemy enemy);
     }
 
     public GameView(Context context) {
@@ -257,29 +258,39 @@ public class GameView extends View {
             Log.w("GameView", "Game is null in handleButtonPress");
             return;
         }
+
+        boolean encounterOccurred = false;
+
         if (btnUp != null && btnUp.contains((int) x, (int) y)) {
             synchronized (buttonLock) {
                 btnUpPressed = true;
             }
-            game.playerMove(0, -1);
+            encounterOccurred = game.playerMove(0, -1);
         } else if (btnDown != null && btnDown.contains((int) x, (int) y)) {
             synchronized (buttonLock) {
                 btnDownPressed = true;
             }
-            game.playerMove(0, 1);
+            encounterOccurred = game.playerMove(0, 1);
         } else if (btnLeft != null && btnLeft.contains((int) x, (int) y)) {
             synchronized (buttonLock) {
                 btnLeftPressed = true;
             }
-            game.playerMove(-1, 0);
+            encounterOccurred = game.playerMove(-1, 0);
         } else if (btnRight != null && btnRight.contains((int) x, (int) y)) {
             synchronized (buttonLock) {
                 btnRightPressed = true;
             }
-            game.playerMove(1, 0);
+            encounterOccurred = game.playerMove(1, 0);
         } else if (btnQuit != null && btnQuit.contains((int) x, (int) y)) {
             if (listener != null) {
                 listener.onQuitRequested();
+            }
+        }
+
+        if (encounterOccurred && listener != null) {
+            Enemy enemy = game.getAndClearEncounteredEnemy();
+            if (enemy != null) {
+                listener.onEncounter(enemy);
             }
         }
 
@@ -288,7 +299,6 @@ public class GameView extends View {
             listener.onGameOver(state);
         }
     }
-
     private void handleButtonRelease() {
         synchronized (buttonLock) {
             btnUpPressed = false;

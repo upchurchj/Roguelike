@@ -2,15 +2,17 @@ package com.knightlight.game;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.io.File;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.widget.Toast;
 import android.os.Bundle;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity implements GameView.GameListener {
-    private static final String LOG_FILE = "/sdcard/roguelike_debug.log";
+    private static final String LOG_FILE = "/data/data/com.knightlight.game/roguelike_debug.log";
     private static final String TAG = "MainActivity";
     private static final int DUNGEON_WIDTH = 40;
     private static final int DUNGEON_HEIGHT = 16;
@@ -106,6 +108,25 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     public void onQuitRequested() {
         showQuitConfirmDialog();
     }
+
+    @Override
+    public void onEncounter(Enemy enemy) {
+        Toast.makeText(this, "onEncounter: started", Toast.LENGTH_SHORT).show();
+        if (enemy == null) {
+            Log.w(TAG, "Encountered enemy is null");
+            return;
+        }
+        
+        Log.d(TAG, "Encounter triggered with enemy at (" + enemy.getX() + ", " + enemy.getY() + ")");
+        Toast.makeText(this, "onEncounter: before Intent", Toast.LENGTH_SHORT).show();
+        
+        Intent battleIntent = new Intent(this, BattleActivity.class);
+        battleIntent.putExtra("enemy", enemy);
+        Toast.makeText(this, "onEncounter: enemy added", Toast.LENGTH_SHORT).show();
+        battleIntent.putExtra("player", game.getPlayer());
+        startActivityForResult(battleIntent, BATTLE_REQUEST_CODE);
+    }
+
 
     private void showGameOverDialog(String title, String message) {
         if (currentDialog != null && currentDialog.isShowing()) {
@@ -203,10 +224,46 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 
     private void writeLog(String msg) {
-        try (java.io.FileWriter fw = new java.io.FileWriter(LOG_FILE, true)) {
+        try {
+            File logFile = new File(getFilesDir(), "roguelike_debug.log");
+            java.io.FileWriter fw = new java.io.FileWriter(logFile, true);
             fw.write(System.currentTimeMillis() + " " + msg + "\n");
+            fw.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        if (requestCode == BATTLE_REQUEST_CODE && data != null) {
+            try {
+                Player updatedPlayer = (Player) data.getSerializableExtra("player");
+                boolean battleWon = data.getBooleanExtra("battle_won", false);
+                
+                if (updatedPlayer != null && game != null) {
+                    Player currentPlayer = game.getPlayer();
+                    if (currentPlayer != null) {
+                        currentPlayer.setHealth(updatedPlayer.getCurrentHealth());
+                        currentPlayer.setGoldCollected(updatedPlayer.getGoldCollected());
+                        Log.d(TAG, "Player synced: HP=" + currentPlayer.getCurrentHealth() + ", Gold=" + currentPlayer.getGoldCollected());
+                        
+                        if (gameView != null) {
+                            gameView.invalidate();
+                        }
+                    }
+                }
+                
+                if (!battleWon && game != null) {
+                    game.setGameState(Game.GameState.LOST);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error processing battle result", e);
+            }
+        }
+    }
+
 }

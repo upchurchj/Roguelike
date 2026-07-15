@@ -1,7 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#1a1a1a</color>
-    <color name="accent">#00FF00</color>
+    <!-- Material Design Colors -->
+    <color name="purple_500">#6200EE</color>
+    <color name="purple_700">#3700B3</color>
+    <color name="teal_200">#03DAC6</color>
+    <color name="teal_700">#018786</color>
+    <color name="red_500">#CF6679</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
+
+    <!-- Primary Colors -->
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorPrimaryVariant">#3700B3</color>
+
+    <!-- Secondary Colors -->
+    <color name="colorSecondary">#03DAC6</color>
+    <color name="colorSecondaryVariant">#018786</color>
+
+    <!-- Surface & Text Colors -->
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorError">#CF6679</color>
+
+    <!-- On* Colors (text/icon on colored backgrounds) -->
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorOnSecondary">#000000</color>
+    <color name="colorOnError">#000000</color>
+    <color name="colorOnSurface">#000000</color>
 </resources>

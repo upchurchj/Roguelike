@@ -12,7 +12,7 @@ public class Player implements Serializable {
     private int currentHealth;
     private int goldCollected;
     private int healthPotions;
-    private final Object stateLock = new Object();
+    private final transient Object stateLock = new Object();
 
     public Player(int startX, int startY) {
         if (startX < 0 || startY < 0) {
@@ -22,12 +22,10 @@ public class Player implements Serializable {
         this.x = startX;
         this.y = startY;
         this.maxHealth = 30;
-        
         if (this.maxHealth <= 0) {
             Log.w("Player", "Invalid maxHealth: " + this.maxHealth + "; defaulting to 30");
             this.maxHealth = 30;
         }
-        
         this.currentHealth = this.maxHealth;
         this.goldCollected = 0;
         this.healthPotions = 3;
@@ -69,7 +67,6 @@ public class Player implements Serializable {
     public synchronized void takeDamage(int damage) {
         int oldHealth = currentHealth;
         currentHealth = Math.max(0, currentHealth - damage);
-        
         if (currentHealth != oldHealth) {
             Log.d("Player", "Took " + damage + " damage: " + oldHealth + " -> " + currentHealth);
         }
@@ -78,7 +75,6 @@ public class Player implements Serializable {
     public synchronized void heal(int amount) {
         int oldHealth = currentHealth;
         currentHealth = Math.min(currentHealth + amount, maxHealth);
-        
         if (currentHealth != oldHealth) {
             Log.d("Player", "Healed " + (currentHealth - oldHealth) + " HP: " + oldHealth + " -> " + currentHealth);
         }
@@ -100,6 +96,29 @@ public class Player implements Serializable {
 
     public synchronized int getGoldCollected() {
         return goldCollected;
+    }
+
+    public synchronized void setHealth(int health) {
+        if (health < 0) {
+            Log.w("Player", "setHealth called with negative value: " + health + "; clamping to 0");
+            currentHealth = 0;
+        } else if (health > maxHealth) {
+            Log.w("Player", "setHealth called with value > maxHealth: " + health + "; clamping to " + maxHealth);
+            currentHealth = maxHealth;
+        } else {
+            currentHealth = health;
+        }
+        Log.d("Player", "Health set to " + currentHealth);
+    }
+
+    public synchronized void setGoldCollected(int gold) {
+        if (gold < 0) {
+            Log.w("Player", "setGoldCollected called with negative value: " + gold + "; clamping to 0");
+            goldCollected = 0;
+        } else {
+            goldCollected = gold;
+        }
+        Log.d("Player", "Gold set to " + goldCollected);
     }
 
     public synchronized int getHealthPotions() {
@@ -131,3 +150,4 @@ public class Player implements Serializable {
         Log.d("Player", "Player reset to initial state");
     }
 }
+

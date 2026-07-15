@@ -7,21 +7,22 @@ import java.util.Random;
 
 public class Game {
     private static final String TAG = "Game";
-    
+
     // Game constants
     private static final int ENEMY_HEALTH = 10;
     private static final int ENEMY_ATTACK_POWER = 5;
     private static final int GOLD_PICKUP_AMOUNT = 10;
     private static final int GOLD_WIN_CONDITION = 100;
     private static final int SPAWN_ATTEMPTS = 100;
-    
+
     public enum GameState {
         PLAYING, WON, LOST
     }
 
     private final Object stateLock = new Object();
     private final Object enemyLock = new Object();
-    
+    private final Object encounterLock = new Object();
+
     private Dungeon dungeon;
     private Player player;
     private List<Enemy> enemies;
@@ -29,6 +30,8 @@ public class Game {
     private int turnCount;
     private int initialEnemyCount;
     private Random rng;
+
+    private Enemy encounteredEnemy = null;
 
     public Game(int dungeonWidth, int dungeonHeight, int numEnemies) {
         if (dungeonWidth <= 0 || dungeonHeight <= 0 || numEnemies < 0) {
@@ -65,7 +68,7 @@ public class Game {
             }
         }
 
-        Log.d(TAG, "Game initialized: " + enemies.size() + "/" + numEnemies 
+        Log.d(TAG, "Game initialized: " + enemies.size() + "/" + numEnemies
             + " enemies spawned, dungeon: " + dungeonWidth + "x" + dungeonHeight);
     }
 
@@ -99,38 +102,46 @@ public class Game {
 
     /**
      * Move player in direction (dx, dy) and process one turn.
+     * Returns true if an encounter was triggered, false otherwise.
      * Synchronized to prevent race conditions with processTurn().
      */
-    public synchronized void playerMove(int dx, int dy) {
+    public synchronized boolean playerMove(int dx, int dy) {
         synchronized (stateLock) {
             if (state != GameState.PLAYING) {
                 Log.w(TAG, "playerMove called but game state is " + state);
-                return;
+                return false;
             }
         }
 
         // Validate movement direction
         if ((dx < -1 || dx > 1) || (dy < -1 || dy > 1) || (dx == 0 && dy == 0)) {
             Log.w(TAG, "Invalid move direction: dx=" + dx + ", dy=" + dy);
-            return;
+            return false;
         }
 
         if (player == null) {
             Log.e(TAG, "Player is null in playerMove");
-            return;
+            return false;
         }
 
         player.move(dx, dy);
         if (player.getX() < 0 || player.getY() < 0 || player.getX() >= dungeon.getWidth() || player.getY() >= dungeon.getHeight() || dungeon.getTile(player.getX(), player.getY()) == Dungeon.TILE_WALL) {
             player.move(-dx, -dy);
-            return;
+            return false;
         }
+
         processTurn();
+
+        // Return whether an encounter occurred
+        synchronized (encounterLock) {
+            return encounteredEnemy != null;
+        }
     }
 
     /**
-     * Process one turn: move enemies, resolve combat, pickup gold, check win/loss.
+     * Process one turn: move enemies, check for encounters, pickup gold, check win/loss.
      * Called only from playerMove() which is synchronized.
+     * If an encounter is detected, sets encounteredEnemy and returns without resolving combat.
      */
     private void processTurn() {
         if (player == null) {
@@ -149,16 +160,17 @@ public class Game {
             }
         }
 
-        // Step 2: Resolve combat: check all enemies at player location
+        // Step 2: Check for encounter at player location
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null && enemy.isAlive() 
+                if (enemy != null && enemy.isAlive()
                     && enemy.getX() == player.getX() && enemy.getY() == player.getY()) {
-                    
-                    player.takeDamage(enemy.getAttack());
-                    enemy.takeDamage(5);
-                    Log.d(TAG, "Combat: Player takes " + enemy.getAttack() 
-                        + " damage, enemy takes 5 damage");
+                    // Encounter detected: set encounteredEnemy and return
+                    synchronized (encounterLock) {
+                        encounteredEnemy = enemy;
+                    }
+                    Log.d(TAG, "Encounter triggered with enemy at (" + enemy.getX() + ", " + enemy.getY() + ")");
+                    return;
                 }
             }
         }
@@ -167,10 +179,8 @@ public class Game {
         if (dungeon != null) {
             int playerX = player.getX();
             int playerY = player.getY();
-            
-            if (dungeon.isInBounds(playerX, playerY) 
+            if (dungeon.isInBounds(playerX, playerY)
                 && dungeon.getTile(playerX, playerY) == Dungeon.TILE_GOLD) {
-                
                 player.addGold(GOLD_PICKUP_AMOUNT);
                 dungeon.setTile(playerX, playerY, Dungeon.TILE_FLOOR);
                 Log.d(TAG, "Player picked up gold. Total: " + player.getGoldCollected());
@@ -184,9 +194,25 @@ public class Game {
                 Log.d(TAG, "Player defeated. Game Over.");
             } else if (player.getGoldCollected() >= GOLD_WIN_CONDITION) {
                 state = GameState.WON;
-                Log.d(TAG, "Player collected " + GOLD_WIN_CONDITION 
+                Log.d(TAG, "Player collected " + GOLD_WIN_CONDITION
                     + " gold. Victory!");
             }
+        }
+    }
+
+    /**
+     * Get and clear the encountered enemy (if any).
+     * Returns the enemy if an encounter occurred, null otherwise.
+     * Thread-safe and resets encounteredEnemy after retrieval.
+     */
+    public synchronized Enemy getAndClearEncounteredEnemy() {
+        synchronized (encounterLock) {
+            Enemy enemy = encounteredEnemy;
+            encounteredEnemy = null;
+            if (enemy != null) {
+                Log.d(TAG, "Retrieved and cleared encountered enemy");
+            }
+            return enemy;
         }
     }
 
@@ -259,5 +285,18 @@ public class Game {
                 Log.d(TAG, "Game reset. Enemies: " + enemies.size() + "/" + initialEnemyCount);
             }
         }
+
+        // Clear any lingering encounter
+        synchronized (encounterLock) {
+            encounteredEnemy = null;
+        }
     }
+
+    public synchronized void setGameState(GameState newState) {
+        synchronized (stateLock) {
+            this.state = newState;
+        }
+    }
+
 }
+

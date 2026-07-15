@@ -1,6 +1,6 @@
 package com.knightlight.game;
-
 import java.io.Serializable;
+
 import android.util.Log;
 
 public class Enemy implements Serializable {
@@ -11,7 +11,7 @@ public class Enemy implements Serializable {
     private int health;
     private int maxHealth;
     private int attackPower;
-    private Dungeon dungeon;
+    private transient Dungeon dungeon;
     private boolean boss;
 
     public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon) {
