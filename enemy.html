@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Enemy.java</title>
-  <style>pre { background: #f4f4f4; padding: 10px; overflow-x: auto; font-family: monospace; }</style>
+    <title>Enemy.java</title>
+    <style>
+        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
+        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
+        h1 { color: #333; margin-bottom: 10px; }
+        .path { color: #666; font-size: 0.9em; }
+    </style>
 </head>
 <body>
-  <h1>Enemy.java</h1>
-  <pre>
-package com.knightlight.game;
+    <h1>Enemy.java</h1>
+    <p class="path">src/main/java/com/knightlight/game/Enemy.java</p>
+    <pre>package com.knightlight.game;
 import java.io.Serializable;
 
 import android.util.Log;
@@ -22,6 +27,9 @@ public class Enemy implements Serializable {
     private int attackPower;
     private transient Dungeon dungeon;
     private boolean boss;
+    private static int nextId = 0;
+    private final int enemyId;
+    private boolean isDead;
 
     public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon) {
         this.x = x;
@@ -31,6 +39,8 @@ public class Enemy implements Serializable {
         this.attackPower = attackPower;
         this.dungeon = dungeon;
         this.boss = false;
+        this.enemyId = nextId++;
+        this.isDead = false;
     }
 
     public synchronized int getX() { return x; }
@@ -39,8 +49,11 @@ public class Enemy implements Serializable {
     public synchronized int getMaxHealth() { return maxHealth; }
     public synchronized int getAttack() { return attackPower; }
     public int getGoldReward() { return boss ? 100 : 25; }
-    public synchronized boolean isAlive() { return health > 0; }
+    public synchronized boolean isAlive() { return health &gt; 0; }
     public boolean isBoss() { return boss; }
+    public synchronized int getEnemyId() { return enemyId; }
+    public synchronized boolean isDead() { return isDead; }
+    public synchronized void setDead(boolean dead) { this.isDead = dead; }
 
     public static Enemy createBoss(int x, int y, Dungeon dungeon) {
         Enemy boss = new Enemy(x, y, 50, 5, dungeon);
@@ -54,17 +67,17 @@ public class Enemy implements Serializable {
 
     public synchronized void moveToward(Player player) {
         if (player == null || dungeon == null) {
-            Log.w("Enemy", "moveToward called with null player or dungeon");
+            Log.w(&quot;Enemy&quot;, &quot;moveToward called with null player or dungeon&quot;);
             return;
         }
         int playerX = player.getX();
         int playerY = player.getY();
-        if (x < playerX && dungeon.isWalkable(x + 1, y)) x++;
-        else if (x > playerX && dungeon.isWalkable(x - 1, y)) x--;
-        else if (y < playerY && dungeon.isWalkable(x, y + 1)) y++;
-        else if (y > playerY && dungeon.isWalkable(x, y - 1)) y--;
+        if (x &lt; playerX &amp;&amp; dungeon.isWalkable(x + 1, y)) x++;
+        else if (x &gt; playerX &amp;&amp; dungeon.isWalkable(x - 1, y)) x--;
+        else if (y &lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) y++;
+        else if (y &gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) y--;
     }
 }
-  </pre>
+</pre>
 </body>
 </html>

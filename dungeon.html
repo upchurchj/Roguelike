@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dungeon.java</title>
+    <style>
+        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
+        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
+        h1 { color: #333; margin-bottom: 10px; }
+        .path { color: #666; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Dungeon.java</h1>
+    <p class="path">src/main/java/com/knightlight/game/Dungeon.java</p>
+    <pre>package com.knightlight.game;
+
+import java.util.Random;
+
+public class Dungeon {
+    public static final char TILE_WALL = &#x27;#&#x27;;
+    public static final char TILE_FLOOR = &#x27;.&#x27;;
+    public static final char TILE_GOLD = &#x27;*&#x27;;
+
+    private int width;
+    private int height;
+    private char[][] grid;
+    private Random random = new Random(System.nanoTime());
+
+    public Dungeon(int width, int height) {
+        this.width = width;
+        this.height = height;
+        this.grid = new char[height][width];
+        generateMap();
+    }
+
+    private void generateMap() {
+        for (int y = 0; y &lt; height; y++) {
+            for (int x = 0; x &lt; width; x++) {
+                if (isBorderTile(x, y)) {
+                    grid[y][x] = TILE_WALL;
+                } else {
+                    double rand = random.nextDouble();
+                    if (rand &lt; 0.15) {
+                        grid[y][x] = TILE_WALL;
+                    } else if (rand &lt; 0.20) {
+                        grid[y][x] = TILE_GOLD;
+                    } else {
+                        grid[y][x] = TILE_FLOOR;
+                    }
+                }
+            }
+        }
+        grid[1][1] = TILE_FLOOR;
+    }
+
+    private boolean isBorderTile(int x, int y) {
+        return x == 0 || x == width - 1 || y == 0 || y == height - 1;
+    }
+
+    public char getTile(int x, int y) {
+        if (!isInBounds(x, y)) return TILE_WALL;
+        return grid[y][x];
+    }
+
+    public void setTile(int x, int y, char tile) {
+        if (!isInBounds(x, y)) {
+            throw new IllegalArgumentException(&quot;Tile out of bounds: (&quot; + x + &quot;, &quot; + y + &quot;)&quot;);
+        }
+        grid[y][x] = tile;
+    }
+
+    public boolean isWalkable(int x, int y) {
+        if (!isInBounds(x, y)) return false;
+        return grid[y][x] != TILE_WALL;
+    }
+
+    public boolean isInBounds(int x, int y) {
+        return x &gt;= 0 &amp;&amp; x &lt; width &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; height;
+    }
+
+    public int getWidth() { return width; }
+    public int getHeight() { return height; }
+}
+</pre>
+</body>
+</html>

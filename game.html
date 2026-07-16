@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Game.java</title>
-  <style>pre { background: #f4f4f4; padding: 10px; overflow-x: auto; font-family: monospace; }</style>
+    <title>Game.java</title>
+    <style>
+        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
+        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
+        h1 { color: #333; margin-bottom: 10px; }
+        .path { color: #666; font-size: 0.9em; }
+    </style>
 </head>
 <body>
-  <h1>Game.java</h1>
-  <pre>
-package com.knightlight.game;
+    <h1>Game.java</h1>
+    <p class="path">src/main/java/com/knightlight/game/Game.java</p>
+    <pre>package com.knightlight.game;
 
 import android.util.Log;
 import java.util.ArrayList;
@@ -15,7 +20,7 @@ import java.util.List;
 import java.util.Random;
 
 public class Game {
-    private static final String TAG = "Game";
+    private static final String TAG = &quot;Game&quot;;
 
     // Game constants
     private static final int ENEMY_HEALTH = 10;
@@ -34,7 +39,7 @@ public class Game {
 
     private Dungeon dungeon;
     private Player player;
-    private List<Enemy> enemies;
+    private List&lt;Enemy&gt; enemies;
     private GameState state;
     private int turnCount;
     private int initialEnemyCount;
@@ -43,20 +48,20 @@ public class Game {
     private Enemy encounteredEnemy = null;
 
     public Game(int dungeonWidth, int dungeonHeight, int numEnemies) {
-        if (dungeonWidth <= 0 || dungeonHeight <= 0 || numEnemies < 0) {
+        if (dungeonWidth &lt;= 0 || dungeonHeight &lt;= 0 || numEnemies &lt; 0) {
             throw new IllegalArgumentException(
-                "Dungeon width/height must be > 0; numEnemies must be >= 0");
+                &quot;Dungeon width/height must be &gt; 0; numEnemies must be &gt;= 0&quot;);
         }
 
         this.dungeon = new Dungeon(dungeonWidth, dungeonHeight);
         if (dungeon == null) {
-            throw new IllegalStateException("Failed to create Dungeon");
+            throw new IllegalStateException(&quot;Failed to create Dungeon&quot;);
         }
 
-        this.enemies = new ArrayList<>();
+        this.enemies = new ArrayList&lt;&gt;();
         this.player = new Player(2, 2);
         if (player == null) {
-            throw new IllegalStateException("Failed to create Player");
+            throw new IllegalStateException(&quot;Failed to create Player&quot;);
         }
 
         this.state = GameState.PLAYING;
@@ -65,33 +70,33 @@ public class Game {
         this.rng = new Random(System.nanoTime());
 
         // Spawn enemies
-        for (int i = 0; i < numEnemies; i++) {
+        for (int i = 0; i &lt; numEnemies; i++) {
             Enemy enemy = spawnEnemy();
             if (enemy != null) {
                 synchronized (enemyLock) {
                     enemies.add(enemy);
                 }
-                Log.d(TAG, "Spawned enemy " + i + " at (" + enemy.getX() + ", " + enemy.getY() + ")");
+                Log.d(TAG, &quot;Spawned enemy &quot; + i + &quot; at (&quot; + enemy.getX() + &quot;, &quot; + enemy.getY() + &quot;)&quot;);
             } else {
-                Log.w(TAG, "Failed to spawn enemy " + i + " after " + SPAWN_ATTEMPTS + " attempts");
+                Log.w(TAG, &quot;Failed to spawn enemy &quot; + i + &quot; after &quot; + SPAWN_ATTEMPTS + &quot; attempts&quot;);
             }
         }
 
-        Log.d(TAG, "Game initialized: " + enemies.size() + "/" + numEnemies
-            + " enemies spawned, dungeon: " + dungeonWidth + "x" + dungeonHeight);
+        Log.d(TAG, &quot;Game initialized: &quot; + enemies.size() + &quot;/&quot; + numEnemies
+            + &quot; enemies spawned, dungeon: &quot; + dungeonWidth + &quot;x&quot; + dungeonHeight);
     }
 
     /**
      * Spawn a single enemy at a random walkable location.
-     * Not player's starting position (2,2).
+     * Not player&#x27;s starting position (2,2).
      */
     private Enemy spawnEnemy() {
         if (dungeon == null) {
-            Log.e(TAG, "Dungeon is null; cannot spawn enemy");
+            Log.e(TAG, &quot;Dungeon is null; cannot spawn enemy&quot;);
             return null;
         }
 
-        for (int attempt = 0; attempt < SPAWN_ATTEMPTS; attempt++) {
+        for (int attempt = 0; attempt &lt; SPAWN_ATTEMPTS; attempt++) {
             int x = rng.nextInt(dungeon.getWidth());
             int y = rng.nextInt(dungeon.getHeight());
 
@@ -100,12 +105,12 @@ public class Game {
                 continue;
             }
 
-            if (dungeon.isWalkable(x, y) && !(x == player.getX() && y == player.getY())) {
+            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
                 return new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon);
             }
         }
 
-        Log.w(TAG, "spawnEnemy() exhausted " + SPAWN_ATTEMPTS + " attempts");
+        Log.w(TAG, &quot;spawnEnemy() exhausted &quot; + SPAWN_ATTEMPTS + &quot; attempts&quot;);
         return null;
     }
 
@@ -117,24 +122,24 @@ public class Game {
     public synchronized boolean playerMove(int dx, int dy) {
         synchronized (stateLock) {
             if (state != GameState.PLAYING) {
-                Log.w(TAG, "playerMove called but game state is " + state);
+                Log.w(TAG, &quot;playerMove called but game state is &quot; + state);
                 return false;
             }
         }
 
         // Validate movement direction
-        if ((dx < -1 || dx > 1) || (dy < -1 || dy > 1) || (dx == 0 && dy == 0)) {
-            Log.w(TAG, "Invalid move direction: dx=" + dx + ", dy=" + dy);
+        if ((dx &lt; -1 || dx &gt; 1) || (dy &lt; -1 || dy &gt; 1) || (dx == 0 &amp;&amp; dy == 0)) {
+            Log.w(TAG, &quot;Invalid move direction: dx=&quot; + dx + &quot;, dy=&quot; + dy);
             return false;
         }
 
         if (player == null) {
-            Log.e(TAG, "Player is null in playerMove");
+            Log.e(TAG, &quot;Player is null in playerMove&quot;);
             return false;
         }
 
         player.move(dx, dy);
-        if (player.getX() < 0 || player.getY() < 0 || player.getX() >= dungeon.getWidth() || player.getY() >= dungeon.getHeight() || dungeon.getTile(player.getX(), player.getY()) == Dungeon.TILE_WALL) {
+        if (player.getX() &lt; 0 || player.getY() &lt; 0 || player.getX() &gt;= dungeon.getWidth() || player.getY() &gt;= dungeon.getHeight() || dungeon.getTile(player.getX(), player.getY()) == Dungeon.TILE_WALL) {
             player.move(-dx, -dy);
             return false;
         }
@@ -154,7 +159,7 @@ public class Game {
      */
     private void processTurn() {
         if (player == null) {
-            Log.e(TAG, "Player is null in processTurn");
+            Log.e(TAG, &quot;Player is null in processTurn&quot;);
             return;
         }
 
@@ -163,7 +168,7 @@ public class Game {
         // Step 1: Move all alive enemies toward player
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null && enemy.isAlive()) {
+                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; !enemy.isDead()) {
                     enemy.moveToward(player);
                 }
             }
@@ -172,13 +177,13 @@ public class Game {
         // Step 2: Check for encounter at player location
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null && enemy.isAlive()
-                    && enemy.getX() == player.getX() && enemy.getY() == player.getY()) {
+                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; !enemy.isDead()
+                    &amp;&amp; enemy.getX() == player.getX() &amp;&amp; enemy.getY() == player.getY()) {
                     // Encounter detected: set encounteredEnemy and return
                     synchronized (encounterLock) {
                         encounteredEnemy = enemy;
                     }
-                    Log.d(TAG, "Encounter triggered with enemy at (" + enemy.getX() + ", " + enemy.getY() + ")");
+                    Log.d(TAG, &quot;Encounter triggered with enemy at (&quot; + enemy.getX() + &quot;, &quot; + enemy.getY() + &quot;)&quot;);
                     return;
                 }
             }
@@ -189,10 +194,10 @@ public class Game {
             int playerX = player.getX();
             int playerY = player.getY();
             if (dungeon.isInBounds(playerX, playerY)
-                && dungeon.getTile(playerX, playerY) == Dungeon.TILE_GOLD) {
+                &amp;&amp; dungeon.getTile(playerX, playerY) == Dungeon.TILE_GOLD) {
                 player.addGold(GOLD_PICKUP_AMOUNT);
                 dungeon.setTile(playerX, playerY, Dungeon.TILE_FLOOR);
-                Log.d(TAG, "Player picked up gold. Total: " + player.getGoldCollected());
+                Log.d(TAG, &quot;Player picked up gold. Total: &quot; + player.getGoldCollected());
             }
         }
 
@@ -200,11 +205,11 @@ public class Game {
         synchronized (stateLock) {
             if (!player.isAlive()) {
                 state = GameState.LOST;
-                Log.d(TAG, "Player defeated. Game Over.");
-            } else if (player.getGoldCollected() >= GOLD_WIN_CONDITION) {
+                Log.d(TAG, &quot;Player defeated. Game Over.&quot;);
+            } else if (player.getGoldCollected() &gt;= GOLD_WIN_CONDITION) {
                 state = GameState.WON;
-                Log.d(TAG, "Player collected " + GOLD_WIN_CONDITION
-                    + " gold. Victory!");
+                Log.d(TAG, &quot;Player collected &quot; + GOLD_WIN_CONDITION
+                    + &quot; gold. Victory!&quot;);
             }
         }
     }
@@ -219,7 +224,7 @@ public class Game {
             Enemy enemy = encounteredEnemy;
             encounteredEnemy = null;
             if (enemy != null) {
-                Log.d(TAG, "Retrieved and cleared encountered enemy");
+                Log.d(TAG, &quot;Retrieved and cleared encountered enemy&quot;);
             }
             return enemy;
         }
@@ -242,9 +247,9 @@ public class Game {
     /**
      * Get a defensive copy of the enemies list.
      */
-    public synchronized List<Enemy> getEnemies() {
+    public synchronized List&lt;Enemy&gt; getEnemies() {
         synchronized (enemyLock) {
-            return new ArrayList<>(enemies);
+            return new ArrayList&lt;&gt;(enemies);
         }
     }
 
@@ -269,7 +274,7 @@ public class Game {
      */
     public synchronized void reset() {
         if (dungeon == null) {
-            Log.e(TAG, "Dungeon is null; cannot reset");
+            Log.e(TAG, &quot;Dungeon is null; cannot reset&quot;);
             return;
         }
 
@@ -283,15 +288,15 @@ public class Game {
                 rng = new Random(System.nanoTime());
 
                 // Respawn initial enemies
-                for (int i = 0; i < initialEnemyCount; i++) {
+                for (int i = 0; i &lt; initialEnemyCount; i++) {
                     Enemy enemy = spawnEnemy();
                     if (enemy != null) {
                         enemies.add(enemy);
-                        Log.d(TAG, "Reset: Spawned enemy " + i);
+                        Log.d(TAG, &quot;Reset: Spawned enemy &quot; + i);
                     }
                 }
 
-                Log.d(TAG, "Game reset. Enemies: " + enemies.size() + "/" + initialEnemyCount);
+                Log.d(TAG, &quot;Game reset. Enemies: &quot; + enemies.size() + &quot;/&quot; + initialEnemyCount);
             }
         }
 
@@ -309,6 +314,6 @@ public class Game {
 
 }
 
-  </pre>
+</pre>
 </body>
 </html>
