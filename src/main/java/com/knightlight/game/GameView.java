@@ -17,7 +17,7 @@ public class GameView extends View {
     private float tileSize;
     private GameListener listener;
     private Rect btnUp, btnDown, btnLeft, btnRight, btnQuit;
-    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint;
+    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, emojiPaint;
     
     // Synchronized access to button press state
     private final Object buttonLock = new Object();
@@ -63,11 +63,11 @@ public class GameView extends View {
         enemyPaint.setStyle(Paint.Style.FILL);
         
         textPaint = new Paint();
-        textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(36);
-        textPaint.setTextAlign(Paint.Align.LEFT);
+        emojiPaint = new Paint();
+                emojiPaint.setTextSize(tileSize * 0.8f);
         
         buttonPaint = new Paint();
+                emojiPaint.setTextAlign(Paint.Align.CENTER);
         buttonPaint.setColor(Color.parseColor("#00FF00"));
         buttonPaint.setStyle(Paint.Style.FILL);
         
@@ -170,22 +170,32 @@ public class GameView extends View {
         canvas.drawCircle(x, y, tileSize * 0.35f, playerPaint);
     }
 
+    private static final float ENEMY_RADIUS = 0.35f;
+    private static final float EMOJI_OFFSET = 0.2f;
+    private static final float EMOJI_TEXT_SIZE_SCALE = 0.4f;
     private void drawEnemies(Canvas canvas) {
         List<Enemy> enemies = game.getEnemies();
         if (enemies == null) {
             Log.w("GameView", "Enemies list is null in drawEnemies");
             return;
         }
-        
         for (Enemy enemy : enemies) {
-            if (enemy != null && enemy.isAlive()) {
-                float x = enemy.getX() * tileSize + tileSize / 2;
-                float y = enemy.getY() * tileSize + tileSize / 2;
-                canvas.drawCircle(x, y, tileSize * 0.35f, enemyPaint);
+            if (enemy == null) continue;
+            
+            float x = enemy.getX() * tileSize + tileSize / 2;
+            float y = enemy.getY() * tileSize + tileSize / 2;
+            
+            if (!enemy.isDead()) {
+                canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
+            } else {
             }
+                        // Draw skull emoji centered in tile
+                        Rect bounds = new Rect();
+                        emojiPaint.getTextBounds("☠️", 0, 1, bounds);
+                        float emojiY = y + (tileSize - (bounds.height())) / 2;
+                        canvas.drawText("☠️", x, emojiY, emojiPaint);
         }
-    }
-
+                canvas.drawText("☠️", x, y + tileSize * 0.15f, emojiPaint);
     private void drawStatus(Canvas canvas, int gameAreaHeight) {
         Player player = game.getPlayer();
         if (player == null) {

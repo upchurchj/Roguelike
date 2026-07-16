@@ -117,6 +117,9 @@ public class BattleActivity extends AppCompatActivity {
         if (isDestroyed) return;
 
         Intent resultIntent = new Intent();
+        resultIntent.putExtra("enemyId", enemy.getEnemyId());
+        enemy.setDead(true);
+        resultIntent.putExtra("enemy", enemy);
         resultIntent.putExtra("player", player);
         resultIntent.putExtra("battle_won", battle.getState() == Battle.State.VICTORY);
         setResult(RESULT_OK, resultIntent);

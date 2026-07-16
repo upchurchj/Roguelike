@@ -154,7 +154,7 @@ public class Game {
         // Step 1: Move all alive enemies toward player
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null && enemy.isAlive()) {
+                if (enemy != null && enemy.isAlive() && !enemy.isDead()) {
                     enemy.moveToward(player);
                 }
             }
@@ -163,7 +163,7 @@ public class Game {
         // Step 2: Check for encounter at player location
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null && enemy.isAlive()
+                if (enemy != null && enemy.isAlive() && !enemy.isDead()
                     && enemy.getX() == player.getX() && enemy.getY() == player.getY()) {
                     // Encounter detected: set encounteredEnemy and return
                     synchronized (encounterLock) {

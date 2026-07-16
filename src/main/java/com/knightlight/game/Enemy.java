@@ -13,6 +13,9 @@ public class Enemy implements Serializable {
     private int attackPower;
     private transient Dungeon dungeon;
     private boolean boss;
+    private static int nextId = 0;
+    private final int enemyId;
+    private boolean isDead;
 
     public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon) {
         this.x = x;
@@ -22,6 +25,8 @@ public class Enemy implements Serializable {
         this.attackPower = attackPower;
         this.dungeon = dungeon;
         this.boss = false;
+        this.enemyId = nextId++;
+        this.isDead = false;
     }
 
     public synchronized int getX() { return x; }
@@ -32,6 +37,9 @@ public class Enemy implements Serializable {
     public int getGoldReward() { return boss ? 100 : 25; }
     public synchronized boolean isAlive() { return health > 0; }
     public boolean isBoss() { return boss; }
+    public synchronized int getEnemyId() { return enemyId; }
+    public synchronized boolean isDead() { return isDead; }
+    public synchronized void setDead(boolean dead) { this.isDead = dead; }
 
     public static Enemy createBoss(int x, int y, Dungeon dungeon) {
         Enemy boss = new Enemy(x, y, 50, 5, dungeon);

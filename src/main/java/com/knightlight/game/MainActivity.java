@@ -250,6 +250,17 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                         currentPlayer.setHealth(updatedPlayer.getCurrentHealth());
                         currentPlayer.setGoldCollected(updatedPlayer.getGoldCollected());
                         Log.d(TAG, "Player synced: HP=" + currentPlayer.getCurrentHealth() + ", Gold=" + currentPlayer.getGoldCollected());
+                                                                                     int defeatedEnemyId = data.getIntExtra("enemyId", -1);
+                                                            if (defeatedEnemyId != -1 && game != null && battleWon) {
+                                                                List<Enemy> currentEnemies = game.getEnemies();
+                                                                for (Enemy e : currentEnemies) {
+                                                                    if (e != null && e.getEnemyId() == defeatedEnemyId) {
+                                                                        e.setDead(true);
+                                                                        Log.d(TAG, "Enemy " + defeatedEnemyId + " marked as dead");
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
                         
                         if (gameView != null) {
                             gameView.invalidate();
