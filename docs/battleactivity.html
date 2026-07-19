@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BattleActivity</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
+        h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
+        .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .back-link:hover { background: #1e3c72; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BattleActivity</h1>
+        <div class="source-path">Source: src/main/java/com/knightlight/game/BattleActivity.java</div>
+package com.knightlight.game;
+
+import android.widget.Toast;
+import android.util.Log;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Button;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class BattleActivity extends AppCompatActivity {
+    private static final String EXTRA_PLAYER = "quot;player"quot;;
+    private static final String EXTRA_ENEMY = "quot;enemy"quot;;
+    private static final long TURN_DELAY_MS = 1000;
+    private static final long RESULT_DELAY_MS = 2000;
+    private static final String TAG = "quot;BattleActivity"quot;;
+
+    private Battle battle;
+    private BattleView battleView;
+    private Player player;
+    private Enemy enemy;
+    private Handler handler;
+    private boolean isDestroyed = false;
+
+    private Button btnAttack, btnDefend, btnFlee;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_battle);
+
+        battleView = findViewById(R.id.battle_view);
+        if (battleView == null) {
+            Log.e(TAG, "quot;BattleView not found in layout"quot;);
+            finish();
+            return;
+        }
+
+        handler = new Handler(Looper.getMainLooper());
+
+        Intent intent = getIntent();
+        Bundle extras = intent.getExtras();
+        if (extras != null) {
+            player = (Player) extras.getSerializable(EXTRA_PLAYER);
+            enemy = (Enemy) extras.getSerializable(EXTRA_ENEMY);
+        }
+
+        if (player != null &amp;&amp; enemy != null) {
+            battle = new Battle(player, enemy);
+            battleView.setBattle(battle);
+        }
+
+        // Wire up buttons
+        btnAttack = findViewById(R.id.btnAttack);
+        btnDefend = findViewById(R.id.btnDefend);
+        btnFlee = findViewById(R.id.btnFlee);
+
+        if (btnAttack != null) {
+            btnAttack.setOnClickListener(v ->gt; playerAction(Battle.Action.ATTACK));
+        }
+        if (btnDefend != null) {
+            btnDefend.setOnClickListener(v ->gt; playerAction(Battle.Action.DEFEND));
+        }
+        if (btnFlee != null) {
+            btnFlee.setOnClickListener(v ->gt; playerAction(Battle.Action.RUN));
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        isDestroyed = true;
+        handler.removeCallbacksAndMessages(null);
+    }
+
+    public void playerAction(Battle.Action action) {
+        if (battle == null || isDestroyed) {
+            Log.w(TAG, "quot;playerAction: battle is null or activity destroyed"quot;);
+            return;
+        }
+
+        Log.d(TAG, "quot;Player action: "quot; + action);
+        battle.playerAction(action);
+        battleView.invalidate();
+
+        // Schedule enemy turn after player animation
+        handler.postDelayed(this::processTurn, TURN_DELAY_MS);
+    }
+
+    private void processTurn() {
+        if (battle == null || isDestroyed) {
+            return;
+        }
+
+        Log.d(TAG, "quot;Processing enemy turn"quot;);
+        battle.enemyTurn();
+        battleView.invalidate();
+
+        Log.d(TAG, "quot;After enemy turn - Battle state: "quot; + battle.getState());
+        if (isBattleOver()) {
+            Log.d(TAG, "quot;Battle over after enemy action"quot;);
+            handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
+        }
+    }
+
+    private boolean isBattleOver() {
+        if (battle == null) return false;
+        Battle.State state = battle.getState();
+        return state == Battle.State.VICTORY ||
+               state == Battle.State.DEFEAT ||
+               state == Battle.State.FLED;
+    }
+
+    private void showBattleResult() {
+        Log.d(TAG, "quot;Showing battle result"quot;);
+        if (isDestroyed) return;
+
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("quot;enemyId"quot;, enemy.getEnemyId());
+        enemy.setDead(true);
+        resultIntent.putExtra("quot;enemy"quot;, enemy);
+        resultIntent.putExtra("quot;player"quot;, player);
+        resultIntent.putExtra("quot;battle_won"quot;, battle.getState() == Battle.State.VICTORY);
+        setResult(RESULT_OK, resultIntent);
+
+        finish();
+    }
+}
+        <a href="index.html" class="back-link">Back to Index</a>
+    </div>
+</body>
+</html>

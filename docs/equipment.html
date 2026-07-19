@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipment</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
+        h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
+        .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .back-link:hover { background: #1e3c72; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Equipment</h1>
+        <div class="source-path">Source: src/main/java/com/knightlight/game/Equipment.java</div>
+package com.knightlight.game;
+
+import java.io.Serializable;
+
+/**
+ * Immutable Equipment item with rarity, stats, and type classification.
+ * Uses Builder pattern for safe, flexible construction.
+ */
+public class Equipment implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    public enum Type {
+        WEAPON, ARMOR, RING
+    }
+
+    public enum Rarity {
+        COMMON("quot;#CCCCCC"quot;),           // Light gray
+        UNCOMMON("quot;#4CAF50"quot;),         // Green
+        RARE("quot;#2196F3"quot;),             // Blue
+        LEGENDARY("quot;#FFD700"quot;);        // Gold
+
+        private final String hexColor;
+
+        Rarity(String hexColor) {
+            this.hexColor = hexColor;
+        }
+
+        public String getHexColor() {
+            return hexColor;
+        }
+    }
+
+    private final String name;
+    private final Type type;
+    private final Rarity rarity;
+    private final int attackBonus;
+    private final int defenseBonus;
+    private final int hpBonus;
+    private final String description;
+
+    /**
+     * Private constructor. Use Builder to instantiate.
+     */
+    private Equipment(Builder builder) {
+        this.name = builder.name;
+        this.type = builder.type;
+        this.rarity = builder.rarity;
+        this.attackBonus = builder.attackBonus;
+        this.defenseBonus = builder.defenseBonus;
+        this.hpBonus = builder.hpBonus;
+        this.description = builder.description;
+    }
+
+    // Getters
+    public String getName() { return name; }
+    public Type getType() { return type; }
+    public Rarity getRarity() { return rarity; }
+    public int getAttackBonus() { return attackBonus; }
+    public int getDefenseBonus() { return defenseBonus; }
+    public int getHpBonus() { return hpBonus; }
+    public String getDescription() { return description; }
+
+    @Override
+    public String toString() {
+        return String.format("quot;[%s] %s (%s) | ATK+%d DEF+%d HP+%d"quot;,
+                rarity, name, type, attackBonus, defenseBonus, hpBonus);
+    }
+
+    /**
+     * Builder class for Equipment construction.
+     */
+    public static class Builder {
+        private final String name;
+        private final Type type;
+        private Rarity rarity = Rarity.COMMON;
+        private int attackBonus = 0;
+        private int defenseBonus = 0;
+        private int hpBonus = 0;
+        private String description = "quot;"quot;;
+
+        public Builder(String name, Type type) {
+            this.name = name;
+            this.type = type;
+        }
+
+        public Builder rarity(Rarity rarity) {
+            this.rarity = rarity;
+            return this;
+        }
+
+        public Builder attackBonus(int bonus) {
+            this.attackBonus = bonus;
+            return this;
+        }
+
+        public Builder defenseBonus(int bonus) {
+            this.defenseBonus = bonus;
+            return this;
+        }
+
+        public Builder hpBonus(int bonus) {
+            this.hpBonus = bonus;
+            return this;
+        }
+
+        public Builder description(String desc) {
+            this.description = desc;
+            return this;
+        }
+
+        public Equipment build() {
+            if (name == null || name.isEmpty()) {
+                throw new IllegalArgumentException("quot;Equipment name cannot be null or empty"quot;);
+            }
+            if (type == null) {
+                throw new IllegalArgumentException("quot;Equipment type cannot be null"quot;);
+            }
+            return new Equipment(this);
+        }
+    }
+}
+        <a href="index.html" class="back-link">Back to Index</a>
+    </div>
+</body>
+</html>

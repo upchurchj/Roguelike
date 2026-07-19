@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CombatSystem</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
+        h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
+        .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .back-link:hover { background: #1e3c72; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CombatSystem</h1>
+        <div class="source-path">Source: src/main/java/com/knightlight/game/CombatSystem.java</div>
+package com.knightlight.game;
+
+import com.knightlight.game.Player;
+import com.knightlight.game.Enemy;
+import com.knightlight.game.Equipment;
+import com.knightlight.game.ExperienceSystem;
+
+import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ * Thread-safe combat system for turn-based combat between Player and Enemy.
+ * Handles attack resolution, damage calculation, hit chance, and combat flow.
+ */
+public class CombatSystem {
+    private final Random random;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    private Player player;
+    private Enemy enemy;
+    private List<lt;String>gt; combatLog;
+    private int round;
+    private boolean isActive;
+    private CombatResult result;
+
+    /**
+     * Private constructor enforces Builder pattern.
+     */
+    private CombatSystem(Builder builder) {
+        this.player = builder.player;
+        this.enemy = builder.enemy;
+        this.random = new Random();
+        this.combatLog = new ArrayList<lt;>gt;();
+        this.round = 0;
+        this.isActive = false;
+        this.result = null;
+    }
+
+    /**
+     * Start a new combat encounter.
+     * @return true if combat successfully initialized
+     */
+    public boolean startCombat() {
+        lock.writeLock().lock();
+        try {
+            if (player == null || enemy == null) {
+                combatLog.add("quot;ERROR: Missing player or enemy"quot;);
+                return false;
+            }
+            if (player.getHealth() <lt;= 0 || enemy.getHealth() <lt;= 0) {
+                combatLog.add("quot;ERROR: Combat participants already dead"quot;);
+                return false;
+            }
+            isActive = true;
+            round = 0;
+            combatLog.clear();
+            combatLog.add("quot;=== COMBAT START: "quot; + player.getName() + "quot; vs "quot; + enemy.getName() + "quot; ==="quot;);
+            return true;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Execute one round of combat (player acts first, then enemy).
+     * @return true if combat is still active, false if combat ended
+     */
+    public boolean executeRound() {
+        lock.writeLock().lock();
+        try {
+            if (!isActive) {
+                return false;
+            }
+
+            round++;
+            combatLog.add("quot;\n--- Round "quot; + round + "quot; ---"quot;);
+
+            // Player attacks first
+            playerAttack();
+
+            if (!isActive) {
+                return false; // Combat ended after player action
+            }
+
+            // Enemy attacks in response
+            enemyAttack();
+
+            // Check for combat end
+            if (player.getHealth() <lt;= 0) {
+                endCombat(CombatResult.DEFEAT);
+                return false;
+            }
+            if (enemy.getHealth() <lt;= 0) {
+                endCombat(CombatResult.VICTORY);
+                return false;
+            }
+
+            return true;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Player attacks enemy.
+     */
+    private void playerAttack() {
+        int playerATK = calculatePlayerAttack();
+        int enemyDEF = enemy.getDefense();
+
+        // Calculate hit chance: base 70%, modified by stats
+        double hitChance = 0.70 + (playerATK - enemyDEF) * 0.02;
+        hitChance = Math.max(0.2, Math.min(1.0, hitChance)); // Clamp 20-100%
+
+        if (random.nextDouble() >gt; hitChance) {
+            combatLog.add(player.getName() + "quot; misses!"quot;);
+            return;
+        }
+
+        // Calculate damage: ATK - DEF/2 + variance
+        int baseDamage = Math.max(1, playerATK - (enemyDEF / 2));
+        int variance = random.nextInt(baseDamage / 2 + 1); // ±25% variance
+        int damage = baseDamage + (random.nextBoolean() ? variance : -variance);
+        damage = Math.max(1, damage);
+
+        enemy.takeDamage(damage);
+        combatLog.add(player.getName() + "quot; attacks for "quot; + damage + "quot; damage! "quot; +
+                "quot;(Enemy HP: "quot; + Math.max(0, enemy.getHealth()) + "quot;)"quot;);
+    }
+
+    /**
+     * Enemy attacks player.
+     */
+    private void enemyAttack() {
+        int enemyATK = enemy.getAttack();
+        int playerDEF = calculatePlayerDefense();
+
+        // Calculate hit chance: base 65%, modified by stats
+        double hitChance = 0.65 + (enemyATK - playerDEF) * 0.01;
+        hitChance = Math.max(0.15, Math.min(0.95, hitChance)); // Clamp 15-95%
+
+        if (random.nextDouble() >gt; hitChance) {
+            combatLog.add(enemy.getName() + "quot; misses!"quot;);
+            return;
+        }
+
+        // Calculate damage: ATK - DEF/2 + variance
+        int baseDamage = Math.max(1, enemyATK - (playerDEF / 2));
+        int variance = random.nextInt(baseDamage / 2 + 1);
+        int damage = baseDamage + (random.nextBoolean() ? variance : -variance);
+        damage = Math.max(1, damage);
+
+        player.takeDamage(damage);
+        combatLog.add(enemy.getName() + "quot; attacks for "quot; + damage + "quot; damage! "quot; +
+                "quot;(Player HP: "quot; + Math.max(0, player.getHealth()) + "quot;)"quot;);
+    }
+
+    /**
+     * Calculate player'#39;s effective attack including equipment bonuses.
+     */
+    private int calculatePlayerAttack() {
+        int baseATK = player.getAttack();
+        int equipmentBonus = player.getInventory().getTotalAttackBonus();
+        return baseATK + equipmentBonus;
+    }
+
+    /**
+     * Calculate player'#39;s effective defense including equipment bonuses.
+     */
+    private int calculatePlayerDefense() {
+        int baseDEF = player.getDefense();
+        int equipmentBonus = player.getInventory().getTotalDefenseBonus();
+        return baseDEF + equipmentBonus;
+    }
+
+    /**
+     * End combat and resolve rewards/penalties.
+     */
+    private void endCombat(CombatResult result) {
+        this.result = result;
+        isActive = false;
+
+        if (result == CombatResult.VICTORY) {
+            combatLog.add("quot;\n=== VICTORY ==="quot;);
+            combatLog.add(player.getName() + "quot; defeated "quot; + enemy.getName() + "quot;!"quot;);
+
+            // Award experience
+            int xpReward = enemy.getExperienceReward();
+            player.addExperience(xpReward);
+            combatLog.add("quot;Gained "quot; + xpReward + "quot; experience!"quot;);
+        } else if (result == CombatResult.DEFEAT) {
+            combatLog.add("quot;\n=== DEFEAT ==="quot;);
+            combatLog.add(player.getName() + "quot; was defeated by "quot; + enemy.getName() + "quot;!"quot;);
+        } else if (result == CombatResult.FLED) {
+            combatLog.add("quot;\n=== FLED ==="quot;);
+            combatLog.add(player.getName() + "quot; successfully fled!"quot;);
+        }
+    }
+
+    /**
+     * Attempt to flee from combat.
+     * Success chance: 40% base, modified by player level vs enemy level.
+     * @return true if flee successful
+     */
+    public boolean attemptFlee() {
+        lock.writeLock().lock();
+        try {
+            if (!isActive) {
+                return false;
+            }
+
+            double fleeChance = 0.40 + (player.getLevel() - enemy.getLevel()) * 0.05;
+            fleeChance = Math.max(0.1, Math.min(0.9, fleeChance)); // Clamp 10-90%
+
+            if (random.nextDouble() <lt;= fleeChance) {
+                endCombat(CombatResult.FLED);
+                combatLog.add("quot;Fled successfully!"quot;);
+                return true;
+            } else {
+                combatLog.add("quot;Failed to flee!"quot;);
+                // Still execute enemy attack for failed flee attempt
+                enemyAttack();
+                if (player.getHealth() <lt;= 0) {
+                    endCombat(CombatResult.DEFEAT);
+                }
+                return false;
+            }
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Get combat result (VICTORY, DEFEAT, FLED, or null if ongoing).
+     */
+    public CombatResult getResult() {
+        lock.readLock().lock();
+        try {
+            return result;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Check if combat is still active.
+     */
+    public boolean isActive() {
+        lock.readLock().lock();
+        try {
+            return isActive;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Get current combat round number.
+     */
+    public int getRound() {
+        lock.readLock().lock();
+        try {
+            return round;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Get combat log as immutable list.
+     */
+    public List<lt;String>gt; getCombatLog() {
+        lock.readLock().lock();
+        try {
+            return new ArrayList<lt;>gt;(combatLog);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Get last combat log entry.
+     */
+    public String getLastLogEntry() {
+        lock.readLock().lock();
+        try {
+            return combatLog.isEmpty() ? "quot;"quot; : combatLog.get(combatLog.size() - 1);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Get full combat log as formatted string.
+     */
+    public String getFullLog() {
+        lock.readLock().lock();
+        try {
+            return String.join("quot;\n"quot;, combatLog);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Combat result enumeration.
+     */
+    public enum CombatResult {
+        VICTORY,
+        DEFEAT,
+        FLED;
+
+        @Override
+        public String toString() {
+            return name().charAt(0) + name().substring(1).toLowerCase();
+        }
+    }
+
+    /**
+     * Builder for CombatSystem.
+     */
+    public static class Builder {
+        private Player player;
+        private Enemy enemy;
+
+        public Builder() {}
+
+        public Builder player(Player player) {
+            this.player = player;
+            return this;
+        }
+
+        public Builder enemy(Enemy enemy) {
+            this.enemy = enemy;
+            return this;
+        }
+
+        public CombatSystem build() {
+            return new CombatSystem(this);
+        }
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @Override
+    public String toString() {
+        lock.readLock().lock();
+        try {
+            return String.format("quot;CombatSystem{round=%d, active=%s, result=%s}"quot;,
+                    round, isActive, result);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+}
+        <a href="index.html" class="back-link">Back to Index</a>
+    </div>
+</body>
+</html>

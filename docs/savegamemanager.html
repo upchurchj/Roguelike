@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaveGameManager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
+        h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
+        .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .back-link:hover { background: #1e3c72; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SaveGameManager</h1>
+        <div class="source-path">Source: src/main/java/com/knightlight/game/SaveGameManager.java</div>
+package com.knightlight.game;
+
+import com.knightlight.game.Player;
+import com.knightlight.game.DungeonManager;
+import com.knightlight.game.InventorySystem;
+import com.knightlight.game.Equipment;
+import com.knightlight.game.InputValidator;
+
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ * Thread-safe manager for saving and loading game state.
+ * Persists player, inventory, dungeon progress, and metadata to disk.
+ * Uses JSON-like serialization (mimicked via maps/lists for Android compatibility).
+ */
+public class SaveGameManager {
+    private final String savePath;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    /**
+     * Create a new SaveGameManager with a given save file directory.
+     * @param savePath path to save directory (e.g., app cache directory)
+     */
+    public SaveGameManager(String savePath) {
+        if (!InputValidator.isNotEmpty(savePath)) {
+            throw new IllegalArgumentException("quot;Save path cannot be null or empty"quot;);
+        }
+        this.savePath = savePath;
+    }
+
+    /**
+     * Save the current game state (player, inventory, dungeon progress, metadata).
+     * @param player the player to save
+     * @param dungeonManager the dungeon manager holding current floor state
+     * @param timestamp save timestamp (milliseconds since epoch)
+     * @return true if save succeeded, false otherwise
+     */
+    public boolean saveGame(Player player, DungeonManager dungeonManager, long timestamp) {
+        if (!InputValidator.isNotNull(player) || !InputValidator.isNotNull(dungeonManager)) {
+            return false;
+        }
+
+        lock.writeLock().lock();
+        try {
+            Map<lt;String, Object>gt; gameState = new HashMap<lt;>gt;();
+
+            // Player data
+            gameState.put("quot;playerName"quot;, player.getName());
+            gameState.put("quot;playerLevel"quot;, player.getLevel());
+            gameState.put("quot;playerExperience"quot;, player.getExperience());
+            gameState.put("quot;playerHealth"quot;, player.getHealth());
+            gameState.put("quot;playerMaxHealth"quot;, player.getMaxHealth());
+            gameState.put("quot;playerAttack"quot;, player.getAttack());
+            gameState.put("quot;playerDefense"quot;, player.getDefense());
+
+            // Dungeon progress
+            gameState.put("quot;currentFloor"quot;, dungeonManager.getCurrentFloor());
+            gameState.put("quot;floorsVisited"quot;, dungeonManager.getFloorsVisited());
+
+            // Inventory (serialize as list of equipment data)
+            InventorySystem inventory = player.getInventory();
+            List<lt;Map<lt;String, Object>gt;>gt; equipmentList = new ArrayList<lt;>gt;();
+            for (Equipment eq : inventory.getAllEquipment()) {
+                Map<lt;String, Object>gt; eqData = new HashMap<lt;>gt;();
+                eqData.put("quot;name"quot;, eq.getName());
+                eqData.put("quot;rarity"quot;, eq.getRarity().name());
+                eqData.put("quot;attackBonus"quot;, eq.getAttackBonus());
+                eqData.put("quot;defenseBonus"quot;, eq.getDefenseBonus());
+                eqData.put("quot;healthBonus"quot;, eq.getHealthBonus());
+                eqData.put("quot;floor"quot;, eq.getFloorFound());
+                equipmentList.add(eqData);
+            }
+            gameState.put("quot;inventory"quot;, equipmentList);
+
+            // Equipped items (current equipment)
+            Equipment mainHand = player.getMainHandEquipment();
+            Equipment offHand = player.getOffHandEquipment();
+            Equipment armor = player.getArmorEquipment();
+
+            if (mainHand != null) {
+                gameState.put("quot;equippedMainHand"quot;, serializeEquipment(mainHand));
+            }
+            if (offHand != null) {
+                gameState.put("quot;equippedOffHand"quot;, serializeEquipment(offHand));
+            }
+            if (armor != null) {
+                gameState.put("quot;equippedArmor"quot;, serializeEquipment(armor));
+            }
+
+            // Metadata
+            gameState.put("quot;timestamp"quot;, timestamp);
+            gameState.put("quot;version"quot;, 1);
+
+            // Write to file
+            String filename = "quot;savegame_"quot; + System.currentTimeMillis() + "quot;.dat"quot;;
+            File saveFile = new File(savePath, filename);
+            return writeGameState(saveFile, gameState);
+
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Load a game from the most recent save file.
+     * @return SaveGameData containing player state and metadata, or null if no save found
+     */
+    public SaveGameData loadLatestGame() {
+        lock.readLock().lock();
+        try {
+            File dir = new File(savePath);
+            if (!dir.exists() || !dir.isDirectory()) {
+                return null;
+            }
+
+            File[] files = dir.listFiles((d, name) ->gt; name.startsWith("quot;savegame_"quot;) &amp;&amp; name.endsWith("quot;.dat"quot;));
+            if (files == null || files.length == 0) {
+                return null;
+            }
+
+            // Sort by modification time, get latest
+            Arrays.sort(files, (a, b) ->gt; Long.compare(b.lastModified(), a.lastModified()));
+            return loadGameFromFile(files[0]);
+
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Load a specific save game by filename.
+     * @param filename the save file name
+     * @return SaveGameData or null if load fails
+     */
+    public SaveGameData loadGameByFilename(String filename) {
+        if (!InputValidator.isNotEmpty(filename)) {
+            return null;
+        }
+
+        lock.readLock().lock();
+        try {
+            File saveFile = new File(savePath, filename);
+            if (!saveFile.exists()) {
+                return null;
+            }
+            return loadGameFromFile(saveFile);
+
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * List all available save games with their metadata.
+     * @return list of save file info (filename, timestamp)
+     */
+    public List<lt;SaveFileInfo>gt; listSaveGames() {
+        List<lt;SaveFileInfo>gt; saves = new ArrayList<lt;>gt;();
+
+        lock.readLock().lock();
+        try {
+            File dir = new File(savePath);
+            if (!dir.exists() || !dir.isDirectory()) {
+                return saves;
+            }
+
+            File[] files = dir.listFiles((d, name) ->gt; name.startsWith("quot;savegame_"quot;) &amp;&amp; name.endsWith("quot;.dat"quot;));
+            if (files == null) {
+                return saves;
+            }
+
+            for (File f : files) {
+                saves.add(new SaveFileInfo(f.getName(), f.lastModified()));
+            }
+
+            // Sort by modification time (newest first)
+            saves.sort((a, b) ->gt; Long.compare(b.modifiedTime, a.modifiedTime));
+            return saves;
+
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Delete a save game file.
+     * @param filename the save file name
+     * @return true if deleted, false otherwise
+     */
+    public boolean deleteSaveGame(String filename) {
+        if (!InputValidator.isNotEmpty(filename)) {
+            return false;
+        }
+
+        lock.writeLock().lock();
+        try {
+            File saveFile = new File(savePath, filename);
+            return saveFile.exists() &amp;&amp; saveFile.delete();
+
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Serialize an Equipment object to a map.
+     */
+    private Map<lt;String, Object>gt; serializeEquipment(Equipment eq) {
+        Map<lt;String, Object>gt; data = new HashMap<lt;>gt;();
+        data.put("quot;name"quot;, eq.getName());
+        data.put("quot;rarity"quot;, eq.getRarity().name());
+        data.put("quot;attackBonus"quot;, eq.getAttackBonus());
+        data.put("quot;defenseBonus"quot;, eq.getDefenseBonus());
+        data.put("quot;healthBonus"quot;, eq.getHealthBonus());
+        data.put("quot;floor"quot;, eq.getFloorFound());
+        return data;
+    }
+
+    /**
+     * Write game state map to file (serialized as ObjectOutputStream for simplicity).
+     */
+    private boolean writeGameState(File file, Map<lt;String, Object>gt; gameState) {
+        try {
+            file.getParentFile().mkdirs();
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+                oos.writeObject(gameState);
+            }
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Load game state map from file.
+     */
+    @SuppressWarnings("quot;unchecked"quot;)
+    private Map<lt;String, Object>gt; readGameState(File file) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            return (Map<lt;String, Object>gt;) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * Load a game from a specific file and return SaveGameData.
+     */
+    private SaveGameData loadGameFromFile(File file) {
+        Map<lt;String, Object>gt; gameState = readGameState(file);
+        if (gameState == null) {
+            return null;
+        }
+
+        // Validate version
+        int version = ((Number) gameState.getOrDefault("quot;version"quot;, 1)).intValue();
+        if (version != 1) {
+            return null;
+        }
+
+        // Build SaveGameData
+        SaveGameData data = new SaveGameData();
+        data.playerName = (String) gameState.get("quot;playerName"quot;);
+        data.playerLevel = ((Number) gameState.getOrDefault("quot;playerLevel"quot;, 1)).intValue();
+        data.playerExperience = ((Number) gameState.getOrDefault("quot;playerExperience"quot;, 0)).intValue();
+        data.playerHealth = ((Number) gameState.getOrDefault("quot;playerHealth"quot;, 100)).intValue();
+        data.playerMaxHealth = ((Number) gameState.getOrDefault("quot;playerMaxHealth"quot;, 100)).intValue();
+        data.playerAttack = ((Number) gameState.getOrDefault("quot;playerAttack"quot;, 5)).intValue();
+        data.playerDefense = ((Number) gameState.getOrDefault("quot;playerDefense"quot;, 1)).intValue();
+        data.currentFloor = ((Number) gameState.getOrDefault("quot;currentFloor"quot;, 1)).intValue();
+        data.floorsVisited = ((Number) gameState.getOrDefault("quot;floorsVisited"quot;, 0)).intValue();
+        data.timestamp = ((Number) gameState.getOrDefault("quot;timestamp"quot;, 0)).longValue();
+        data.filename = file.getName();
+
+        // Load inventory
+        data.inventory = (List<lt;Map<lt;String, Object>gt;>gt;) gameState.getOrDefault("quot;inventory"quot;, new ArrayList<lt;>gt;());
+        data.equippedMainHand = (Map<lt;String, Object>gt;) gameState.get("quot;equippedMainHand"quot;);
+        data.equippedOffHand = (Map<lt;String, Object>gt;) gameState.get("quot;equippedOffHand"quot;);
+        data.equippedArmor = (Map<lt;String, Object>gt;) gameState.get("quot;equippedArmor"quot;);
+
+        return data;
+    }
+
+    /**
+     * Data class for save file information.
+     */
+    public static class SaveFileInfo {
+        public final String filename;
+        public final long modifiedTime;
+
+        public SaveFileInfo(String filename, long modifiedTime) {
+            this.filename = filename;
+            this.modifiedTime = modifiedTime;
+        }
+
+        @Override
+        public String toString() {
+            return "quot;SaveFileInfo{"quot; +
+                    "quot;filename='#39;"quot; + filename + '#39;\'#39;'#39; +
+                    "quot;, modifiedTime="quot; + modifiedTime +
+                    '#39;}'#39;;
+        }
+    }
+
+    /**
+     * Data class for loaded game state.
+     * Contains all player, inventory, and dungeon progress data.
+     */
+    public static class SaveGameData {
+        public String filename;
+        public String playerName;
+        public int playerLevel;
+        public int playerExperience;
+        public int playerHealth;
+        public int playerMaxHealth;
+        public int playerAttack;
+        public int playerDefense;
+        public int currentFloor;
+        public int floorsVisited;
+        public long timestamp;
+        public List<lt;Map<lt;String, Object>gt;>gt; inventory;
+        public Map<lt;String, Object>gt; equippedMainHand;
+        public Map<lt;String, Object>gt; equippedOffHand;
+        public Map<lt;String, Object>gt; equippedArmor;
+
+        @Override
+        public String toString() {
+            return "quot;SaveGameData{"quot; +
+                    "quot;filename='#39;"quot; + filename + '#39;\'#39;'#39; +
+                    "quot;, playerName='#39;"quot; + playerName + '#39;\'#39;'#39; +
+                    "quot;, playerLevel="quot; + playerLevel +
+                    "quot;, currentFloor="quot; + currentFloor +
+                    "quot;, timestamp="quot; + timestamp +
+                    '#39;}'#39;;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "quot;SaveGameManager{"quot; +
+                "quot;savePath='#39;"quot; + savePath + '#39;\'#39;'#39; +
+                '#39;}'#39;;
+    }
+}
+        <a href="index.html" class="back-link">Back to Index</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InventorySystem</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
+        h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
+        .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .back-link:hover { background: #1e3c72; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>InventorySystem</h1>
+        <div class="source-path">Source: src/main/java/com/knightlight/game/InventorySystem.java</div>
+package com.knightlight.game;
+
+import android.util.Log;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Thread-safe inventory management system for weapons, armor, rings, and potions.
+ * Enforces capacity limits and tracks equipped items.
+ */
+public class InventorySystem implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static final String TAG = "quot;InventorySystem"quot;;
+
+    private static final int MAX_WEAPONS = 10;
+    private static final int MAX_ARMOR = 10;
+    private static final int MAX_RINGS = 5;
+    private static final int MAX_POTIONS = 99;
+
+    private final List<lt;Equipment>gt; weapons = new ArrayList<lt;>gt;();
+    private final List<lt;Equipment>gt; armor = new ArrayList<lt;>gt;();
+    private final List<lt;Equipment>gt; rings = new ArrayList<lt;>gt;();
+
+    private Equipment equippedWeapon = null;
+    private Equipment equippedArmor = null;
+    private Equipment equippedRing = null;
+
+    private int healthPotions = 0;
+
+    /**
+     * Add equipment to inventory. Returns true if successful, false if full.
+     */
+    public synchronized boolean addEquipment(Equipment equipment) {
+        if (equipment == null) {
+            Log.w(TAG, "quot;Attempted to add null equipment"quot;);
+            return false;
+        }
+
+        List<lt;Equipment>gt; targetList = getListForType(equipment.getType());
+        int maxCapacity = getMaxCapacity(equipment.getType());
+
+        if (targetList.size() >gt;= maxCapacity) {
+            Log.w(TAG, "quot;Inventory full for "quot; + equipment.getType());
+            return false;
+        }
+
+        targetList.add(equipment);
+        Log.d(TAG, "quot;Added: "quot; + equipment.getName());
+        return true;
+    }
+
+    /**
+     * Remove equipment from inventory.
+     */
+    public synchronized boolean removeEquipment(Equipment equipment) {
+        Equipment.Type type = equipment.getType();
+        List<lt;Equipment>gt; targetList = getListForType(type);
+
+        if (targetList.remove(equipment)) {
+            // If equipped item was removed, unequip it
+            if (equipment.equals(equippedWeapon)) {
+                equippedWeapon = null;
+            } else if (equipment.equals(equippedArmor)) {
+                equippedArmor = null;
+            } else if (equipment.equals(equippedRing)) {
+                equippedRing = null;
+            }
+            Log.d(TAG, "quot;Removed: "quot; + equipment.getName());
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Equip an item. Returns true if successful.
+     */
+    public synchronized boolean equip(Equipment equipment) {
+        if (equipment == null) {
+            Log.w(TAG, "quot;Cannot equip null equipment"quot;);
+            return false;
+        }
+
+        switch (equipment.getType()) {
+            case WEAPON:
+                if (!weapons.contains(equipment)) {
+                    Log.w(TAG, "quot;Weapon not in inventory"quot;);
+                    return false;
+                }
+                equippedWeapon = equipment;
+                Log.d(TAG, "quot;Equipped weapon: "quot; + equipment.getName());
+                return true;
+
+            case ARMOR:
+                if (!armor.contains(equipment)) {
+                    Log.w(TAG, "quot;Armor not in inventory"quot;);
+                    return false;
+                }
+                equippedArmor = equipment;
+                Log.d(TAG, "quot;Equipped armor: "quot; + equipment.getName());
+                return true;
+
+            case RING:
+                if (!rings.contains(equipment)) {
+                    Log.w(TAG, "quot;Ring not in inventory"quot;);
+                    return false;
+                }
+                equippedRing = equipment;
+                Log.d(TAG, "quot;Equipped ring: "quot; + equipment.getName());
+                return true;
+
+            default:
+                Log.w(TAG, "quot;Unknown equipment type"quot;);
+                return false;
+        }
+    }
+
+    /**
+     * Unequip an item type.
+     */
+    public synchronized void unequip(Equipment.Type type) {
+        switch (type) {
+            case WEAPON:
+                equippedWeapon = null;
+                break;
+            case ARMOR:
+                equippedArmor = null;
+                break;
+            case RING:
+                equippedRing = null;
+                break;
+        }
+        Log.d(TAG, "quot;Unequipped: "quot; + type);
+    }
+
+    /**
+     * Get current health potion count.
+     */
+    public synchronized int getHealthPotions() {
+        return healthPotions;
+    }
+
+    /**
+     * Use one health potion. Returns true if successful, false if none available.
+     */
+    public synchronized boolean usePotion() {
+        if (healthPotions >gt; 0) {
+            healthPotions--;
+            Log.d(TAG, "quot;Used health potion. Remaining: "quot; + healthPotions);
+            return true;
+        }
+        Log.w(TAG, "quot;No health potions available"quot;);
+        return false;
+    }
+
+    /**
+     * Add health potions to inventory. Returns true if successful, false if would exceed max.
+     */
+    public synchronized boolean addHealthPotions(int count) {
+        if (count <lt; 0) {
+            Log.w(TAG, "quot;Cannot add negative potions"quot;);
+            return false;
+        }
+        if (healthPotions + count <lt;= MAX_POTIONS) {
+            healthPotions += count;
+            Log.d(TAG, "quot;Added "quot; + count + "quot; health potions. Total: "quot; + healthPotions);
+            return true;
+        }
+        Log.w(TAG, "quot;Health potion capacity exceeded. Max: "quot; + MAX_POTIONS);
+        return false;
+    }
+
+    // Getters for equipped items
+    public synchronized Equipment getEquippedWeapon() { return equippedWeapon; }
+    public synchronized Equipment getEquippedArmor() { return equippedArmor; }
+    public synchronized Equipment getEquippedRing() { return equippedRing; }
+
+    // Getters for inventory lists (defensive copies)
+    public synchronized List<lt;Equipment>gt; getWeapons() { return new ArrayList<lt;>gt;(weapons); }
+    public synchronized List<lt;Equipment>gt; getArmor() { return new ArrayList<lt;>gt;(armor); }
+    public synchronized List<lt;Equipment>gt; getRings() { return new ArrayList<lt;>gt;(rings); }
+
+    /**
+     * Calculate total stat bonuses from equipped items.
+     */
+    public synchronized int getTotalAttackBonus() {
+        int total = 0;
+        if (equippedWeapon != null) total += equippedWeapon.getAttackBonus();
+        if (equippedArmor != null) total += equippedArmor.getAttackBonus();
+        if (equippedRing != null) total += equippedRing.getAttackBonus();
+        return total;
+    }
+
+    public synchronized int getTotalDefenseBonus() {
+        int total = 0;
+        if (equippedWeapon != null) total += equippedWeapon.getDefenseBonus();
+        if (equippedArmor != null) total += equippedArmor.getDefenseBonus();
+        if (equippedRing != null) total += equippedRing.getDefenseBonus();
+        return total;
+    }
+
+    public synchronized int getTotalHpBonus() {
+        int total = 0;
+        if (equippedWeapon != null) total += equippedWeapon.getHpBonus();
+        if (equippedArmor != null) total += equippedArmor.getHpBonus();
+        if (equippedRing != null) total += equippedRing.getHpBonus();
+        return total;
+    }
+
+    // Private helpers
+    private List<lt;Equipment>gt; getListForType(Equipment.Type type) {
+        switch (type) {
+            case WEAPON: return weapons;
+            case ARMOR: return armor;
+            case RING: return rings;
+            default: throw new IllegalArgumentException("quot;Unknown type: "quot; + type);
+        }
+    }
+
+    private int getMaxCapacity(Equipment.Type type) {
+        switch (type) {
+            case WEAPON: return MAX_WEAPONS;
+            case ARMOR: return MAX_ARMOR;
+            case RING: return MAX_RINGS;
+            default: return 0;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("quot;Inventory [W:%d/%d | A:%d/%d | R:%d/%d | P:%d/%d]"quot;,
+                weapons.size(), MAX_WEAPONS,
+                armor.size(), MAX_ARMOR,
+                rings.size(), MAX_RINGS,
+                healthPotions, MAX_POTIONS);
+    }
+}
+        <a href="index.html" class="back-link">Back to Index</a>
+    </div>
+</body>
+</html>

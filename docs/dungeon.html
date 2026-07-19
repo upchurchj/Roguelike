@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
+        h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
+        .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .back-link:hover { background: #1e3c72; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dungeon</h1>
+        <div class="source-path">Source: src/main/java/com/knightlight/game/Dungeon.java</div>
+package com.knightlight.game;
+
+import java.util.Random;
+
+public class Dungeon {
+    public static final char TILE_WALL = '#39;#'#39;;
+    public static final char TILE_FLOOR = '#39;.'#39;;
+    public static final char TILE_GOLD = '#39;*'#39;;
+
+    private int width;
+    private int height;
+    private char[][] grid;
+    private Random random = new Random(System.nanoTime());
+
+    public Dungeon(int width, int height) {
+        this.width = width;
+        this.height = height;
+        this.grid = new char[height][width];
+        generateMap();
+    }
+
+    private void generateMap() {
+        for (int y = 0; y <lt; height; y++) {
+            for (int x = 0; x <lt; width; x++) {
+                if (isBorderTile(x, y)) {
+                    grid[y][x] = TILE_WALL;
+                } else {
+                    double rand = random.nextDouble();
+                    if (rand <lt; 0.15) {
+                        grid[y][x] = TILE_WALL;
+                    } else if (rand <lt; 0.20) {
+                        grid[y][x] = TILE_GOLD;
+                    } else {
+                        grid[y][x] = TILE_FLOOR;
+                    }
+                }
+            }
+        }
+        grid[1][1] = TILE_FLOOR;
+    }
+
+    private boolean isBorderTile(int x, int y) {
+        return x == 0 || x == width - 1 || y == 0 || y == height - 1;
+    }
+
+    public char getTile(int x, int y) {
+        if (!isInBounds(x, y)) return TILE_WALL;
+        return grid[y][x];
+    }
+
+    public void setTile(int x, int y, char tile) {
+        if (!isInBounds(x, y)) {
+            throw new IllegalArgumentException("quot;Tile out of bounds: ("quot; + x + "quot;, "quot; + y + "quot;)"quot;);
+        }
+        grid[y][x] = tile;
+    }
+
+    public boolean isWalkable(int x, int y) {
+        if (!isInBounds(x, y)) return false;
+        return grid[y][x] != TILE_WALL;
+    }
+
+    public boolean isInBounds(int x, int y) {
+        return x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height;
+    }
+
+    public int getWidth() { return width; }
+    public int getHeight() { return height; }
+}
+        <a href="index.html" class="back-link">Back to Index</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InputValidator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #333; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
+        h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
+        .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .back-link:hover { background: #1e3c72; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>InputValidator</h1>
+        <div class="source-path">Source: src/main/java/com/knightlight/game/InputValidator.java</div>
+package com.knightlight.game;
+
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ * Thread-safe utility for validating inputs across the roguelike system.
+ * Provides static methods for common validation patterns used by dungeon,
+ * combat, player, and equipment systems.
+ */
+public class InputValidator {
+    private static final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    // Private constructor prevents instantiation
+    private InputValidator() {
+        throw new AssertionError("quot;InputValidator is a utility class"quot;);
+    }
+
+    /**
+     * Validate floor number for dungeon progression.
+     * @param floorNumber the floor to validate
+     * @param maxFloor the maximum allowed floor
+     * @return true if valid (1 <lt;= floorNumber <lt;= maxFloor), false otherwise
+     */
+    public static boolean isValidFloorNumber(int floorNumber, int maxFloor) {
+        return floorNumber >gt;= 1 &amp;&amp; floorNumber <lt;= maxFloor;
+    }
+
+    /**
+     * Validate base dungeon floor number (1-99).
+     * @param floorNumber the floor to validate
+     * @return true if valid, false otherwise
+     */
+    public static boolean isValidFloorNumber(int floorNumber) {
+        return isValidFloorNumber(floorNumber, 99);
+    }
+
+    /**
+     * Validate enemy count for a dungeon level.
+     * @param baseEnemyCount the count to validate
+     * @return true if valid (1-20), false otherwise
+     */
+    public static boolean isValidBaseEnemyCount(int baseEnemyCount) {
+        return baseEnemyCount >gt;= 1 &amp;&amp; baseEnemyCount <lt;= 20;
+    }
+
+    /**
+     * Validate difficulty scaling multiplier.
+     * @param difficultyScaling the multiplier to validate
+     * @return true if valid (0.5-3.0), false otherwise
+     */
+    public static boolean isValidDifficultyScaling(double difficultyScaling) {
+        return difficultyScaling >gt;= 0.5 &amp;&amp; difficultyScaling <lt;= 3.0;
+    }
+
+    /**
+     * Validate rarity threshold for loot drops.
+     * @param rarityThreshold the threshold to validate
+     * @return true if valid (0.0-1.0), false otherwise
+     */
+    public static boolean isValidRarityThreshold(double rarityThreshold) {
+        return rarityThreshold >gt;= 0.0 &amp;&amp; rarityThreshold <lt;= 1.0;
+    }
+
+    /**
+     * Validate a player or character name.
+     * @param name the name to validate
+     * @return true if valid (1-32 characters, alphanumeric + space/underscore), false otherwise
+     */
+    public static boolean isValidName(String name) {
+        if (name == null || name.isEmpty() || name.length() >gt; 32) {
+            return false;
+        }
+        return name.matches("quot;[a-zA-Z0-9_\\s]+"quot;);
+    }
+
+    /**
+     * Validate a character'#39;s health value.
+     * @param health the health to validate
+     * @return true if valid (>gt;= 0), false otherwise
+     */
+    public static boolean isValidHealth(int health) {
+        return health >gt;= 0;
+    }
+
+    /**
+     * Validate a character'#39;s attack stat.
+     * @param attack the attack value to validate
+     * @return true if valid (>gt;= 1), false otherwise
+     */
+    public static boolean isValidAttack(int attack) {
+        return attack >gt;= 1;
+    }
+
+    /**
+     * Validate a character'#39;s defense stat.
+     * @param defense the defense value to validate
+     * @return true if valid (>gt;= 0), false otherwise
+     */
+    public static boolean isValidDefense(int defense) {
+        return defense >gt;= 0;
+    }
+
+    /**
+     * Validate a player level.
+     * @param level the level to validate
+     * @return true if valid (1-100), false otherwise
+     */
+    public static boolean isValidPlayerLevel(int level) {
+        return level >gt;= 1 &amp;&amp; level <lt;= 100;
+    }
+
+    /**
+     * Validate experience points.
+     * @param experience the XP to validate
+     * @return true if valid (>gt;= 0), false otherwise
+     */
+    public static boolean isValidExperience(int experience) {
+        return experience >gt;= 0;
+    }
+
+    /**
+     * Validate inventory capacity.
+     * @param capacity the capacity to validate
+     * @return true if valid (1-100), false otherwise
+     */
+    public static boolean isValidInventoryCapacity(int capacity) {
+        return capacity >gt;= 1 &amp;&amp; capacity <lt;= 100;
+    }
+
+    /**
+     * Validate current inventory size.
+     * @param size the size to validate
+     * @param capacity the max capacity
+     * @return true if valid (0 <lt;= size <lt;= capacity), false otherwise
+     */
+    public static boolean isValidInventorySize(int size, int capacity) {
+        return size >gt;= 0 &amp;&amp; size <lt;= capacity;
+    }
+
+    /**
+     * Validate an equipment stat bonus (ATK, DEF, or HP bonus).
+     * @param bonus the bonus to validate
+     * @return true if valid (-50 to +100), false otherwise
+     */
+    public static boolean isValidEquipmentBonus(int bonus) {
+        return bonus >gt;= -50 &amp;&amp; bonus <lt;= 100;
+    }
+
+    /**
+     * Validate a hit chance probability.
+     * @param hitChance the probability to validate
+     * @return true if valid (0.0-1.0), false otherwise
+     */
+    public static boolean isValidHitChance(double hitChance) {
+        return hitChance >gt;= 0.0 &amp;&amp; hitChance <lt;= 1.0;
+    }
+
+    /**
+     * Validate damage amount.
+     * @param damage the damage to validate
+     * @return true if valid (>gt;= 1), false otherwise
+     */
+    public static boolean isValidDamage(int damage) {
+        return damage >gt;= 1;
+    }
+
+    /**
+     * Validate enemy level (scaled with floor).
+     * @param enemyLevel the level to validate
+     * @return true if valid (1-100), false otherwise
+     */
+    public static boolean isValidEnemyLevel(int enemyLevel) {
+        return enemyLevel >gt;= 1 &amp;&amp; enemyLevel <lt;= 100;
+    }
+
+    /**
+     * Validate experience reward amount.
+     * @param reward the reward to validate
+     * @return true if valid (>gt;= 10), false otherwise
+     */
+    public static boolean isValidExperienceReward(int reward) {
+        return reward >gt;= 10;
+    }
+
+    /**
+     * Validate a percentage value.
+     * @param percentage the percentage to validate
+     * @return true if valid (0-100), false otherwise
+     */
+    public static boolean isValidPercentage(double percentage) {
+        return percentage >gt;= 0.0 &amp;&amp; percentage <lt;= 100.0;
+    }
+
+    /**
+     * Validate a multiplier/scalar value (commonly used for floor scaling).
+     * @param scalar the scalar to validate
+     * @return true if valid (0.1-10.0), false otherwise
+     */
+    public static boolean isValidScalar(double scalar) {
+        return scalar >gt;= 0.1 &amp;&amp; scalar <lt;= 10.0;
+    }
+
+    /**
+     * Validate a non-null object.
+     * @param obj the object to validate
+     * @return true if not null, false otherwise
+     */
+    public static boolean isNotNull(Object obj) {
+        return obj != null;
+    }
+
+    /**
+     * Validate a non-empty string.
+     * @param str the string to validate
+     * @return true if not null and not empty, false otherwise
+     */
+    public static boolean isNotEmpty(String str) {
+        return str != null &amp;&amp; !str.isEmpty();
+    }
+
+    /**
+     * Clamp an integer value to a range.
+     * @param value the value to clamp
+     * @param min the minimum value
+     * @param max the maximum value
+     * @return clamped value
+     */
+    public static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    /**
+     * Clamp a double value to a range.
+     * @param value the value to clamp
+     * @param min the minimum value
+     * @param max the maximum value
+     * @return clamped value
+     */
+    public static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    @Override
+    public String toString() {
+        return "quot;InputValidator{utility class}"quot;;
+    }
+}
+        <a href="index.html" class="back-link">Back to Index</a>
+    </div>
+</body>
+</html>
