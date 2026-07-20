@@ -102,14 +102,13 @@ public class LootTable {
             double floorScalar = 1.0 + (floorNumber - 1) * 0.05;
             int scaledATK = (int) (baseItem.getAttackBonus() * floorScalar);
             int scaledDEF = (int) (baseItem.getDefenseBonus() * floorScalar);
-            int scaledHP = (int) (baseItem.getHealthBonus() * floorScalar);
+            int scaledHP = (int) (baseItem.getHpBonus() * floorScalar);
 
-            return Equipment.builder()
-                    .name(baseItem.getName())
+            return new Equipment.Builder(baseItem.getName(), baseItem.getType())
                     .rarity(baseItem.getRarity())
                     .attackBonus(scaledATK)
                     .defenseBonus(scaledDEF)
-                    .healthBonus(scaledHP)
+                    .hpBonus(scaledHP)
                     .description(baseItem.getDescription())
                     .build();
         } finally {
@@ -212,7 +211,7 @@ public class LootTable {
             rarityWeights.put(Equipment.Rarity.COMMON, 1.0);
             rarityWeights.put(Equipment.Rarity.UNCOMMON, 0.4);
             rarityWeights.put(Equipment.Rarity.RARE, 0.15);
-            rarityWeights.put(Equipment.Rarity.EPIC, 0.04);
+            rarityWeights.put(Equipment.Rarity.LEGENDARY, 0.04);
             rarityWeights.put(Equipment.Rarity.LEGENDARY, 0.01);
 
             // Initialize empty pools
@@ -235,6 +234,11 @@ public class LootTable {
                     addItem(item);
                 }
             }
+            return this;
+        }
+
+        public Builder healthBonus(int healthBonus) {
+            // Store health bonus (no specific field shown, stub for now)
             return this;
         }
 

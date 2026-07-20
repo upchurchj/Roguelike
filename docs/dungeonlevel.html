@@ -119,9 +119,15 @@ public class DungeonLevel {
         return playerLevel <lt; minimumLevel;
     }
 
+    public static Builder builder(int floorNumber) {
+        return new Builder(floorNumber);
+    }
+
     // ===== Builder Pattern =====
     public static class Builder {
         private final int floorNumber;
+
+
         private int baseEnemyCount = 3;
         private float enemyDifficultyScaling = 1.0f;
         private float lootRarityThreshold = 0.6f;

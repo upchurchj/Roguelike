@@ -257,6 +257,12 @@ public class InventorySystem implements Serializable {
                 rings.size(), MAX_RINGS,
                 healthPotions, MAX_POTIONS);
     }
+    public synchronized List<lt;Equipment>gt; getAllEquipment() {
+        List<lt;Equipment>gt; all = new ArrayList<lt;>gt;(weapons);
+        all.addAll(armor);
+        all.addAll(rings);
+        return all;
+    }
 }
         <a href="index.html" class="back-link">Back to Index</a>
     </div>

@@ -173,6 +173,10 @@ public class GameView extends View {
                 } else if (tile == Dungeon.TILE_GOLD) {
                     tilePaint = tileGoldPaint;
                 } else {
+                        Rect bounds = new Rect();
+                        emojiPaint.getTextBounds("quot;☠️"quot;, 0, 1, bounds);
+                        float emojiY = y + (tileSize - (bounds.height())) / 2;
+                        canvas.drawText("quot;☠️"quot;, x, emojiY, emojiPaint);
                     tilePaint = tileFloorPaint;
                 }
                 canvas.drawRect(left, top, right, bottom, tilePaint);
@@ -210,14 +214,13 @@ public class GameView extends View {
             if (!enemy.isDead()) {
                 canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
             } else {
-            }
-                        // Draw skull emoji centered in tile
                         Rect bounds = new Rect();
                         emojiPaint.getTextBounds("quot;☠️"quot;, 0, 1, bounds);
                         float emojiY = y + (tileSize - (bounds.height())) / 2;
                         canvas.drawText("quot;☠️"quot;, x, emojiY, emojiPaint);
         }
-    }
+        }
+}
     private void drawStatus(Canvas canvas, int gameAreaHeight) {
         Player player = game.getPlayer();
         if (player == null) {

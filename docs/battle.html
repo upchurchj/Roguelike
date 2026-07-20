@@ -119,6 +119,7 @@ public class Battle {
         lastMessage = "quot;You deal "quot; + damage + "quot; damage!"quot;;
 
         if (!enemy.isAlive()) {
+            enemy.setDead(true);
             state = State.VICTORY;
             int goldReward = enemy.getGoldReward();
             player.addGold(goldReward);

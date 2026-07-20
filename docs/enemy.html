@@ -27,7 +27,7 @@ import android.util.Log;
 
 public class Enemy implements Serializable {
     private static final long serialVersionUID = 1L;
-    
+
     private int x;
     private int y;
     private int health;
@@ -38,8 +38,12 @@ public class Enemy implements Serializable {
     private static int nextId = 0;
     private final int enemyId;
     private boolean isDead;
+    private String name;
+    private int defense;
+    private int experienceReward;
+    private int level;
 
-    public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon) {
+    public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon, String name, int defense, int experienceReward, int level) {
         this.x = x;
         this.y = y;
         this.health = health;
@@ -49,6 +53,10 @@ public class Enemy implements Serializable {
         this.boss = false;
         this.enemyId = nextId++;
         this.isDead = false;
+        this.name = name;
+        this.defense = defense;
+        this.experienceReward = experienceReward;
+        this.level = level;
     }
 
     public synchronized int getX() { return x; }
@@ -62,9 +70,13 @@ public class Enemy implements Serializable {
     public synchronized int getEnemyId() { return enemyId; }
     public synchronized boolean isDead() { return isDead; }
     public synchronized void setDead(boolean dead) { this.isDead = dead; }
+    public String getName() { return name; }
+    public synchronized int getDefense() { return defense; }
+    public int getExperienceReward() { return experienceReward; }
+    public synchronized int getLevel() { return level; }
 
     public static Enemy createBoss(int x, int y, Dungeon dungeon) {
-        Enemy boss = new Enemy(x, y, 50, 5, dungeon);
+        Enemy boss = new Enemy(x, y, 50, 5, dungeon, "quot;Boss"quot;, 3, 500, 10);
         boss.boss = true;
         return boss;
     }
@@ -85,10 +97,6 @@ public class Enemy implements Serializable {
         else if (y <lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) y++;
         else if (y >gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) y--;
     }
-
-    public String getName() { return "quot;Enemy"quot;; }
-    public int getDefense() { return attackPower / 2; }
-    public int getExperienceReward() { return 25; }
 }
         <a href="index.html" class="back-link">Back to Index</a>
     </div>

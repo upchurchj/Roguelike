@@ -23,6 +23,7 @@
 package com.knightlight.game;
 
 import com.knightlight.game.Player;
+import android.util.Log;
 import com.knightlight.game.Enemy;
 import com.knightlight.game.Equipment;
 import com.knightlight.game.ExperienceSystem;
@@ -114,6 +115,8 @@ public class CombatSystem {
                 return false;
             }
             if (enemy.getHealth() <lt;= 0) {
+                Log.d("quot;COMBAT_DEBUG"quot;, "quot;Enemy health <lt;= 0, calling setDead(true)"quot;);
+                enemy.setDead(true);
                 endCombat(CombatResult.VICTORY);
                 return false;
             }

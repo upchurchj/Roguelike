@@ -55,6 +55,7 @@ public class Equipment implements Serializable {
     private final String name;
     private final Type type;
     private final Rarity rarity;
+    private int floorFound;
     private final int attackBonus;
     private final int defenseBonus;
     private final int hpBonus;
@@ -76,6 +77,8 @@ public class Equipment implements Serializable {
     // Getters
     public String getName() { return name; }
     public Type getType() { return type; }
+    public int getFloorFound() { return floorFound; }
+
     public Rarity getRarity() { return rarity; }
     public int getAttackBonus() { return attackBonus; }
     public int getDefenseBonus() { return defenseBonus; }
@@ -95,6 +98,7 @@ public class Equipment implements Serializable {
         private final String name;
         private final Type type;
         private Rarity rarity = Rarity.COMMON;
+    private int floorFound;
         private int attackBonus = 0;
         private int defenseBonus = 0;
         private int hpBonus = 0;

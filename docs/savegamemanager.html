@@ -91,7 +91,7 @@ public class SaveGameManager {
                 eqData.put("quot;rarity"quot;, eq.getRarity().name());
                 eqData.put("quot;attackBonus"quot;, eq.getAttackBonus());
                 eqData.put("quot;defenseBonus"quot;, eq.getDefenseBonus());
-                eqData.put("quot;healthBonus"quot;, eq.getHealthBonus());
+                eqData.put("quot;healthBonus"quot;, eq.getHpBonus());
                 eqData.put("quot;floor"quot;, eq.getFloorFound());
                 equipmentList.add(eqData);
             }
@@ -236,7 +236,7 @@ public class SaveGameManager {
         data.put("quot;rarity"quot;, eq.getRarity().name());
         data.put("quot;attackBonus"quot;, eq.getAttackBonus());
         data.put("quot;defenseBonus"quot;, eq.getDefenseBonus());
-        data.put("quot;healthBonus"quot;, eq.getHealthBonus());
+        data.put("quot;healthBonus"quot;, eq.getHpBonus());
         data.put("quot;floor"quot;, eq.getFloorFound());
         return data;
     }

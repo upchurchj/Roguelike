@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     private static final int BATTLE_REQUEST_CODE = 100;
 
     private Game game;
+    private DungeonManager dungeonManager;
     private GameView gameView;
     private AlertDialog currentDialog;
     @Override
@@ -69,9 +70,11 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         // Initialize game if not already created
         if (savedInstanceState == null) {
+            dungeonManager = DungeonManager.builder().build();
+            dungeonManager = DungeonManager.builder().build();
             Log.d(TAG, "quot;Creating new Game with dimensions "quot; + DUNGEON_WIDTH + "quot;x"quot; + DUNGEON_HEIGHT + "quot;, enemies="quot; + INITIAL_ENEMIES);
             try {
-                game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
+                game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES, dungeonManager);
                 writeLog("quot;Game created successfully"quot;);
                 Log.d(TAG, "quot;Game created successfully"quot;);
             } catch (Exception e) {
@@ -193,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 
     private void restartGame() {
-        game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
+        game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES, dungeonManager);
         writeLog("quot;Game created successfully"quot;);
         if (gameView != null) {
             gameView.setGame(game);

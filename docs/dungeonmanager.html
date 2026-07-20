@@ -35,6 +35,7 @@ public class DungeonManager {
     private final Map<lt;Integer, DungeonLevel>gt; levels;
     private final int maxFloor;
     private int currentFloor;
+    private int floorsVisited = 0;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
@@ -76,11 +77,11 @@ public class DungeonManager {
         }
 
         // Generate new level outside read lock
-        DungeonLevel newLevel = DungeonLevel.builder()
-                .floorNumber(floorNumber)
+        DungeonLevel newLevel = DungeonLevel.builder(currentFloor + 1)
+                
                 .baseEnemyCount(5)
-                .difficultyScaling(1.0)
-                .rarityThreshold(0.2)
+                .enemyDifficultyScaling(1.0f)
+                .lootRarityThreshold(0.2f)
                 .build();
 
         lock.writeLock().lock();
@@ -261,6 +262,9 @@ public class DungeonManager {
         } finally {
             lock.readLock().unlock();
         }
+    }
+    public int getFloorsVisited() {
+        return floorsVisited;
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>

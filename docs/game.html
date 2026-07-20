@@ -46,6 +46,7 @@ public class Game {
     private final Object encounterLock = new Object();
 
     private Dungeon dungeon;
+    private DungeonManager dungeonManager;
     private Player player;
     private List<lt;Enemy>gt; enemies;
     private GameState state;
@@ -55,12 +56,16 @@ public class Game {
 
     private Enemy encounteredEnemy = null;
 
-    public Game(int dungeonWidth, int dungeonHeight, int numEnemies) {
+    public Game(int dungeonWidth, int dungeonHeight, int numEnemies, DungeonManager dungeonManager) {
         if (dungeonWidth <lt;= 0 || dungeonHeight <lt;= 0 || numEnemies <lt; 0) {
             throw new IllegalArgumentException(
                 "quot;Dungeon width/height must be >gt; 0; numEnemies must be >gt;= 0"quot;);
         }
+        if (dungeonManager == null) {
+            throw new IllegalArgumentException("quot;DungeonManager cannot be null"quot;);
+        }
 
+        this.dungeonManager = dungeonManager;
         this.dungeon = new Dungeon(dungeonWidth, dungeonHeight);
         if (dungeon == null) {
             throw new IllegalStateException("quot;Failed to create Dungeon"quot;);
@@ -104,6 +109,9 @@ public class Game {
             return null;
         }
 
+        DungeonLevel currentLevel = dungeonManager.getCurrentLevel();
+        int floorNumber = currentLevel.getFloorNumber();
+
         for (int attempt = 0; attempt <lt; SPAWN_ATTEMPTS; attempt++) {
             int x = rng.nextInt(dungeon.getWidth());
             int y = rng.nextInt(dungeon.getHeight());
@@ -114,7 +122,8 @@ public class Game {
             }
 
             if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
-                return new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon);
+                return new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon,
+                    "quot;Enemy"quot;, floorNumber, floorNumber * 10, floorNumber);
             }
         }
 
@@ -176,7 +185,7 @@ public class Game {
         // Step 1: Move all alive enemies toward player
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; !enemy.isDead()) {
+                if (enemy != null &amp;&amp; enemy.isAlive()) {
                     enemy.moveToward(player);
                 }
             }
@@ -185,7 +194,7 @@ public class Game {
         // Step 2: Check for encounter at player location
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; !enemy.isDead()
+                if (enemy != null &amp;&amp; enemy.isAlive()
                     &amp;&amp; enemy.getX() == player.getX() &amp;&amp; enemy.getY() == player.getY()) {
                     // Encounter detected: set encounteredEnemy and return
                     synchronized (encounterLock) {
