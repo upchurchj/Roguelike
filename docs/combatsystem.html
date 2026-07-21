@@ -21,6 +21,7 @@
         <h1>CombatSystem</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/CombatSystem.java</div>
 package com.knightlight.game;
+import com.knightlight.game.Game.GameState;
 
 import com.knightlight.game.Player;
 import android.util.Log;
@@ -213,9 +214,13 @@ public class CombatSystem {
             // Award experience
             int xpReward = enemy.getExperienceReward();
             player.addExperience(xpReward);
+        
+        if (enemy.isBoss()) {
+            // Victory handled by Game.processTurn()
+        }
+                int goldReward = enemy.getGoldReward();
+                combatLog.add("quot;Gained "quot; + goldReward + "quot; gold!"quot;);
             combatLog.add("quot;Gained "quot; + xpReward + "quot; experience!"quot;);
-        } else if (result == CombatResult.DEFEAT) {
-            combatLog.add("quot;\n=== DEFEAT ==="quot;);
             combatLog.add(player.getName() + "quot; was defeated by "quot; + enemy.getName() + "quot;!"quot;);
         } else if (result == CombatResult.FLED) {
             combatLog.add("quot;\n=== FLED ==="quot;);

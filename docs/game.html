@@ -32,10 +32,18 @@ public class Game {
 
     // Game constants
     private static final int ENEMY_HEALTH = 10;
+    private static final int ENEMY_EXPERIENCE = 50;
     private static final int ENEMY_ATTACK_POWER = 5;
     private static final int GOLD_PICKUP_AMOUNT = 10;
     private static final int GOLD_WIN_CONDITION = 100;
     private static final int SPAWN_ATTEMPTS = 100;
+
+    // Boss constants
+    private static final String BOSS_NAME = "quot;Shadow Lord"quot;;
+    private static final int BOSS_HEALTH = 50;
+    private static final int BOSS_DAMAGE = 8;
+    private static final int BOSS_EXPERIENCE = 500;
+    private static final int BOSS_UNLOCK_GOLD = 100;
 
     public enum GameState {
         PLAYING, WON, LOST
@@ -46,7 +54,6 @@ public class Game {
     private final Object encounterLock = new Object();
 
     private Dungeon dungeon;
-    private DungeonManager dungeonManager;
     private Player player;
     private List<lt;Enemy>gt; enemies;
     private GameState state;
@@ -55,17 +62,15 @@ public class Game {
     private Random rng;
 
     private Enemy encounteredEnemy = null;
+    private boolean bossUnlocked = false;
+    private Enemy boss = null;
 
-    public Game(int dungeonWidth, int dungeonHeight, int numEnemies, DungeonManager dungeonManager) {
+    public Game(int dungeonWidth, int dungeonHeight, int numEnemies) {
         if (dungeonWidth <lt;= 0 || dungeonHeight <lt;= 0 || numEnemies <lt; 0) {
             throw new IllegalArgumentException(
                 "quot;Dungeon width/height must be >gt; 0; numEnemies must be >gt;= 0"quot;);
         }
-        if (dungeonManager == null) {
-            throw new IllegalArgumentException("quot;DungeonManager cannot be null"quot;);
-        }
 
-        this.dungeonManager = dungeonManager;
         this.dungeon = new Dungeon(dungeonWidth, dungeonHeight);
         if (dungeon == null) {
             throw new IllegalStateException("quot;Failed to create Dungeon"quot;);
@@ -109,9 +114,6 @@ public class Game {
             return null;
         }
 
-        DungeonLevel currentLevel = dungeonManager.getCurrentLevel();
-        int floorNumber = currentLevel.getFloorNumber();
-
         for (int attempt = 0; attempt <lt; SPAWN_ATTEMPTS; attempt++) {
             int x = rng.nextInt(dungeon.getWidth());
             int y = rng.nextInt(dungeon.getHeight());
@@ -122,13 +124,43 @@ public class Game {
             }
 
             if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
-                return new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon,
-                    "quot;Enemy"quot;, floorNumber, floorNumber * 10, floorNumber);
+                return new Enemy(x, y, ENEMY_HEALTH, ENEMY_HEALTH, dungeon, "quot;Goblin"quot;, ENEMY_ATTACK_POWER, ENEMY_EXPERIENCE, player.getLevel());
             }
         }
 
         Log.w(TAG, "quot;spawnEnemy() exhausted "quot; + SPAWN_ATTEMPTS + "quot; attempts"quot;);
         return null;
+    }
+
+    /**
+     * Spawn the final boss at a random walkable location.
+     */
+    private void spawnBoss() {
+        if (dungeon == null || player == null) {
+            Log.e(TAG, "quot;Cannot spawn boss: dungeon or player is null"quot;);
+            return;
+        }
+
+        for (int attempt = 0; attempt <lt; SPAWN_ATTEMPTS; attempt++) {
+            int x = rng.nextInt(dungeon.getWidth());
+            int y = rng.nextInt(dungeon.getHeight());
+
+            if (!dungeon.isInBounds(x, y)) {
+                continue;
+            }
+
+            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                boss = new Enemy(x, y, BOSS_HEALTH, BOSS_HEALTH, dungeon, BOSS_NAME, 2, BOSS_EXPERIENCE, player.getLevel() + 2);
+                boss.setIsBoss(true);
+                synchronized (enemyLock) {
+                    enemies.add(boss);
+                }
+                Log.d(TAG, "quot;Boss spawned at ("quot; + x + "quot;, "quot; + y + "quot;)"quot;);
+                return;
+            }
+        }
+
+        Log.w(TAG, "quot;spawnBoss() exhausted "quot; + SPAWN_ATTEMPTS + "quot; attempts"quot;);
     }
 
     /**
@@ -185,7 +217,7 @@ public class Game {
         // Step 1: Move all alive enemies toward player
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null &amp;&amp; enemy.isAlive()) {
+                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; !enemy.isDead()) {
                     enemy.moveToward(player);
                 }
             }
@@ -194,7 +226,7 @@ public class Game {
         // Step 2: Check for encounter at player location
         synchronized (enemyLock) {
             for (Enemy enemy : enemies) {
-                if (enemy != null &amp;&amp; enemy.isAlive()
+                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; !enemy.isDead()
                     &amp;&amp; enemy.getX() == player.getX() &amp;&amp; enemy.getY() == player.getY()) {
                     // Encounter detected: set encounteredEnemy and return
                     synchronized (encounterLock) {
@@ -223,10 +255,15 @@ public class Game {
             if (!player.isAlive()) {
                 state = GameState.LOST;
                 Log.d(TAG, "quot;Player defeated. Game Over."quot;);
-            } else if (player.getGoldCollected() >gt;= GOLD_WIN_CONDITION) {
+            } else if (player.getGoldCollected() >gt;= BOSS_UNLOCK_GOLD &amp;&amp; !bossUnlocked) {
+                // Gold threshold reached: spawn the boss
+                bossUnlocked = true;
+                spawnBoss();
+                Log.d(TAG, "quot;Player collected "quot; + BOSS_UNLOCK_GOLD + "quot; gold. Boss spawned!"quot;);
+            } else if (bossUnlocked &amp;&amp; boss != null &amp;&amp; boss.isDead() &amp;&amp; !boss.isAlive()) {
+                // Boss defeated: victory
                 state = GameState.WON;
-                Log.d(TAG, "quot;Player collected "quot; + GOLD_WIN_CONDITION
-                    + "quot; gold. Victory!"quot;);
+                Log.d(TAG, "quot;Boss defeated! Victory!"quot;);
             }
         }
     }
@@ -264,6 +301,18 @@ public class Game {
     /**
      * Get a defensive copy of the enemies list.
      */
+    /**
+     * Remove a dead enemy from the game.
+     */
+    public synchronized void removeEnemy(Enemy enemy) {
+        if (enemy == null) return;
+        synchronized (enemyLock) {
+            if (enemies.remove(enemy)) {
+                Log.d(TAG, "quot;Removed enemy: "quot; + enemy.getName());
+            }
+        }
+    }
+
     public synchronized List<lt;Enemy>gt; getEnemies() {
         synchronized (enemyLock) {
             return new ArrayList<lt;>gt;(enemies);
@@ -302,6 +351,8 @@ public class Game {
                 player = new Player(2, 2);
                 state = GameState.PLAYING;
                 turnCount = 0;
+                bossUnlocked = false;
+                boss = null;
                 rng = new Random(System.nanoTime());
 
                 // Respawn initial enemies

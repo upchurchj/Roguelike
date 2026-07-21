@@ -205,22 +205,48 @@ public class GameView extends View {
             Log.w("quot;GameView"quot;, "quot;Enemies list is null in drawEnemies"quot;);
             return;
         }
+
         for (Enemy enemy : enemies) {
             if (enemy == null) continue;
-            
+
             float x = enemy.getX() * tileSize + tileSize / 2;
             float y = enemy.getY() * tileSize + tileSize / 2;
-            
-            if (!enemy.isDead()) {
-                canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
+
+            if (enemy.isBoss()) {
+                // Boss rendering: Dragon emoji at 4x tile size
+                if (!enemy.isDead()) {
+                    float dragonSize = tileSize * 4;
+                    Paint dragonPaint = new Paint(emojiPaint);
+                    dragonPaint.setTextSize(dragonSize);
+                    Rect bounds = new Rect();
+                    dragonPaint.getTextBounds("quot;🐉"quot;, 0, 1, bounds);
+                    float dragonY = y + (dragonSize - bounds.height()) / 2;
+                    canvas.drawText("quot;🐉"quot;, x, dragonY, dragonPaint);
+                } else {
+                    // Dead boss: large skull
+                    float dragonSize = tileSize * 4;
+                    Paint skullPaint = new Paint(emojiPaint);
+                    skullPaint.setTextSize(dragonSize);
+                    Rect bounds = new Rect();
+                    skullPaint.getTextBounds("quot;☠️"quot;, 0, 1, bounds);
+                    float skullY = y + (dragonSize - bounds.height()) / 2;
+                    canvas.drawText("quot;☠️"quot;, x, skullY, skullPaint);
+                }
             } else {
-                        Rect bounds = new Rect();
-                        emojiPaint.getTextBounds("quot;☠️"quot;, 0, 1, bounds);
-                        float emojiY = y + (tileSize - (bounds.height())) / 2;
-                        canvas.drawText("quot;☠️"quot;, x, emojiY, emojiPaint);
+                // Regular enemy rendering
+                if (!enemy.isDead()) {
+                    canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
+                } else {
+                    // Dead regular enemy: normal skull
+                    Rect bounds = new Rect();
+                    emojiPaint.getTextBounds("quot;☠️"quot;, 0, 1, bounds);
+                    float emojiY = y + (tileSize - (bounds.height())) / 2;
+                    canvas.drawText("quot;☠️"quot;, x, emojiY, emojiPaint);
+                }
+            }
         }
-        }
-}
+    }
+
     private void drawStatus(Canvas canvas, int gameAreaHeight) {
         Player player = game.getPlayer();
         if (player == null) {

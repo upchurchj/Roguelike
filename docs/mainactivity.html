@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             dungeonManager = DungeonManager.builder().build();
             Log.d(TAG, "quot;Creating new Game with dimensions "quot; + DUNGEON_WIDTH + "quot;x"quot; + DUNGEON_HEIGHT + "quot;, enemies="quot; + INITIAL_ENEMIES);
             try {
-                game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES, dungeonManager);
+                game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
                 writeLog("quot;Game created successfully"quot;);
                 Log.d(TAG, "quot;Game created successfully"quot;);
             } catch (Exception e) {
@@ -196,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 
     private void restartGame() {
-        game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES, dungeonManager);
+        game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
         writeLog("quot;Game created successfully"quot;);
         if (gameView != null) {
             gameView.setGame(game);
@@ -275,6 +275,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                         currentPlayer.setHealth(updatedPlayer.getCurrentHealth());
                         currentPlayer.setGoldCollected(updatedPlayer.getGoldCollected());
                         Log.d(TAG, "quot;Player synced: HP="quot; + currentPlayer.getCurrentHealth() + "quot;, Gold="quot; + currentPlayer.getGoldCollected());
+                        currentPlayer.setExperience(updatedPlayer.getExperience());
                                                                                      int defeatedEnemyId = data.getIntExtra("quot;enemyId"quot;, -1);
                                                             if (defeatedEnemyId != -1 &amp;&amp; game != null &amp;&amp; battleWon) {
                                                                 List<lt;Enemy>gt; currentEnemies = game.getEnemies();

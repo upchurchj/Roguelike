@@ -27,6 +27,7 @@ import android.util.Log;
 
 public class Player implements Serializable {
     private static final long serialVersionUID = 1L;
+    private static final int EXPERIENCE_PER_LEVEL = 100;
 
     private int x;
     private int y;
@@ -36,8 +37,7 @@ public class Player implements Serializable {
     private int healthPotions;
     private int level = 1;
     private int experience = 0;
-    private static final int EXPERIENCE_PER_LEVEL = 100;
-
+    private InventorySystem inventory;
     private final transient Object stateLock = new Object();
 
     public Player(int startX, int startY) {
@@ -45,16 +45,20 @@ public class Player implements Serializable {
             Log.w("quot;Player"quot;, "quot;Negative starting position: ("quot; + startX + "quot;, "quot; + startY + "quot;)"quot;);
         }
         if (startX <lt; 0 || startY <lt; 0) throw new IllegalArgumentException("quot;Negative coordinates not allowed"quot;);
+        
         this.x = startX;
         this.y = startY;
         this.maxHealth = 30;
+        
         if (this.maxHealth <lt;= 0) {
             Log.w("quot;Player"quot;, "quot;Invalid maxHealth: "quot; + this.maxHealth + "quot;; defaulting to 30"quot;);
             this.maxHealth = 30;
         }
+        
         this.currentHealth = this.maxHealth;
         this.goldCollected = 0;
         this.healthPotions = 3;
+        this.inventory = new InventorySystem();
     }
 
     public synchronized void move(int dx, int dy) {
@@ -89,11 +93,28 @@ public class Player implements Serializable {
     public synchronized void addExperience(int xp) {
         if (xp <lt; 0) throw new IllegalArgumentException("quot;Experience cannot be negative"quot;);
         this.experience += xp;
+        Log.d("quot;Player"quot;, "quot;XP gained: "quot; + xp);
+        
         while (this.experience >gt;= EXPERIENCE_PER_LEVEL) {
             this.experience -= EXPERIENCE_PER_LEVEL;
             this.level++;
             Log.d("quot;Player"quot;, "quot;Level up! Now level "quot; + this.level);
         }
+    }
+
+    public synchronized void setExperience(int xp) {
+        if (xp <lt; 0) throw new IllegalArgumentException("quot;Experience cannot be negative"quot;);
+        this.experience = xp;
+        
+        while (this.experience >gt;= EXPERIENCE_PER_LEVEL) {
+            this.experience -= EXPERIENCE_PER_LEVEL;
+            this.level++;
+            Log.d("quot;Player"quot;, "quot;Level up! Now level "quot; + this.level);
+        }
+    }
+
+    public InventorySystem getInventory() {
+        return inventory;
     }
 
     public synchronized int getHealth() {
@@ -191,16 +212,34 @@ public class Player implements Serializable {
         currentHealth = maxHealth;
         goldCollected = 0;
         healthPotions = 3;
+        experience = 0;
+        level = 1;
         Log.d("quot;Player"quot;, "quot;Player reset to initial state"quot;);
     }
 
-    public String getName() { return "quot;Player"quot;; }
-    public int getDefense() { return 5; }
-    public int getAttack() { return 8; }
-    public InventorySystem getInventory() { return new InventorySystem(); }
-    public Equipment getMainHandEquipment() { return null; }
-    public Equipment getOffHandEquipment() { return null; }
-    public Equipment getArmorEquipment() { return null; }
+    public String getName() { 
+        return "quot;Player"quot;; 
+    }
+
+    public int getDefense() { 
+        return 5; 
+    }
+
+    public int getAttack() { 
+        return 8; 
+    }
+
+    public Equipment getMainHandEquipment() { 
+        return null; 
+    }
+
+    public Equipment getOffHandEquipment() { 
+        return null; 
+    }
+
+    public Equipment getArmorEquipment() { 
+        return null; 
+    }
 }
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
