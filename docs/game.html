@@ -21,8 +21,9 @@
         <h1>Game</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Game.java</div>
 package com.knightlight.game;
-
 import android.util.Log;
+
+import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -100,7 +101,7 @@ public class Game {
             }
         }
 
-        Log.d(TAG, "quot;Game initialized: "quot; + enemies.size() + "quot;/"quot; + numEnemies
+        Logger.getLogger(getClass().getName()).fine(TAG + "quot;: "quot; + "quot;Game initialized: "quot; + enemies.size() + "quot;/"quot; + numEnemies
             + "quot; enemies spawned, dungeon: "quot; + dungeonWidth + "quot;x"quot; + dungeonHeight);
     }
 

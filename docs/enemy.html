@@ -21,9 +21,10 @@
         <h1>Enemy</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Enemy.java</div>
 package com.knightlight.game;
+import android.util.Log;
 
 import java.io.Serializable;
-import android.util.Log;
+import java.util.logging.Logger;
 
 public class Enemy implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -37,11 +38,11 @@ public class Enemy implements Serializable {
     private boolean isBoss;
     private static int nextId = 0;
     private final int enemyId;
-    private boolean isDead;
     private String name;
     private int defense;
     private int experienceReward;
     private int level;
+    private int goldReward;
 
     public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon, String name, int defense, int experienceReward, int level) {
         this.x = x;
@@ -52,27 +53,64 @@ public class Enemy implements Serializable {
         this.dungeon = dungeon;
         this.isBoss = false;
         this.enemyId = nextId++;
-        this.isDead = false;
         this.name = name;
         this.defense = defense;
         this.experienceReward = experienceReward;
         this.level = level;
+        this.goldReward = 25;
     }
 
-    public synchronized int getX() { return x; }
-    public synchronized int getY() { return y; }
-    public synchronized int getHealth() { return health; }
-    public synchronized int getMaxHealth() { return maxHealth; }
-    public synchronized int getAttack() { return attackPower; }
-    public int getGoldReward() { return isBoss ? 100 : 25; }
-    public synchronized boolean isAlive() { return health >gt; 0; }
-    public synchronized int getEnemyId() { return enemyId; }
-    public synchronized boolean isDead() { return isDead; }
-    public synchronized void setDead(boolean dead) { this.isDead = dead; }
-    public String getName() { return name; }
-    public synchronized int getDefense() { return defense; }
-    public int getExperienceReward() { return experienceReward; }
-    public synchronized int getLevel() { return level; }
+    public synchronized int getX() {
+        return x;
+    }
+
+    public synchronized int getY() {
+        return y;
+    }
+
+    public synchronized int getHealth() {
+        return health;
+    }
+
+    public synchronized int getMaxHealth() {
+        return maxHealth;
+    }
+
+    public synchronized int getAttack() {
+        return attackPower;
+    }
+
+    public int getGoldReward() {
+        return isBoss ? 100 : 25;
+    }
+
+    public synchronized boolean isAlive() {
+        return health >gt; 0;
+    }
+
+    public synchronized int getEnemyId() {
+        return enemyId;
+    }
+
+    public synchronized boolean isDead() {
+        return health <lt;= 0;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public synchronized int getDefense() {
+        return defense;
+    }
+
+    public int getExperienceReward() {
+        return experienceReward;
+    }
+
+    public synchronized int getLevel() {
+        return level;
+    }
 
     public static Enemy createBoss(int x, int y, Dungeon dungeon) {
         Enemy boss = new Enemy(x, y, 50, 5, dungeon, "quot;Boss"quot;, 3, 500, 10);
@@ -81,7 +119,15 @@ public class Enemy implements Serializable {
     }
 
     public synchronized void takeDamage(int damage) {
+        if (damage <lt; 0) {
+            Log.w("quot;Enemy"quot;, "quot;Negative damage attempted: "quot; + damage);
+            return;
+        }
+        int oldHealth = health;
         health = Math.max(0, health - damage);
+        if (health == 0 &amp;&amp; oldHealth >gt; 0) {
+            Log.d("quot;Enemy"quot;, this.getName() + "quot; has been defeated!"quot;);
+        }
     }
 
     public synchronized void moveToward(Player player) {
@@ -91,11 +137,16 @@ public class Enemy implements Serializable {
         }
         int playerX = player.getX();
         int playerY = player.getY();
-
-        if (x <lt; playerX &amp;&amp; dungeon.isWalkable(x + 1, y)) x++;
-        else if (x >gt; playerX &amp;&amp; dungeon.isWalkable(x - 1, y)) x--;
-        else if (y <lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) y++;
-        else if (y >gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) y--;
+        if (x >gt; playerX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
+            x--;
+        } else if (x <lt; playerX &amp;&amp; dungeon.isWalkable(x + 1, y)) {
+            x++;
+        }
+        if (y >gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
+            y--;
+        } else if (y <lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) {
+            y++;
+        }
     }
 
     public void setIsBoss(boolean boss) {
@@ -104,6 +155,12 @@ public class Enemy implements Serializable {
 
     public boolean isBoss() {
         return isBoss;
+    }
+
+    public void setDead(boolean dead) {
+        if (dead) {
+            health = 0;
+        }
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>

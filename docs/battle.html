@@ -21,154 +21,47 @@
         <h1>Battle</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Battle.java</div>
 package com.knightlight.game;
-
-import java.util.Random;
 import android.util.Log;
 
-public class Battle {
-    public enum Action { ATTACK, DEFEND, ITEM, RUN }
-    public enum State { PLAYER_TURN, ENEMY_TURN, VICTORY, DEFEAT, FLED }
+import java.util.logging.Logger;
+import java.io.Serializable;
+
+public class Battle implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static final String TAG = "quot;Battle"quot;;
+
+    public enum State {
+        PLAYER_TURN, ENEMY_TURN, VICTORY, DEFEAT, FLED
+    }
+
+    public enum Action {
+        ATTACK, USE_POTION, RUN, DEFEND
+    }
 
     private Player player;
     private Enemy enemy;
+    private CombatSystem combatSystem;
     private State state;
     private String lastMessage;
-    private boolean defending;
-    private Random random;
-    private final Object stateLock = new Object();
+    private final transient Object stateLock = new Object();
 
     public Battle(Player player, Enemy enemy) {
-        if (player == null || enemy == null) {
-            Log.e("quot;Battle"quot;, "quot;Battle constructor called with null player or enemy"quot;);
-            throw new IllegalArgumentException("quot;Player and Enemy cannot be null"quot;);
+        // Constructor validation - security hardening
+        if (player == null) {
+            throw new IllegalArgumentException("quot;Player cannot be null"quot;);
         }
+        if (enemy == null) {
+            throw new IllegalArgumentException("quot;Enemy cannot be null"quot;);
+        }
+
         this.player = player;
         this.enemy = enemy;
+        this.combatSystem = new CombatSystem(player, enemy);
         this.state = State.PLAYER_TURN;
-        this.defending = false;
-        this.lastMessage = "quot;Battle started!"quot;;
-        this.random = new Random(System.nanoTime());
-    }
-
-    public void playerAction(Action action) {
-        if (action == null) {
-            Log.w("quot;Battle"quot;, "quot;playerAction called with null action"quot;);
-            return;
-        }
-
-        synchronized (stateLock) {
-            if (state != State.PLAYER_TURN) {
-                Log.w("quot;Battle"quot;, "quot;playerAction called when state is "quot; + state);
-                return;
-            }
-            defending = false;
-
-            switch (action) {
-                case ATTACK:
-                    playerAttack();
-                    break;
-                case DEFEND:
-                    defending = true;
-                    lastMessage = "quot;You brace for impact!"quot;;
-                    break;
-                case ITEM:
-                    usePotion();
-                    break;
-                case RUN:
-                    if (random.nextDouble() <lt; 0.5) {
-                        state = State.FLED;
-                        lastMessage = "quot;You escaped!"quot;;
-                        return;
-                    } else {
-                        lastMessage = "quot;Couldn'#39;t escape!"quot;;
-                    }
-                    break;
-            }
-
-            if (state != State.FLED &amp;&amp; state != State.VICTORY) {
-                state = State.ENEMY_TURN;
-            }
-        }
-    }
-
-    public void enemyTurn() {
-        synchronized (stateLock) {
-            if (state != State.ENEMY_TURN) {
-                Log.w("quot;Battle"quot;, "quot;enemyTurn called when state is "quot; + state);
-                return;
-            }
-
-            enemyAttack();
-
-            if (player.getHealth() <lt;= 0) {
-                state = State.DEFEAT;
-                lastMessage = "quot;You were defeated..."quot;;
-            } else {
-                defending = false;
-                state = State.PLAYER_TURN;
-            }
-        }
-    }
-
-    private void playerAttack() {
-        // Damage range: 8-12 (base 8, variance 0-4)
-        int baseDamage = 8;
-        int variance = random.nextInt(5);
-        int damage = baseDamage + variance;
-        enemy.takeDamage(damage);
-        lastMessage = "quot;You deal "quot; + damage + "quot; damage!"quot;;
-
-        if (!enemy.isAlive()) {
-            enemy.setDead(true);
-            state = State.VICTORY;
-            int goldReward = enemy.getGoldReward();
-            player.addGold(goldReward);
-            lastMessage = "quot;Victory! You gained "quot; + goldReward + "quot; gold!"quot;;
-
-            if (enemy.isBoss()) {
-                int bossBonus = 50;
-                player.addGold(bossBonus);
-                lastMessage += "quot; (Boss bonus: +"quot; + bossBonus + "quot; gold!)"quot;;
-            }
-        }
-    }
-
-    private void enemyAttack() {
-        int enemyAttackPower = enemy.getAttack();
-        int baseDamage = enemyAttackPower;
-        int variance = random.nextInt(3);
-        int damage = baseDamage + variance;
-
-        if (defending) {
-            damage = Math.max(1, damage / 2);
-            lastMessage = "quot;Enemy deals "quot; + damage + "quot; damage (reduced)!"quot;;
-        } else {
-            lastMessage = "quot;Enemy deals "quot; + damage + "quot; damage!"quot;;
-        }
-
-        player.takeDamage(damage);
-    }
-
-    private void usePotion() {
-        if (player.getHealthPotions() >gt; 0) {
-            int healAmount = 30;
-            int oldHealth = player.getHealth();
-            player.heal(healAmount);
-            int actualHealed = player.getHealth() - oldHealth;
-            player.usePotion();
-            lastMessage = "quot;You healed "quot; + actualHealed + "quot; HP!"quot;;
-            // Transition to ENEMY_TURN after using potion
-            state = State.ENEMY_TURN;
-        } else {
-            lastMessage = "quot;No potions left!"quot;;
-            // Stay in PLAYER_TURN; allow player to retry with ATTACK, DEFEND, or RUN
-        }
-    }
-
-    public State getState() {
-        synchronized (stateLock) {
-            return state;
-        }
+        this.lastMessage = "quot;Battle started! "quot; + enemy.getName() + "quot; appears!"quot;;
+        
+        Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;Battle initialized: Player (Lvl "quot; + player.getLevel() + 
+              "quot;) vs "quot; + enemy.getName() + "quot; (Health: "quot; + enemy.getHealth() + "quot;)"quot;);
     }
 
     public Player getPlayer() {
@@ -179,16 +72,124 @@ public class Battle {
         return enemy;
     }
 
-    public String getLastMessage() {
+    public State getState() {
         synchronized (stateLock) {
-            return lastMessage;
+            return state;
         }
     }
 
-    public boolean isDefending() {
-        synchronized (stateLock) {
-            return defending;
+    public String getLastMessage() {
+        return lastMessage;
+    }
+
+    public CombatSystem getCombatSystem() {
+        return combatSystem;
+    }
+
+    public void playerAction(Action action) {
+        if (action == null) {
+            Log.w(TAG, "quot;playerAction called with null action"quot;);
+            return;
         }
+
+        synchronized (stateLock) {
+            if (state != State.PLAYER_TURN) {
+                Log.w(TAG, "quot;playerAction called when state is "quot; + state);
+                return;
+            }
+
+            switch (action) {
+                case ATTACK:
+                    combatSystem.playerAttack();
+                    lastMessage = combatSystem.getLastLogEntry();
+                    Log.d(TAG, "quot;Player attack: "quot; + lastMessage);
+                    break;
+
+                case USE_POTION:
+                    if (player.usePotion()) {
+                        lastMessage = "quot;You healed yourself!"quot;;
+                        Log.d(TAG, "quot;Player used potion. Health: "quot; + player.getHealth());
+                    } else {
+                        lastMessage = "quot;No potions left!"quot;;
+                        Log.w(TAG, "quot;Player attempted potion use but none available"quot;);
+                        return;
+                    }
+                    break;
+
+                case RUN:
+                    if (combatSystem.attemptFlee()) {
+                        state = State.FLED;
+                        lastMessage = "quot;You fled successfully!"quot;;
+                        Log.i(TAG, "quot;FLED: Player escaped from "quot; + enemy.getName());
+                        return;
+                    } else {
+                        lastMessage = "quot;Failed to flee!"quot;;
+                        Log.d(TAG, "quot;Player failed flee attempt"quot;);
+                        return;
+                    }
+            }
+
+            // Check if enemy is defeated after player action
+            if (!enemy.isAlive()) {
+                state = State.VICTORY;
+                lastMessage = "quot;You defeated "quot; + enemy.getName() + "quot;!"quot;;
+                Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;VICTORY: Player defeated "quot; + enemy.getName() + 
+                      "quot; | Player Health: "quot; + player.getHealth());
+                
+                // Validate and process combat rewards
+                CombatResult result = combatSystem.endCombat();
+                if (result == null) {
+                    Log.e(TAG, "quot;CRITICAL: endCombat() returned null - rewards may not have been processed!"quot;);
+                } else if (!result.isSuccessful()) {
+                    Log.e(TAG, "quot;endCombat() failed: "quot; + result.getMessage());
+                } else {
+                    Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;Rewards processed: XP="quot; + result.getExperienceAwarded() + 
+                          "quot; Gold="quot; + result.getGoldAwarded());
+                }
+                return;
+            }
+
+            // Proceed to enemy turn
+            state = State.ENEMY_TURN;
+            enemyTurn();
+        }
+    }
+
+    public void enemyTurn() {
+        synchronized (stateLock) {
+            if (state != State.ENEMY_TURN) {
+                Log.w(TAG, "quot;enemyTurn called when state is "quot; + state);
+                return;
+            }
+
+            combatSystem.enemyAttack();
+            lastMessage = combatSystem.getLastLogEntry();
+            Log.d(TAG, "quot;Enemy turn: "quot; + lastMessage);
+
+            // Check if player is defeated after enemy action
+            if (!player.isAlive()) {
+                state = State.DEFEAT;
+                lastMessage = enemy.getName() + "quot; defeated you!"quot;;
+                Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;DEFEAT: Player defeated by "quot; + enemy.getName() + 
+                      "quot; | Enemy Health: "quot; + enemy.getHealth());
+                
+                // Validate defeat processing
+                CombatResult result = combatSystem.endCombat();
+                if (result == null) {
+                    Log.e(TAG, "quot;CRITICAL: endCombat() returned null on defeat"quot;);
+                } else {
+                    Log.i(TAG, "quot;Defeat processed: "quot; + result.getMessage());
+                }
+                return;
+            }
+
+            // Return to player turn
+            state = State.PLAYER_TURN;
+        }
+    }
+
+    public void update() {
+        // Called from game loop if needed
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>

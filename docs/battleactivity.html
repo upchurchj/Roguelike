@@ -21,9 +21,10 @@
         <h1>BattleActivity</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/BattleActivity.java</div>
 package com.knightlight.game;
+import android.util.Log;
 
 import android.widget.Toast;
-import android.util.Log;
+import java.util.logging.Logger;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -156,7 +157,7 @@ public class BattleActivity extends AppCompatActivity {
                 Log.d(TAG, "quot;Dropped: "quot; + loot.getName());
             }
 
-            Log.d(TAG, "quot;Victory: +"quot; + enemy.getGoldReward() + "quot; gold, +"quot; + enemy.getExperienceReward() + "quot; XP"quot;);
+        Log.d(TAG, "quot;Victory: +"quot; + enemy.getGoldReward() + "quot; gold, +"quot; + enemy.getExperienceReward() + "quot; XP"quot;);
         }
 
         setResult(RESULT_OK, resultIntent);

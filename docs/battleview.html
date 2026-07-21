@@ -21,13 +21,14 @@
         <h1>BattleView</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/BattleView.java</div>
 package com.knightlight.game;
+import android.util.Log;
 
 import android.util.AttributeSet;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.util.Log;
+import java.util.logging.Logger;
 import android.view.View;
 
 public class BattleView extends View {
@@ -69,15 +70,12 @@ public class BattleView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
         if (battle == null) {
             Log.w("quot;BattleView"quot;, "quot;Battle is null in onDraw"quot;);
             return;
         }
-
         int height = getHeight();
         int statusAreaHeight = (int) (height * 0.75);
-
         drawHealthBars(canvas, statusAreaHeight);
         drawMessage(canvas, statusAreaHeight / 2);
     }
@@ -85,7 +83,6 @@ public class BattleView extends View {
     private void drawHealthBars(Canvas canvas, int statusAreaHeight) {
         Player player = battle.getPlayer();
         Enemy enemy = battle.getEnemy();
-
         if (player == null || enemy == null) {
             Log.w("quot;BattleView"quot;, "quot;Player or Enemy is null in drawHealthBars"quot;);
             return;
@@ -99,41 +96,64 @@ public class BattleView extends View {
         int playerMaxHealth = player.getMaxHealth();
         int playerCurrentHealth = Math.min(player.getCurrentHealth(), playerMaxHealth);
         playerCurrentHealth = Math.max(0, playerCurrentHealth);
-
         int playerBarY = 10;
+
         canvas.drawRect(barX, playerBarY, barX + barWidth, playerBarY + barHeight, healthBarBackPaint);
         float playerHealthRatio = (float) playerCurrentHealth / playerMaxHealth;
         canvas.drawRect(barX, playerBarY, barX + (int) (barWidth * playerHealthRatio), playerBarY + barHeight, healthBarFillPaint);
         canvas.drawText("quot;Player: "quot; + playerCurrentHealth + "quot;/"quot; + playerMaxHealth, barX + 5, playerBarY + 22, textPaint);
 
-        // Enemy health bar (only draw if alive)
+        // Enemy health bar (show skull if dead)
         int enemyHealth = enemy.getHealth();
+        int enemyBarX = barX + barWidth + 20;
+        int enemyBarY = 10;
+
         if (enemyHealth >gt; 0) {
             int enemyMaxHealth = enemy.getMaxHealth();
             int enemyCurrentHealth = Math.min(enemyHealth, enemyMaxHealth);
             enemyCurrentHealth = Math.max(0, enemyCurrentHealth);
 
-            int enemyBarX = barX + barWidth + 20;
-            int enemyBarY = 10;
             canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + barWidth, enemyBarY + barHeight, healthBarBackPaint);
             float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
             canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio), enemyBarY + barHeight, healthBarFillPaint);
-            canvas.drawText("quot;Enemy: "quot; + enemyCurrentHealth + "quot;/"quot; + enemyMaxHealth, enemyBarX + 5, enemyBarY + 22, textPaint);
+            canvas.drawText("quot;Enemy: "quot; + enemyCurrentHealth + "quot;/"quot; + enemy.getMaxHealth(), enemyBarX + 5, enemyBarY + 22, textPaint);
+        } else {
+            drawSkull(canvas, enemyBarX + barWidth / 2 - 15, enemyBarY, 30);
+            Paint skullText = new Paint(textPaint);
+            skullText.setColor(Color.parseColor("quot;#FFD700"quot;));
+            canvas.drawText(enemy.getName() + "quot; DEFEATED"quot;, enemyBarX + 5, enemyBarY + 22, skullText);
         }
     }
 
+    private void drawSkull(Canvas canvas, int x, int y, int size) {
+        Paint skullPaint = new Paint();
+        skullPaint.setColor(Color.parseColor("quot;#FFD700"quot;));
+        skullPaint.setStyle(Paint.Style.FILL);
+
+        // Skull shape: main cranium
+        canvas.drawCircle(x + size / 2, y + size / 3, size / 3, skullPaint);
+        // Eye sockets
+        canvas.drawCircle(x + size / 4, y + size / 3, size / 5, skullPaint);
+        canvas.drawCircle(x + 3 * size / 4, y + size / 3, size / 5, skullPaint);
+        // Jaw
+        canvas.drawRect(x + size / 4, y + 2 * size / 3, x + 3 * size / 4, y + size, skullPaint);
+
+        // Eye pupils (black)
+        Paint eyePaint = new Paint();
+        eyePaint.setColor(Color.BLACK);
+        canvas.drawCircle(x + size / 4, y + size / 3, size / 10, eyePaint);
+        canvas.drawCircle(x + 3 * size / 4, y + size / 3, size / 10, eyePaint);
+    }
+
     private void drawMessage(Canvas canvas, int y) {
-        if (battle == null) {
-            Log.w("quot;BattleView"quot;, "quot;Battle is null in drawMessage"quot;);
-            return;
-        }
-
+        if (battle == null) return;
         String message = battle.getLastMessage();
-        if (message == null) {
-            message = "quot;Battle in progress..."quot;;
+        if (message != null &amp;&amp; !message.isEmpty()) {
+            Paint messagePaint = new Paint(textPaint);
+            messagePaint.setTextSize(32);
+            messagePaint.setColor(Color.YELLOW);
+            canvas.drawText(message, 10, y, messagePaint);
         }
-
-        canvas.drawText(message, 10, y, textPaint);
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>

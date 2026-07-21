@@ -21,9 +21,10 @@
         <h1>Player</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Player.java</div>
 package com.knightlight.game;
+import android.util.Log;
+import java.util.logging.Logger;
 
 import java.io.Serializable;
-import android.util.Log;
 
 public class Player implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -41,76 +42,39 @@ public class Player implements Serializable {
     private final transient Object stateLock = new Object();
 
     public Player(int startX, int startY) {
-        if (startX <lt; 0 || startY <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;Negative starting position: ("quot; + startX + "quot;, "quot; + startY + "quot;)"quot;);
-        }
-        if (startX <lt; 0 || startY <lt; 0) throw new IllegalArgumentException("quot;Negative coordinates not allowed"quot;);
-        
         this.x = startX;
         this.y = startY;
-        this.maxHealth = 30;
-        
-        if (this.maxHealth <lt;= 0) {
-            Log.w("quot;Player"quot;, "quot;Invalid maxHealth: "quot; + this.maxHealth + "quot;; defaulting to 30"quot;);
-            this.maxHealth = 30;
-        }
-        
-        this.currentHealth = this.maxHealth;
+        this.maxHealth = 50;
+        this.currentHealth = maxHealth;
         this.goldCollected = 0;
         this.healthPotions = 3;
         this.inventory = new InventorySystem();
+        Log.d("quot;Player"quot;, "quot;Player initialized at ("quot; + startX + "quot;, "quot; + startY + "quot;)"quot;);
     }
 
-    public synchronized void move(int dx, int dy) {
-        x += dx;
-        y += dy;
-    }
-
-    public synchronized void setPosition(int newX, int newY) {
-        if (newX <lt; 0 || newY <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;setPosition called with negative values: ("quot; + newX + "quot;, "quot; + newY + "quot;)"quot;);
+    public synchronized void addExperience(int amount) {
+        if (amount <lt; 0) {
+            Log.w("quot;Player"quot;, "quot;Negative experience attempted: "quot; + amount);
+            return;
         }
-        x = newX;
-        y = newY;
-    }
-
-    public synchronized int getX() {
-        return x;
-    }
-
-    public synchronized int getY() {
-        return y;
-    }
-
-    public synchronized int getLevel() {
-        return level;
-    }
-
-    public synchronized int getExperience() {
-        return experience;
-    }
-
-    public synchronized void addExperience(int xp) {
-        if (xp <lt; 0) throw new IllegalArgumentException("quot;Experience cannot be negative"quot;);
-        this.experience += xp;
-        Log.d("quot;Player"quot;, "quot;XP gained: "quot; + xp);
-        
-        while (this.experience >gt;= EXPERIENCE_PER_LEVEL) {
+        this.experience += amount;
+        Log.d("quot;Player"quot;, "quot;Gained "quot; + amount + "quot; XP. Total: "quot; + experience);
+        while (experience >gt;= EXPERIENCE_PER_LEVEL) {
             this.experience -= EXPERIENCE_PER_LEVEL;
             this.level++;
-            Log.d("quot;Player"quot;, "quot;Level up! Now level "quot; + this.level);
+            this.maxHealth += 5;
+            this.currentHealth = maxHealth;
+            Log.d("quot;Player"quot;, "quot;LEVEL UP! Now level "quot; + level + "quot;. Max health: "quot; + maxHealth);
         }
     }
 
     public synchronized void setExperience(int xp) {
-        if (xp <lt; 0) throw new IllegalArgumentException("quot;Experience cannot be negative"quot;);
-        this.experience = xp;
-        
-        while (this.experience >gt;= EXPERIENCE_PER_LEVEL) {
-            this.experience -= EXPERIENCE_PER_LEVEL;
-            this.level++;
-            Log.d("quot;Player"quot;, "quot;Level up! Now level "quot; + this.level);
+        if (xp <lt; 0) {
+            Log.w("quot;Player"quot;, "quot;Invalid experience value: "quot; + xp);
+            return;
         }
+        this.experience = xp;
+        this.addExperience(0);
     }
 
     public InventorySystem getInventory() {
@@ -147,12 +111,11 @@ public class Player implements Serializable {
 
     public synchronized void addGold(int amount) {
         if (amount <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;addGold called with negative amount: "quot; + amount);
+            Log.w("quot;Player"quot;, "quot;Negative gold attempted: "quot; + amount);
             return;
         }
-        int oldGold = goldCollected;
-        goldCollected += amount;
-        Log.d("quot;Player"quot;, "quot;Collected "quot; + amount + "quot; gold: "quot; + oldGold + "quot; ->gt; "quot; + goldCollected);
+        this.goldCollected += amount;
+        Log.d("quot;Player"quot;, "quot;Collected "quot; + amount + "quot; gold. Total: "quot; + goldCollected);
     }
 
     public synchronized int getGold() {
@@ -164,30 +127,22 @@ public class Player implements Serializable {
     }
 
     public synchronized void setHealth(int health) {
-        if (health <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;setHealth called with negative value: "quot; + health + "quot;; clamping to 0"quot;);
-            currentHealth = 0;
-        } else if (health >gt; maxHealth) {
+        if (health >gt; maxHealth) {
             Log.w("quot;Player"quot;, "quot;setHealth called with value >gt; maxHealth: "quot; + health + "quot;; clamping to "quot; + maxHealth);
             currentHealth = maxHealth;
         } else {
-            currentHealth = health;
+            currentHealth = Math.max(0, health);
         }
         Log.d("quot;Player"quot;, "quot;Health set to "quot; + currentHealth);
     }
 
     public synchronized void setGoldCollected(int gold) {
         if (gold <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;setGoldCollected called with negative value: "quot; + gold + "quot;; clamping to 0"quot;);
-            goldCollected = 0;
-        } else {
-            goldCollected = gold;
+            Log.w("quot;Player"quot;, "quot;Negative gold attempted in setGoldCollected: "quot; + gold);
+            return;
         }
-        Log.d("quot;Player"quot;, "quot;Gold set to "quot; + goldCollected);
-    }
-
-    public synchronized int getHealthPotions() {
-        return healthPotions;
+        this.goldCollected = gold;
+        Log.d("quot;Player"quot;, "quot;Gold set to "quot; + gold);
     }
 
     public synchronized boolean usePotion() {
@@ -217,28 +172,66 @@ public class Player implements Serializable {
         Log.d("quot;Player"quot;, "quot;Player reset to initial state"quot;);
     }
 
-    public String getName() { 
-        return "quot;Player"quot;; 
+    public String getName() {
+        return "quot;Player"quot;;
     }
 
-    public int getDefense() { 
-        return 5; 
+    public int getDefense() {
+        return 5 + (level - 1);
     }
 
-    public int getAttack() { 
-        return 8; 
+    public int getAttack() {
+        return 8 + (level - 1) * 2;
     }
 
-    public Equipment getMainHandEquipment() { 
-        return null; 
+    public Equipment getMainHandEquipment() {
+        return null;
     }
 
-    public Equipment getOffHandEquipment() { 
-        return null; 
+    public Equipment getOffHandEquipment() {
+        return null;
     }
 
-    public Equipment getArmorEquipment() { 
-        return null; 
+    public Equipment getArmorEquipment() {
+        return null;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public void setX(int x) {
+        this.x = x;
+    }
+
+    public void setY(int y) {
+        this.y = y;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public int getExperience() {
+        return experience;
+    }
+
+    public int getHealthPotions() {
+        return healthPotions;
+    }
+
+    public synchronized void move(int dx, int dy) {
+        if (Math.abs(dx) >gt; 1 || Math.abs(dy) >gt; 1) {
+            Log.w("quot;Player"quot;, "quot;Invalid move: dx="quot; + dx + "quot;, dy="quot; + dy);
+            return;
+        }
+        this.x += dx;
+        this.y += dy;
+        Log.d("quot;Player"quot;, "quot;Moved to ("quot; + x + "quot;, "quot; + y + "quot;)"quot;);
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>
