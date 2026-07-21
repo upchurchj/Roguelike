@@ -135,6 +135,8 @@ public class BattleActivity extends AppCompatActivity {
     }
 
     private void showBattleResult() {
+        player.addGold(enemy.getGoldReward());
+        player.addExperience(enemy.getExperienceReward());
         Log.d(TAG, "quot;Showing battle result"quot;);
         if (isDestroyed) return;
 
@@ -144,6 +146,20 @@ public class BattleActivity extends AppCompatActivity {
         resultIntent.putExtra("quot;enemy"quot;, enemy);
         resultIntent.putExtra("quot;player"quot;, player);
         resultIntent.putExtra("quot;battle_won"quot;, battle.getState() == Battle.State.VICTORY);
+        if (battle.getState() == Battle.State.VICTORY) {
+            player.addGold(enemy.getGoldReward());
+            player.addExperience(enemy.getExperienceReward());
+            
+            LootTable lootTable = LootTable.builder().build();
+            Equipment loot = lootTable.generateLoot(1, 0.3);
+            if (loot != null) {
+                player.getInventory().addEquipment(loot);
+                Log.d(TAG, "quot;Dropped: "quot; + loot.getName());
+            }
+
+            Log.d(TAG, "quot;Victory: +"quot; + enemy.getGoldReward() + "quot; gold, +"quot; + enemy.getExperienceReward() + "quot; XP"quot;);
+        }
+
         setResult(RESULT_OK, resultIntent);
 
         finish();

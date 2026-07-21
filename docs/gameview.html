@@ -254,7 +254,9 @@ public class GameView extends View {
             return;
         }
         
-        String status = String.format("quot;HP: %d/%d | Gold: %d | Turn: %d"quot;,
+        String status = String.format("quot;LVL: %d (XP: %d) | HP: %d/%d | Gold: %d | Turn: %d"quot;,
+                player.getLevel(),
+                player.getExperience(),
                 player.getCurrentHealth(),
                 player.getMaxHealth(),
                 player.getGoldCollected(),
