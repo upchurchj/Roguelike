@@ -53,13 +53,10 @@ public class Player implements Serializable {
     }
 
     public synchronized void addExperience(int amount) {
-        if (amount <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;Negative experience attempted: "quot; + amount);
-            return;
-        }
-        this.experience += amount;
+        this.experience += amount;  // ADD the experience
         Log.d("quot;Player"quot;, "quot;Gained "quot; + amount + "quot; XP. Total: "quot; + experience);
-        while (experience >gt;= EXPERIENCE_PER_LEVEL) {
+        
+        while (experience >gt;= EXPERIENCE_PER_LEVEL) {  // Level up when threshold reached
             this.experience -= EXPERIENCE_PER_LEVEL;
             this.level++;
             this.maxHealth += 5;

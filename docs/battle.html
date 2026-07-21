@@ -143,8 +143,9 @@ public class Battle implements Serializable {
                 } else if (!result.isSuccessful()) {
                     Log.e(TAG, "quot;endCombat() failed: "quot; + result.getMessage());
                 } else {
-                    Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;Rewards processed: XP="quot; + result.getExperienceAwarded() + 
-                          "quot; Gold="quot; + result.getGoldAwarded());
+    Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;Rewards processed: XP="quot; + result.getExperienceAwarded() + "quot; Gold="quot; + result.getGoldAwarded());
+    player.addExperience(result.getExperienceAwarded());
+    player.addGold(result.getGoldAwarded());
                 }
                 return;
             }
