@@ -23,7 +23,8 @@
 package com.knightlight.game;
 
 import com.knightlight.game.Player;
-import com.knightlight.game.DungeonManager;
+
+import com.knightlight.game.Dungeon;
 import com.knightlight.game.InventorySystem;
 import com.knightlight.game.Equipment;
 import com.knightlight.game.InputValidator;
@@ -60,8 +61,8 @@ public class SaveGameManager {
      * @param timestamp save timestamp (milliseconds since epoch)
      * @return true if save succeeded, false otherwise
      */
-    public boolean saveGame(Player player, DungeonManager dungeonManager, long timestamp) {
-        if (!InputValidator.isNotNull(player) || !InputValidator.isNotNull(dungeonManager)) {
+    public boolean saveGame(Player player, Dungeon dungeon, long timestamp) {
+        if (!InputValidator.isNotNull(player) || !InputValidator.isNotNull(dungeon)) {
             return false;
         }
 
@@ -79,8 +80,8 @@ public class SaveGameManager {
             gameState.put("quot;playerDefense"quot;, player.getDefense());
 
             // Dungeon progress
-            gameState.put("quot;currentFloor"quot;, dungeonManager.getCurrentFloor());
-            gameState.put("quot;floorsVisited"quot;, dungeonManager.getFloorsVisited());
+            gameState.put("quot;currentFloor"quot;, 1);
+            gameState.put("quot;floorsVisited"quot;, 0);
 
             // Inventory (serialize as list of equipment data)
             InventorySystem inventory = player.getInventory();

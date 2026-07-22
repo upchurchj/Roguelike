@@ -21,328 +21,87 @@
         <h1>MainActivity</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/MainActivity.java</div>
 package com.knightlight.game;
-import android.util.Log;
-import java.io.*;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.io.File;
 
-import android.app.AlertDialog;
 import android.content.Intent;
-import android.widget.Toast;
 import android.os.Bundle;
-import java.util.logging.Logger;
+import android.util.Log;
+import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
+import java.io.Serializable;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements GameView.GameListener {
-    private static final String LOG_FILE = "quot;/data/data/com.knightlight.game/roguelike_debug.log"quot;;
+public class MainActivity extends AppCompatActivity {
     private static final String TAG = "quot;MainActivity"quot;;
-    private static final int DUNGEON_WIDTH = 40;
-    private static final int DUNGEON_HEIGHT = 16;
-    private static final int INITIAL_ENEMIES = 5;
-    private static final int BATTLE_REQUEST_CODE = 100;
+    private static final int BATTLE_REQUEST_CODE = 1;
+    private static final int DUNGEON_WIDTH = 50;
+    private static final int DUNGEON_HEIGHT = 50;
+    private static final int INITIAL_ENEMIES = 10;
 
     private Game game;
-    private SaveGameManager saveGameManager;
-    private DungeonManager dungeonManager;
     private GameView gameView;
-    private AlertDialog currentDialog;
+    private SaveGameManager saveGameManager;
+    private Dungeon dungeon;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        writeLog("quot;onCreate() START"quot;);
-        writeLog("quot;About to create Game"quot;);
-        writeLog("quot;MainActivity.onCreate() START"quot;);
         super.onCreate(savedInstanceState);
-        writeLog("quot;super.onCreate() OK"quot;);
-        
-        try {
-            writeLog("quot;About to call setContentView()"quot;);
-            setContentView(R.layout.activity_main);
-        saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
-        Log.d("quot;RoguelikeApp"quot;, "quot;Setting content view"quot;);
-            writeLog("quot;setContentView() completed successfully"quot;);
-        } catch (Exception e) {
-            writeLog("quot;CRASH during setContentView(): "quot; + e.getClass().getName() + "quot; - "quot; + e.getMessage());
-            Log.e(TAG, "quot;CRASH during setContentView()"quot;, e);
-            e.printStackTrace();
-            finish();
-            return;
-        }
-
-        Log.d(TAG, "quot;Layout inflated"quot;);
-
-        // Initialize game if not already created
-        if (savedInstanceState == null) {
-            dungeonManager = DungeonManager.builder().build();
-            dungeonManager = DungeonManager.builder().build();
-            Log.d(TAG, "quot;Creating new Game with dimensions "quot; + DUNGEON_WIDTH + "quot;x"quot; + DUNGEON_HEIGHT + "quot;, enemies="quot; + INITIAL_ENEMIES);
-            try {
-                SaveGameManager.SaveGameData savedGame = saveGameManager.loadLatestGame();
-                if (savedGame != null) {
-                    game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, 0);
-                    game.getPlayer().setExperience(savedGame.playerExperience);
-                    
-                        int healthToLoad = savedGame.playerHealth;
-                        if (healthToLoad <lt;= 0) {
-                            healthToLoad = game.getPlayer().getMaxHealth();
-                            Log.w(TAG, "quot;Loaded game had 0 HP; restoring to max"quot;);
-                            }
-                        game.getPlayer().setHealth(healthToLoad);
-                } else {
-                    game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
-                    Log.d(TAG, "quot;Starting new game"quot;);
-                }
-                writeLog("quot;Game created successfully"quot;);
-                Log.d(TAG, "quot;Game created successfully"quot;);
-            } catch (Exception e) {
-                Log.e(TAG, "quot;Exception during Game creation"quot;, e);
-                writeLog("quot;Exception during Game creation: "quot; + e.getMessage());
-                throw new RuntimeException("quot;Failed to create Game"quot;, e);
-            }
-        } else {
-            Log.d(TAG, "quot;savedInstanceState is not null, game not recreated"quot;);
-        }
-
-        // Retrieve GameView from layout
+        setContentView(R.layout.activity_main);
         gameView = findViewById(R.id.game_view);
-        writeLog("quot;GameView findViewById done"quot;);
-        if (gameView == null) {
-            Log.e(TAG, "quot;GameView not found in layout"quot;);
-            writeLog("quot;ERROR: GameView not found in layout"quot;);
-            finish();
-            return;
-        }
+        saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
 
-        if (game == null) {
-            Log.e(TAG, "quot;Game is null after onCreate"quot;);
-            finish();
-            return;
-        }
-
-        Log.d(TAG, "quot;Setting game on GameView and attaching listener"quot;);
-        gameView.setGame(game);
-        Log.d("quot;MainActivity"quot;, "quot;GameView.setGame() called"quot;);
-        gameView.setGameListener(this);
-        writeLog("quot;onCreate() COMPLETE"quot;);
-        Log.d(TAG, "quot;onCreate completed successfully"quot;);
-    }
-
-    @Override
-    public void onGameOver(Game.GameState state) {
-        if (game == null) {
-            Log.w(TAG, "quot;Game is null in onGameOver"quot;);
-            return;
-        }
-
-        String title, message;
-        if (state == Game.GameState.WON) {
-            title = "quot;Victory!"quot;;
-            message = "quot;You'#39;ve collected 100 gold and won the game!"quot;;
-        } else {
-            title = "quot;Defeat"quot;;
-            message = "quot;You were defeated. Game Over."quot;;
-        }
-
-        showGameOverDialog(title, message);
-    }
-
-    @Override
-    public void onQuitRequested() {
-        showQuitConfirmDialog();
-    }
-
-    @Override
-    public void onEncounter(Enemy enemy) {
-        Toast.makeText(this, "quot;onEncounter: started"quot;, Toast.LENGTH_SHORT).show();
-        if (enemy == null) {
-            Log.w(TAG, "quot;Encountered enemy is null"quot;);
-            return;
-        }
-        
-        Log.d(TAG, "quot;Encounter triggered with enemy at ("quot; + enemy.getX() + "quot;, "quot; + enemy.getY() + "quot;)"quot;);
-        Toast.makeText(this, "quot;onEncounter: before Intent"quot;, Toast.LENGTH_SHORT).show();
-        
-        Intent battleIntent = new Intent(this, BattleActivity.class);
-        battleIntent.putExtra("quot;enemy"quot;, enemy);
-        Toast.makeText(this, "quot;onEncounter: enemy added"quot;, Toast.LENGTH_SHORT).show();
-        battleIntent.putExtra("quot;player"quot;, game.getPlayer());
-        startActivityForResult(battleIntent, BATTLE_REQUEST_CODE);
-    }
-
-
-    private void showGameOverDialog(String title, String message) {
-        if (currentDialog != null &amp;&amp; currentDialog.isShowing()) {
-            currentDialog.dismiss();
-        }
-
-        currentDialog = new AlertDialog.Builder(this)
-                .setTitle(title)
-                .setMessage(message)
-                .setCancelable(false)
-                .setPositiveButton("quot;Play Again"quot;, (dialog, which) ->gt; {
-                    dialog.dismiss();
-                    currentDialog = null;
-                    restartGame();
-                })
-                .setNegativeButton("quot;Exit"quot;, (dialog, which) ->gt; {
-                    dialog.dismiss();
-                    currentDialog = null;
-                    finish();
-                })
-                .show();
-    }
-
-    private void showQuitConfirmDialog() {
-        if (currentDialog != null &amp;&amp; currentDialog.isShowing()) {
-            currentDialog.dismiss();
-        }
-
-        currentDialog = new AlertDialog.Builder(this)
-                .setTitle("quot;Quit Game?"quot;)
-                .setMessage("quot;Are you sure you want to quit?"quot;)
-                .setPositiveButton("quot;Yes"quot;, (dialog, which) ->gt; {
-                    dialog.dismiss();
-                    currentDialog = null;
-                    finish();
-                })
-                .setNegativeButton("quot;No"quot;, (dialog, which) ->gt; {
-                    dialog.dismiss();
-                    currentDialog = null;
-                })
-                .show();
-    }
-
-    private void restartGame() {
-                SaveGameManager.SaveGameData savedGame = saveGameManager.loadLatestGame();
-                if (savedGame != null) {
-                    game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, 0);
-                    game.getPlayer().setExperience(savedGame.playerExperience);
-                    game.getPlayer().setHealth(savedGame.playerHealth);
-                    
-                    Log.d(TAG, "quot;Loaded saved game: "quot; + savedGame.playerName);
-                } else {
-                    game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
-                    Log.d(TAG, "quot;Starting new game"quot;);
-                }
-        writeLog("quot;Game created successfully"quot;);
-        if (gameView != null) {
+        if (savedInstanceState == null) {
+            game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
+            dungeon = game.getDungeon();
             gameView.setGame(game);
-            Log.d("quot;MainActivity"quot;, "quot;GameView.setGame() called"quot;);
-            gameView.invalidate();
-        }
-        Log.d(TAG, "quot;Game restarted"quot;);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.d(TAG, "quot;onPause called"quot;);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "quot;onResume called"quot;);
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (currentDialog != null &amp;&amp; currentDialog.isShowing()) {
-            currentDialog.dismiss();
-            currentDialog = null;
-        }
-
-        if (gameView != null) {
-            gameView.setGameListener(null);
-        }
-
-        game = null;
-        gameView = null;
-
-        super.onDestroy();
-        Log.d(TAG, "quot;onDestroy called"quot;);
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        Log.d(TAG, "quot;onSaveInstanceState called"quot;);
-    }
-
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        Log.d(TAG, "quot;onRestoreInstanceState called"quot;);
-    }
-
-    private void writeLog(String msg) {
-        try {
-            File logFile = new File(getFilesDir(), "quot;roguelike_debug.log"quot;);
-            java.io.FileWriter fw = new java.io.FileWriter(logFile, true);
-            fw.write(System.currentTimeMillis() + "quot; "quot; + msg + "quot;\n"quot;);
-            fw.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+        } else {
+            SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
+            if (saveData != null) {
+                dungeon = game.getDungeon();
+                gameView.setGame(game);
+            } else {
+                game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
+                dungeon = game.getDungeon();
+                gameView.setGame(game);
+            }
         }
     }
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        
         try {
-            // Guard: verify request code and result
             if (requestCode != BATTLE_REQUEST_CODE || resultCode != RESULT_OK) {
                 return;
             }
-            
-            // Guard: data not null
             if (data == null) {
                 Log.w(TAG, "quot;onActivityResult: data is null"quot;);
                 return;
             }
-            
-            // Extract battleWon FIRST
             boolean battleWon = data.getBooleanExtra("quot;battleWon"quot;, false);
-            
-            // Extract updatedPlayer from Intent
             Serializable playerExtra = data.getSerializableExtra("quot;updatedPlayer"quot;);
             if (!(playerExtra instanceof Player)) {
                 Log.w(TAG, "quot;onActivityResult: updatedPlayer is not a valid Player"quot;);
                 return;
             }
             Player updatedPlayer = (Player) playerExtra;
-            
-            // Extract defeatedEnemyId
             int defeatedEnemyId = data.getIntExtra("quot;enemyId"quot;, -1);
-            
-            // Guard against 0 HP
-            int healthToSet = updatedPlayer.getCurrentHealth();
+
+            int healthToSet = updatedPlayer.getHealth();
             if (healthToSet <lt;= 0) {
-                healthToSet = currentPlayer.getMaxHealth();
-                Log.w(TAG, "quot;Battle result had 0 HP; restoring to max"quot;);
+                healthToSet = game.getPlayer().getMaxHealth();
             }
-            
-            // Sync player stats with guarded health value
-            currentPlayer.setHealth(healthToSet);
-            currentPlayer.setGoldCollected(updatedPlayer.getGoldCollected());
-            currentPlayer.setExperience(updatedPlayer.getExperience());
-            Log.d(TAG, "quot;Player synced: HP="quot; + currentPlayer.getCurrentHealth()
-                + "quot;, Gold="quot; + currentPlayer.getGoldCollected());
-            
-            // Save game if battle won
-            if (battleWon &amp;&amp; saveGameManager != null &amp;&amp; game != null) {
-                boolean saved = saveGameManager.saveGame(
-                    game.getPlayer(),
-                    dungeonManager,
-                    System.currentTimeMillis()
-                );
-                Log.d(TAG, "quot;Game saved: "quot; + saved);
+
+            if (game != null &amp;&amp; game.getPlayer() != null) {
+                game.getPlayer().setHealth(healthToSet);
+                game.getPlayer().addGold(updatedPlayer.getGoldCollected());
+                game.getPlayer().addExperience(updatedPlayer.getExperience());
             }
-            
-            // Mark defeated enemy as dead if battle won
-            if (defeatedEnemyId != -1 &amp;&amp; game != null &amp;&amp; battleWon) {
+
+            if (battleWon &amp;&amp; game != null &amp;&amp; dungeon != null) {
+                saveGameManager.saveGame(game.getPlayer(), dungeon, System.currentTimeMillis());
+            }
+
+            if (battleWon &amp;&amp; game != null) {
                 List<lt;Enemy>gt; currentEnemies = game.getEnemies();
                 if (currentEnemies != null) {
                     for (Enemy e : currentEnemies) {
@@ -354,22 +113,18 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     }
                 }
             }
-            
-            // Set game state to LOST if battle failed
+
             if (!battleWon &amp;&amp; game != null) {
                 game.setGameState(Game.GameState.LOST);
             }
-            
-            // Refresh view
+
             if (gameView != null) {
                 gameView.invalidate();
             }
-            
         } catch (Exception e) {
             Log.e(TAG, "quot;Error processing battle result"quot;, e);
         }
     }
-
 }
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
