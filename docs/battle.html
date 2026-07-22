@@ -21,8 +21,8 @@
         <h1>Battle</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Battle.java</div>
 package com.knightlight.game;
-import android.util.Log;
 
+import android.util.Log;
 import java.util.logging.Logger;
 import java.io.Serializable;
 
@@ -46,31 +46,22 @@ public class Battle implements Serializable {
     private final transient Object stateLock = new Object();
 
     public Battle(Player player, Enemy enemy) {
-        // Constructor validation - security hardening
         if (player == null) {
             throw new IllegalArgumentException("quot;Player cannot be null"quot;);
         }
         if (enemy == null) {
             throw new IllegalArgumentException("quot;Enemy cannot be null"quot;);
         }
-
         this.player = player;
         this.enemy = enemy;
         this.combatSystem = new CombatSystem(player, enemy);
         this.state = State.PLAYER_TURN;
         this.lastMessage = "quot;Battle started! "quot; + enemy.getName() + "quot; appears!"quot;;
-        
-        Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;Battle initialized: Player (Lvl "quot; + player.getLevel() + 
-              "quot;) vs "quot; + enemy.getName() + "quot; (Health: "quot; + enemy.getHealth() + "quot;)"quot;);
+        Logger.getLogger(getClass().getName()).info(TAG + "quot;: Battle initialized: Player (Lvl "quot; + player.getLevel() + "quot;) vs "quot; + enemy.getName() + "quot; (Health: "quot; + enemy.getHealth() + "quot;)"quot;);
     }
 
-    public Player getPlayer() {
-        return player;
-    }
-
-    public Enemy getEnemy() {
-        return enemy;
-    }
+    public Player getPlayer() { return player; }
+    public Enemy getEnemy() { return enemy; }
 
     public State getState() {
         synchronized (stateLock) {
@@ -78,33 +69,25 @@ public class Battle implements Serializable {
         }
     }
 
-    public String getLastMessage() {
-        return lastMessage;
-    }
-
-    public CombatSystem getCombatSystem() {
-        return combatSystem;
-    }
+    public String getLastMessage() { return lastMessage; }
+    public CombatSystem getCombatSystem() { return combatSystem; }
 
     public void playerAction(Action action) {
         if (action == null) {
             Log.w(TAG, "quot;playerAction called with null action"quot;);
             return;
         }
-
         synchronized (stateLock) {
             if (state != State.PLAYER_TURN) {
                 Log.w(TAG, "quot;playerAction called when state is "quot; + state);
                 return;
             }
-
             switch (action) {
                 case ATTACK:
                     combatSystem.playerAttack();
                     lastMessage = combatSystem.getLastLogEntry();
                     Log.d(TAG, "quot;Player attack: "quot; + lastMessage);
                     break;
-
                 case USE_POTION:
                     if (player.usePotion()) {
                         lastMessage = "quot;You healed yourself!"quot;;
@@ -115,7 +98,6 @@ public class Battle implements Serializable {
                         return;
                     }
                     break;
-
                 case RUN:
                     if (combatSystem.attemptFlee()) {
                         state = State.FLED;
@@ -128,29 +110,22 @@ public class Battle implements Serializable {
                         return;
                     }
             }
-
-            // Check if enemy is defeated after player action
             if (!enemy.isAlive()) {
                 state = State.VICTORY;
                 lastMessage = "quot;You defeated "quot; + enemy.getName() + "quot;!"quot;;
-                Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;VICTORY: Player defeated "quot; + enemy.getName() + 
-                      "quot; | Player Health: "quot; + player.getHealth());
-                
-                // Validate and process combat rewards
+                Logger.getLogger(getClass().getName()).info(TAG + "quot;: VICTORY: Player defeated "quot; + enemy.getName() + "quot; | Player Health: "quot; + player.getHealth());
                 CombatResult result = combatSystem.endCombat();
                 if (result == null) {
                     Log.e(TAG, "quot;CRITICAL: endCombat() returned null - rewards may not have been processed!"quot;);
                 } else if (!result.isSuccessful()) {
                     Log.e(TAG, "quot;endCombat() failed: "quot; + result.getMessage());
                 } else {
-    Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;Rewards processed: XP="quot; + result.getExperienceAwarded() + "quot; Gold="quot; + result.getGoldAwarded());
-    player.addExperience(result.getExperienceAwarded());
-    player.addGold(result.getGoldAwarded());
+                    Logger.getLogger(getClass().getName()).info(TAG + "quot;: Rewards processed: XP="quot; + result.getExperienceAwarded() + "quot; Gold="quot; + result.getGoldAwarded());
+                    player.addExperience(result.getExperienceAwarded());
+                    player.addGold(result.getGoldAwarded());
                 }
                 return;
             }
-
-            // Proceed to enemy turn
             state = State.ENEMY_TURN;
             enemyTurn();
         }
@@ -162,19 +137,13 @@ public class Battle implements Serializable {
                 Log.w(TAG, "quot;enemyTurn called when state is "quot; + state);
                 return;
             }
-
             combatSystem.enemyAttack();
             lastMessage = combatSystem.getLastLogEntry();
             Log.d(TAG, "quot;Enemy turn: "quot; + lastMessage);
-
-            // Check if player is defeated after enemy action
             if (!player.isAlive()) {
                 state = State.DEFEAT;
                 lastMessage = enemy.getName() + "quot; defeated you!"quot;;
-                Logger.getLogger(getClass().getName()).info(TAG + "quot;: "quot; + "quot;DEFEAT: Player defeated by "quot; + enemy.getName() + 
-                      "quot; | Enemy Health: "quot; + enemy.getHealth());
-                
-                // Validate defeat processing
+                Logger.getLogger(getClass().getName()).info(TAG + "quot;: DEFEAT: Player defeated by "quot; + enemy.getName() + "quot; | Enemy Health: "quot; + enemy.getHealth());
                 CombatResult result = combatSystem.endCombat();
                 if (result == null) {
                     Log.e(TAG, "quot;CRITICAL: endCombat() returned null on defeat"quot;);
@@ -183,8 +152,6 @@ public class Battle implements Serializable {
                 }
                 return;
             }
-
-            // Return to player turn
             state = State.PLAYER_TURN;
         }
     }

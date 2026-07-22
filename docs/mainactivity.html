@@ -81,9 +81,13 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 if (savedGame != null) {
                     game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, 0);
                     game.getPlayer().setExperience(savedGame.playerExperience);
-                    game.getPlayer().setHealth(savedGame.playerHealth);
                     
-                    Log.d(TAG, "quot;Loaded saved game: "quot; + savedGame.playerName);
+                        int healthToLoad = savedGame.playerHealth;
+                        if (healthToLoad <lt;= 0) {
+                            healthToLoad = game.getPlayer().getMaxHealth();
+                            Log.w(TAG, "quot;Loaded game had 0 HP; restoring to max"quot;);
+                            }
+                        game.getPlayer().setHealth(healthToLoad);
                 } else {
                     game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
                     Log.d(TAG, "quot;Starting new game"quot;);
@@ -287,51 +291,82 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         
-        if (requestCode == BATTLE_REQUEST_CODE &amp;&amp; data != null) {
-            try {
-                Player updatedPlayer = (Player) data.getSerializableExtra("quot;player"quot;);
-                boolean battleWon = data.getBooleanExtra("quot;battle_won"quot;, false);
-                
-                if (updatedPlayer != null &amp;&amp; game != null) {
-                    Player currentPlayer = game.getPlayer();
-                    if (currentPlayer != null) {
-                        currentPlayer.setHealth(updatedPlayer.getCurrentHealth());
-                        currentPlayer.setGoldCollected(updatedPlayer.getGoldCollected());
-                        Log.d(TAG, "quot;Player synced: HP="quot; + currentPlayer.getCurrentHealth() + "quot;, Gold="quot; + currentPlayer.getGoldCollected());
-                        currentPlayer.setExperience(updatedPlayer.getExperience());
-        
-        if (saveGameManager != null &amp;&amp; game != null) {
-            boolean saved = saveGameManager.saveGame(
-                game.getPlayer(),
-                dungeonManager,
-                System.currentTimeMillis()
-            );
-            Log.d(TAG, "quot;Game saved: "quot; + saved);
-        }
-                                                                                     int defeatedEnemyId = data.getIntExtra("quot;enemyId"quot;, -1);
-                                                            if (defeatedEnemyId != -1 &amp;&amp; game != null &amp;&amp; battleWon) {
-                                                                List<lt;Enemy>gt; currentEnemies = game.getEnemies();
-                                                                for (Enemy e : currentEnemies) {
-                                                                    if (e != null &amp;&amp; e.getEnemyId() == defeatedEnemyId) {
-                                                                        e.setDead(true);
-                                                                        Log.d(TAG, "quot;Enemy "quot; + defeatedEnemyId + "quot; marked as dead"quot;);
-                                                                        break;
-                                                                    }
-                                                                }
-                                                            }
-                        
-                        if (gameView != null) {
-                            gameView.invalidate();
+        try {
+            // Guard: verify request code and result
+            if (requestCode != BATTLE_REQUEST_CODE || resultCode != RESULT_OK) {
+                return;
+            }
+            
+            // Guard: data not null
+            if (data == null) {
+                Log.w(TAG, "quot;onActivityResult: data is null"quot;);
+                return;
+            }
+            
+            // Extract battleWon FIRST
+            boolean battleWon = data.getBooleanExtra("quot;battleWon"quot;, false);
+            
+            // Extract updatedPlayer from Intent
+            Serializable playerExtra = data.getSerializableExtra("quot;updatedPlayer"quot;);
+            if (!(playerExtra instanceof Player)) {
+                Log.w(TAG, "quot;onActivityResult: updatedPlayer is not a valid Player"quot;);
+                return;
+            }
+            Player updatedPlayer = (Player) playerExtra;
+            
+            // Extract defeatedEnemyId
+            int defeatedEnemyId = data.getIntExtra("quot;enemyId"quot;, -1);
+            
+            // Guard against 0 HP
+            int healthToSet = updatedPlayer.getCurrentHealth();
+            if (healthToSet <lt;= 0) {
+                healthToSet = currentPlayer.getMaxHealth();
+                Log.w(TAG, "quot;Battle result had 0 HP; restoring to max"quot;);
+            }
+            
+            // Sync player stats with guarded health value
+            currentPlayer.setHealth(healthToSet);
+            currentPlayer.setGoldCollected(updatedPlayer.getGoldCollected());
+            currentPlayer.setExperience(updatedPlayer.getExperience());
+            Log.d(TAG, "quot;Player synced: HP="quot; + currentPlayer.getCurrentHealth()
+                + "quot;, Gold="quot; + currentPlayer.getGoldCollected());
+            
+            // Save game if battle won
+            if (battleWon &amp;&amp; saveGameManager != null &amp;&amp; game != null) {
+                boolean saved = saveGameManager.saveGame(
+                    game.getPlayer(),
+                    dungeonManager,
+                    System.currentTimeMillis()
+                );
+                Log.d(TAG, "quot;Game saved: "quot; + saved);
+            }
+            
+            // Mark defeated enemy as dead if battle won
+            if (defeatedEnemyId != -1 &amp;&amp; game != null &amp;&amp; battleWon) {
+                List<lt;Enemy>gt; currentEnemies = game.getEnemies();
+                if (currentEnemies != null) {
+                    for (Enemy e : currentEnemies) {
+                        if (e != null &amp;&amp; e.getEnemyId() == defeatedEnemyId) {
+                            e.setDead(true);
+                            Log.d(TAG, "quot;Enemy "quot; + defeatedEnemyId + "quot; marked as dead"quot;);
+                            break;
                         }
                     }
                 }
-                
-                if (!battleWon &amp;&amp; game != null) {
-                    game.setGameState(Game.GameState.LOST);
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "quot;Error processing battle result"quot;, e);
             }
+            
+            // Set game state to LOST if battle failed
+            if (!battleWon &amp;&amp; game != null) {
+                game.setGameState(Game.GameState.LOST);
+            }
+            
+            // Refresh view
+            if (gameView != null) {
+                gameView.invalidate();
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "quot;Error processing battle result"quot;, e);
         }
     }
 
