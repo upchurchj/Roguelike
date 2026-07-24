@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
                 for (int y = 0; y <lt; saveData.dungeonMap.length; y++) {
                     if (saveData.dungeonMap[y] != null) {
                         for (int x = 0; x <lt; saveData.dungeonMap[y].length; x++) {
-                            gameDungeon.setTile(x, y, saveData.dungeonMap[y][x]);
+                            gameDungeon.setTile(x, y, (char) saveData.dungeonMap[y][x]);
                         }
                     }
                 }
