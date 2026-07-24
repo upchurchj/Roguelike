@@ -51,16 +51,46 @@ public class MainActivity extends AppCompatActivity {
 
         SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
         
-        // Always create fresh game with standard dimensions
+        // Create fresh game with standard dimensions
         game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
         
-        // If we have saved player data, copy health to the new game'#39;s player
-        if (saveData != null &amp;&amp; saveData.player != null) {
-            Player newGamePlayer = game.getPlayer();
-            Player savedPlayer = saveData.player;
+        // If we have saved data, restore the game state
+        if (saveData != null) {
+            // Restore player position
+            if (saveData.playerX >gt;= 0 &amp;&amp; saveData.playerY >gt;= 0) {
+                Player gamePlayer = game.getPlayer();
+                gamePlayer.setX(saveData.playerX);
+                gamePlayer.setY(saveData.playerY);
+                Log.d(TAG, "quot;Restored player position to ("quot; + saveData.playerX + "quot;, "quot; + saveData.playerY + "quot;)"quot;);
+            }
             
-            // Copy health only (other stats may not have setters)
-            newGamePlayer.setHealth(savedPlayer.getHealth());
+            // Restore player stats
+            if (saveData.player != null) {
+                Player gamePlayer = game.getPlayer();
+                gamePlayer.setHealth(saveData.player.getHealth());
+                gamePlayer.setExperience(saveData.player.getExperience());
+                gamePlayer.setGoldCollected(saveData.player.getGoldCollected());
+                Log.d(TAG, "quot;Restored player stats: exp="quot; + saveData.player.getExperience() + "quot; hp="quot; + saveData.player.getHealth());
+            }
+            
+            // Restore dungeon map
+            if (saveData.dungeonMap != null) {
+                Dungeon gameDungeon = game.getDungeon();
+                for (int y = 0; y <lt; saveData.dungeonMap.length &amp;&amp; y <lt; gameDungeon.getHeight(); y++) {
+                    for (int x = 0; x <lt; saveData.dungeonMap[y].length &amp;&amp; x <lt; gameDungeon.getWidth(); x++) {
+                        gameDungeon.setTile(x, y, (char) saveData.dungeonMap[y][x]);
+                    }
+                }
+                Log.d(TAG, "quot;Restored dungeon map"quot;);
+            }
+            
+            // Restore enemies (clear current and add saved ones)
+            if (saveData.enemies != null &amp;&amp; !saveData.enemies.isEmpty()) {
+                List<lt;Enemy>gt; gameEnemies = game.getEnemies();
+                gameEnemies.clear();
+                gameEnemies.addAll(saveData.enemies);
+                Log.d(TAG, "quot;Restored "quot; + saveData.enemies.size() + "quot; enemies"quot;);
+            }
         }
         
         dungeon = game.getDungeon();
