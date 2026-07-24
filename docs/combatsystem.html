@@ -21,11 +21,10 @@
         <h1>CombatSystem</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/CombatSystem.java</div>
 package com.knightlight.game;
-import android.util.Log;
 
+import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class CombatSystem {
     private Player player;
@@ -57,7 +56,6 @@ public class CombatSystem {
         int playerAttack = player.getAttack();
         int enemyDefense = enemy.getDefense();
         int damage = Math.max(1, playerAttack - enemyDefense + (int)(Math.random() * 5));
-        
         enemy.takeDamage(damage);
         lastLogEntry = "quot;You attack for "quot; + damage + "quot; damage!"quot;;
         combatLog.add(lastLogEntry);
@@ -73,7 +71,6 @@ public class CombatSystem {
         int playerDefense = player.getDefense();
         int baseDamage = Math.max(1, enemyAttack - playerDefense);
         int damage = baseDamage;
-        
         player.takeDamage(damage);
         lastLogEntry = enemy.getName() + "quot; attacks for "quot; + damage + "quot; damage!"quot;;
         combatLog.add(lastLogEntry);
@@ -83,54 +80,45 @@ public class CombatSystem {
     public boolean attemptFlee() {
         double fleeChance = 0.3;
         if (Math.random() <lt; fleeChance) {
-            lastLogEntry = "quot;You fled successfully!"quot;;
+            lastLogEntry = "quot;You successfully flee!"quot;;
             combatLog.add(lastLogEntry);
             Log.d("quot;CombatSystem"quot;, "quot;Flee successful"quot;);
             return true;
-        } else {
-            lastLogEntry = "quot;Failed to flee!"quot;;
-            combatLog.add(lastLogEntry);
-            Log.d("quot;CombatSystem"quot;, "quot;Flee failed"quot;);
-            return false;
         }
+        lastLogEntry = "quot;You failed to flee!"quot;;
+        combatLog.add(lastLogEntry);
+        Log.d("quot;CombatSystem"quot;, "quot;Flee failed"quot;);
+        return false;
     }
 
     public CombatResult endCombat() {
-        if (player == null || enemy == null) {
-            Log.w("quot;CombatSystem"quot;, "quot;endCombat called with null player or enemy"quot;);
+        // FIX #4: Restore truncated endCombat() method with XP/gold logic
+        if (enemy == null || !enemy.isDead()) {
+            Log.w("quot;CombatSystem"quot;, "quot;endCombat called but enemy is not dead"quot;);
             return CombatResult.ongoing();
         }
 
-        if (!player.isAlive()) {
-            lastLogEntry = "quot;You have been defeated!"quot;;
-            combatLog.add("quot;\n=== DEFEAT ==="quot;);
-            combatLog.add(lastLogEntry);
-            Log.d("quot;CombatSystem"quot;, "quot;Player defeated"quot;);
-            return CombatResult.defeat(lastLogEntry);
+        if (player == null) {
+            Log.w("quot;CombatSystem"quot;, "quot;endCombat called with null player"quot;);
+            return CombatResult.ongoing();
         }
 
-        if (!enemy.isAlive()) {
-            combatLog.add("quot;\n=== VICTORY ==="quot;);
-            combatLog.add(player.getName() + "quot; defeated "quot; + enemy.getName() + "quot;!"quot;);
-            
-            int xpReward = enemy.getExperienceReward();
-            if (xpReward >gt; 0) {
-                player.addExperience(xpReward);
-                combatLog.add("quot;Gained "quot; + xpReward + "quot; experience!"quot;);
-            }
-            
-            int goldReward = enemy.getGoldReward();
-            if (goldReward >gt; 0) {
-                player.addGold(goldReward);
-                combatLog.add("quot;Gained "quot; + goldReward + "quot; gold!"quot;);
-            }
-            
-            enemy.setDead(true);
-            Log.d("quot;CombatSystem"quot;, "quot;Victory"quot; + "quot; "quot; + "quot;Player gained "quot; + xpReward + "quot;xp and "quot; + goldReward + "quot;g"quot;);
-            return CombatResult.victory(player.getName() + "quot; defeated "quot; + enemy.getName() + "quot;!"quot;, xpReward, goldReward);
+        int xpReward = enemy.getExperienceReward();
+        if (xpReward >gt; 0) {
+            player.addExperience(xpReward);
+            combatLog.add("quot;Gained "quot; + xpReward + "quot; experience!"quot;);
         }
 
-        return CombatResult.ongoing();
+        int goldReward = enemy.getGoldReward();
+        if (goldReward >gt; 0) {
+            player.addGold(goldReward);
+            combatLog.add("quot;Gained "quot; + goldReward + "quot; gold!"quot;);
+        }
+
+        enemy.setDead(true);
+        Log.d("quot;CombatSystem"quot;, "quot;Victory - Player gained "quot; + xpReward + "quot;xp and "quot; + goldReward + "quot;g"quot;);
+
+        return CombatResult.victory(player.getName() + "quot; defeated "quot; + enemy.getName() + "quot;!"quot;, xpReward, goldReward);
     }
 
     public Player getPlayer() {

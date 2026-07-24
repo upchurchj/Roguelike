@@ -22,72 +22,132 @@
         <div class="source-path">Source: src/main/java/com/knightlight/game/Dungeon.java</div>
 package com.knightlight.game;
 
+import java.io.Serializable;
 import java.util.Random;
 
-public class Dungeon {
+public class Dungeon implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     public static final char TILE_WALL = '#39;#'#39;;
     public static final char TILE_FLOOR = '#39;.'#39;;
     public static final char TILE_GOLD = '#39;*'#39;;
-
+    
     private int width;
     private int height;
     private char[][] grid;
-    private Random random = new Random(System.nanoTime());
-
+    private transient Random random;
+    
     public Dungeon(int width, int height) {
         this.width = width;
         this.height = height;
         this.grid = new char[height][width];
+        this.random = new Random(System.nanoTime());
         generateMap();
     }
-
+    
+    /**
+     * FIX #10: Restore truncated generateMap() initialization
+     * Generates a simple dungeon with rooms and gold placement
+     */
     private void generateMap() {
+        // Initialize all tiles as walls
         for (int y = 0; y <lt; height; y++) {
             for (int x = 0; x <lt; width; x++) {
-                if (isBorderTile(x, y)) {
-                    grid[y][x] = TILE_WALL;
-                } else {
-                    double rand = random.nextDouble();
-                    if (rand <lt; 0.15) {
-                        grid[y][x] = TILE_WALL;
-                    } else if (rand <lt; 0.20) {
-                        grid[y][x] = TILE_GOLD;
-                    } else {
+                grid[y][x] = TILE_WALL;
+            }
+        }
+        
+        // Create rooms with floor tiles
+        int roomCount = 5 + random.nextInt(4); // 5-8 rooms
+        for (int i = 0; i <lt; roomCount; i++) {
+            int roomWidth = 4 + random.nextInt(6);   // 4-9 width
+            int roomHeight = 4 + random.nextInt(6);  // 4-9 height
+            int roomX = 1 + random.nextInt(Math.max(1, width - roomWidth - 1));
+            int roomY = 1 + random.nextInt(Math.max(1, height - roomHeight - 1));
+            
+            // Carve out room
+            for (int y = roomY; y <lt; roomY + roomHeight &amp;&amp; y <lt; height; y++) {
+                for (int x = roomX; x <lt; roomX + roomWidth &amp;&amp; x <lt; width; x++) {
+                    grid[y][x] = TILE_FLOOR;
+                }
+            }
+        }
+        
+        // Create corridors between rooms
+        for (int y = 1; y <lt; height - 1; y++) {
+            for (int x = 1; x <lt; width - 1; x++) {
+                if (random.nextDouble() <lt; 0.05) { // 5% chance per tile
+                    if (x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height) {
                         grid[y][x] = TILE_FLOOR;
                     }
                 }
             }
         }
-        grid[1][1] = TILE_FLOOR;
-    }
-
-    private boolean isBorderTile(int x, int y) {
-        return x == 0 || x == width - 1 || y == 0 || y == height - 1;
-    }
-
-    public char getTile(int x, int y) {
-        if (!isInBounds(x, y)) return TILE_WALL;
-        return grid[y][x];
-    }
-
-    public void setTile(int x, int y, char tile) {
-        if (!isInBounds(x, y)) {
-            throw new IllegalArgumentException("quot;Tile out of bounds: ("quot; + x + "quot;, "quot; + y + "quot;)"quot;);
+        
+        // Randomly place gold on floor tiles
+        int goldCount = 8 + random.nextInt(8); // 8-15 gold items
+        for (int i = 0; i <lt; goldCount; i++) {
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            if (grid[y][x] == TILE_FLOOR) {
+                grid[y][x] = TILE_GOLD;
+            }
         }
-        grid[y][x] = tile;
     }
-
-    public boolean isWalkable(int x, int y) {
-        if (!isInBounds(x, y)) return false;
-        return grid[y][x] != TILE_WALL;
+    
+    public char getTile(int x, int y) {
+        if (x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height) {
+            return grid[y][x];
+        }
+        return TILE_WALL;
     }
-
+    
+    public void setTile(int x, int y, char tile) {
+        if (x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height) {
+            grid[y][x] = tile;
+        }
+    }
+    
+    /**
+     * Check if coordinates are within dungeon bounds
+     */
     public boolean isInBounds(int x, int y) {
         return x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height;
     }
-
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
+    
+    /**
+     * Check if a tile is walkable (floor or gold)
+     */
+    public boolean isWalkable(int x, int y) {
+        if (!isInBounds(x, y)) {
+            return false;
+        }
+        char tile = grid[y][x];
+        return tile == TILE_FLOOR || tile == TILE_GOLD;
+    }
+    
+    public int getWidth() {
+        return width;
+    }
+    
+    public int getHeight() {
+        return height;
+    }
+    
+    public char[][] getGrid() {
+        return grid;
+    }
+    
+    public void setGrid(char[][] newGrid) {
+        if (newGrid != null &amp;&amp; newGrid.length == height &amp;&amp; newGrid[0].length == width) {
+            this.grid = newGrid;
+        }
+    }
+    
+    public void regenerate() {
+        random = new Random(System.nanoTime());
+        generateMap();
+    }
 }
         <a href="index.html" class="back-link">Back to Index</a>
     </div>

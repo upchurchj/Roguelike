@@ -21,36 +21,34 @@
         <h1>ExperienceSystem</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/ExperienceSystem.java</div>
 package com.knightlight.game;
-import android.util.Log;
 
-import java.util.logging.Logger;
+import android.util.Log;
 import java.io.Serializable;
 
 public class ExperienceSystem implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final String TAG = "quot;ExperienceSystem"quot;;
-    
     private int currentLevel;
     private long currentExperience;
     private long experienceForNextLevel;
     private final Object levelLock = new Object();
-    
+
     // Experience thresholds using exponential scaling: baseExp * (1.5 ^ (level - 1))
     private static final long BASE_EXPERIENCE = 100L;
     private static final double EXP_MULTIPLIER = 1.5;
-    
+
     // Stat growth per level
     private static final int HEALTH_PER_LEVEL = 5;
     private static final int ATTACK_PER_LEVEL = 2;
     private static final int DEFENSE_PER_LEVEL = 1;
-    
+
     public ExperienceSystem() {
         this.currentLevel = 1;
         this.currentExperience = 0;
         this.experienceForNextLevel = calculateExperienceThreshold(1);
         Log.d(TAG, "quot;ExperienceSystem initialized"quot;);
     }
-    
+
     /**
      * Calculates experience needed for a given level
      * @param level Target level (1-based)
@@ -58,84 +56,84 @@ public class ExperienceSystem implements Serializable {
      */
     private static long calculateExperienceThreshold(int level) {
         if (level <lt; 1) {
-            throw new IllegalArgumentException("quot;Level must be >gt;= 1"quot;);
+            Log.w(TAG, "quot;Invalid level requested: "quot; + level);
+            return 0L;
         }
         // Exponential scaling: 100 * 1.5^(level-1)
         return Math.round(BASE_EXPERIENCE * Math.pow(EXP_MULTIPLIER, level - 1));
     }
-    
+
     /**
      * Add experience and check for level-up
+     * FIX #9: Restore truncated addExperience() level-up loop
      * @param amount Experience to add (validated to be non-negative)
      * @return Number of levels gained (0 if no level-up)
      */
     public synchronized int addExperience(int amount) {
         if (amount <lt; 0) {
-            Log.w(TAG, "quot;addExperience called with negative amount: "quot; + amount);
+            Log.w(TAG, "quot;Negative experience amount ignored: "quot; + amount);
             return 0;
         }
-        if (amount == 0) {
-            return 0;
+
+        currentExperience += amount;
+        int levelsGained = 0;
+
+        // Level-up loop: keep leveling while experience exceeds threshold
+        while (currentExperience >gt;= experienceForNextLevel) {
+            currentExperience -= experienceForNextLevel;
+            currentLevel++;
+            experienceForNextLevel = calculateExperienceThreshold(currentLevel);
+            levelsGained++;
+            Log.d(TAG, "quot;Level up! New level: "quot; + currentLevel);
         }
-        
+
+        Log.d(TAG, "quot;Added "quot; + amount + "quot; experience. Total: "quot; + currentExperience + "quot;/"quot; + experienceForNextLevel);
+        return levelsGained;
+    }
+
+    public int getCurrentLevel() {
         synchronized (levelLock) {
-            currentExperience += amount;
-            int levelsGained = 0;
-            
-            // Check for level-ups
-            while (currentExperience >gt;= experienceForNextLevel &amp;&amp; currentLevel <lt; 99) {
-                currentExperience -= experienceForNextLevel;
-                currentLevel++;
-                experienceForNextLevel = calculateExperienceThreshold(currentLevel);
-                levelsGained++;
-                Log.d(TAG, "quot;Level up! New level: "quot; + currentLevel);
-            }
-            
-            return levelsGained;
+            return currentLevel;
         }
     }
-    
-    public synchronized int getLevel() {
-        return currentLevel;
+
+    public long getCurrentExperience() {
+        synchronized (levelLock) {
+            return currentExperience;
+        }
     }
-    
-    public synchronized long getExperience() {
-        return currentExperience;
+
+    public long getExperienceForNextLevel() {
+        synchronized (levelLock) {
+            return experienceForNextLevel;
+        }
     }
-    
-    public synchronized long getExperienceForNextLevel() {
-        return experienceForNextLevel;
+
+    public void setCurrentLevel(int level) {
+        synchronized (levelLock) {
+            this.currentLevel = level;
+            this.experienceForNextLevel = calculateExperienceThreshold(level);
+            Log.d(TAG, "quot;Level set to: "quot; + level);
+        }
     }
-    
-    /**
-     * Get progress to next level (0.0 to 1.0)
-     */
-    public synchronized float getExperienceProgress() {
-        long prevThreshold = calculateExperienceThreshold(currentLevel);
-        long currentProgress = currentExperience;
-        return (float) currentProgress / experienceForNextLevel;
+
+    public void setCurrentExperience(long experience) {
+        synchronized (levelLock) {
+            this.currentExperience = experience;
+            Log.d(TAG, "quot;Experience set to: "quot; + experience);
+        }
     }
-    
-    /**
-     * Calculate stat bonuses based on level
-     */
-    public int getHealthBonus() {
-        return (currentLevel - 1) * HEALTH_PER_LEVEL;
+
+    public static int getHealthPerLevel() {
+        return HEALTH_PER_LEVEL;
     }
-    
-    public int getAttackBonus() {
-        return (currentLevel - 1) * ATTACK_PER_LEVEL;
+
+    public static int getAttackPerLevel() {
+        return ATTACK_PER_LEVEL;
     }
-    
-    public int getDefenseBonus() {
-        return (currentLevel - 1) * DEFENSE_PER_LEVEL;
-    }
-    
-    public synchronized void reset() {
-        currentLevel = 1;
-        currentExperience = 0;
-        experienceForNextLevel = calculateExperienceThreshold(1);
-        Log.d(TAG, "quot;ExperienceSystem reset"quot;);
+
+    public static int getDefensePerLevel() {
+        return DEFENSE_PER_LEVEL;
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>

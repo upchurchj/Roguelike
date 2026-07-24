@@ -49,21 +49,22 @@ public class MainActivity extends AppCompatActivity {
         gameView = findViewById(R.id.game_view);
         saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
 
-        if (savedInstanceState == null) {
-            game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
-            dungeon = game.getDungeon();
-            gameView.setGame(game);
-        } else {
-            SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
-            if (saveData != null) {
-                dungeon = game.getDungeon();
-                gameView.setGame(game);
-            } else {
-                game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
-                dungeon = game.getDungeon();
-                gameView.setGame(game);
-            }
+        SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
+        
+        // Always create fresh game with standard dimensions
+        game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
+        
+        // If we have saved player data, copy health to the new game'#39;s player
+        if (saveData != null &amp;&amp; saveData.player != null) {
+            Player newGamePlayer = game.getPlayer();
+            Player savedPlayer = saveData.player;
+            
+            // Copy health only (other stats may not have setters)
+            newGamePlayer.setHealth(savedPlayer.getHealth());
         }
+        
+        dungeon = game.getDungeon();
+        gameView.setGame(game);
     }
 
     @Override
@@ -85,23 +86,11 @@ public class MainActivity extends AppCompatActivity {
             }
             Player updatedPlayer = (Player) playerExtra;
             int defeatedEnemyId = data.getIntExtra("quot;enemyId"quot;, -1);
-
             int healthToSet = updatedPlayer.getHealth();
-            if (healthToSet <lt;= 0) {
-                healthToSet = game.getPlayer().getMaxHealth();
-            }
-
-            if (game != null &amp;&amp; game.getPlayer() != null) {
+            if (game != null) {
                 game.getPlayer().setHealth(healthToSet);
-                game.getPlayer().addGold(updatedPlayer.getGoldCollected());
-                game.getPlayer().addExperience(updatedPlayer.getExperience());
             }
-
-            if (battleWon &amp;&amp; game != null &amp;&amp; dungeon != null) {
-                saveGameManager.saveGame(game.getPlayer(), dungeon, System.currentTimeMillis());
-            }
-
-            if (battleWon &amp;&amp; game != null) {
+            if (defeatedEnemyId >gt;= 0) {
                 List<lt;Enemy>gt; currentEnemies = game.getEnemies();
                 if (currentEnemies != null) {
                     for (Enemy e : currentEnemies) {
@@ -113,11 +102,9 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-
             if (!battleWon &amp;&amp; game != null) {
                 game.setGameState(Game.GameState.LOST);
             }
-
             if (gameView != null) {
                 gameView.invalidate();
             }

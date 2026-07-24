@@ -21,14 +21,13 @@
         <h1>Enemy</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Enemy.java</div>
 package com.knightlight.game;
-import android.util.Log;
 
+import android.util.Log;
 import java.io.Serializable;
-import java.util.logging.Logger;
 
 public class Enemy implements Serializable {
     private static final long serialVersionUID = 1L;
-
+    
     private int x;
     private int y;
     private int health;
@@ -43,7 +42,7 @@ public class Enemy implements Serializable {
     private int experienceReward;
     private int level;
     private int goldReward;
-
+    
     public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon, String name, int defense, int experienceReward, int level) {
         this.x = x;
         this.y = y;
@@ -59,108 +58,125 @@ public class Enemy implements Serializable {
         this.level = level;
         this.goldReward = 25;
     }
-
+    
     public synchronized int getX() {
         return x;
     }
-
+    
     public synchronized int getY() {
         return y;
     }
-
+    
     public synchronized int getHealth() {
         return health;
     }
-
+    
     public synchronized int getMaxHealth() {
         return maxHealth;
     }
-
+    
     public synchronized int getAttack() {
         return attackPower;
     }
-
+    
     public int getGoldReward() {
         return isBoss ? 100 : 25;
     }
-
+    
     public synchronized boolean isAlive() {
         return health >gt; 0;
     }
-
+    
     public synchronized int getEnemyId() {
         return enemyId;
     }
-
+    
     public synchronized boolean isDead() {
         return health <lt;= 0;
     }
-
-    public String getName() {
-        return name;
-    }
-
-    public synchronized int getDefense() {
-        return defense;
-    }
-
-    public int getExperienceReward() {
-        return experienceReward;
-    }
-
-    public synchronized int getLevel() {
-        return level;
-    }
-
-    public static Enemy createBoss(int x, int y, Dungeon dungeon) {
-        Enemy boss = new Enemy(x, y, 50, 5, dungeon, "quot;Boss"quot;, 3, 500, 10);
-        boss.setIsBoss(true);
-        return boss;
-    }
-
-    public synchronized void takeDamage(int damage) {
-        if (damage <lt; 0) {
-            Log.w("quot;Enemy"quot;, "quot;Negative damage attempted: "quot; + damage);
-            return;
+    
+    public synchronized void setDead(boolean dead) {
+        if (dead) {
+            this.health = 0;
         }
-        int oldHealth = health;
-        health = Math.max(0, health - damage);
-        if (health == 0 &amp;&amp; oldHealth >gt; 0) {
+    }
+    
+    public synchronized void takeDamage(int damage) {
+        health -= damage;
+        if (health <lt;= 0) {
             Log.d("quot;Enemy"quot;, this.getName() + "quot; has been defeated!"quot;);
         }
     }
-
+    
+    /**
+     * FIX #12: Restore truncated moveToward() X-axis and Y-axis movement logic
+     * Move enemy toward player if possible
+     */
     public synchronized void moveToward(Player player) {
         if (player == null || dungeon == null) {
             Log.w("quot;Enemy"quot;, "quot;moveToward called with null player or dungeon"quot;);
             return;
         }
+        
         int playerX = player.getX();
         int playerY = player.getY();
+        
+        // X-axis movement (prioritize horizontal distance)
         if (x >gt; playerX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
             x--;
         } else if (x <lt; playerX &amp;&amp; dungeon.isWalkable(x + 1, y)) {
             x++;
         }
-        if (y >gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
+        // Y-axis movement (prioritize vertical distance)
+        else if (y >gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
             y--;
         } else if (y <lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) {
             y++;
         }
     }
-
-    public void setIsBoss(boolean boss) {
-        this.isBoss = boss;
+    
+    public String getName() {
+        return name;
     }
-
+    
+    public synchronized void setName(String name) {
+        this.name = name;
+    }
+    
+    public int getDefense() {
+        return defense;
+    }
+    
+    public synchronized void setDefense(int defense) {
+        this.defense = defense;
+    }
+    
+    public int getExperienceReward() {
+        return experienceReward;
+    }
+    
+    public synchronized void setExperienceReward(int experienceReward) {
+        this.experienceReward = experienceReward;
+    }
+    
+    public int getLevel() {
+        return level;
+    }
+    
+    public synchronized void setLevel(int level) {
+        this.level = level;
+    }
+    
     public boolean isBoss() {
         return isBoss;
     }
-
-    public void setDead(boolean dead) {
-        if (dead) {
-            health = 0;
-        }
+    
+    public synchronized void setIsBoss(boolean boss) {
+        isBoss = boss;
+    }
+    
+    public void setDungeon(Dungeon dungeon) {
+        this.dungeon = dungeon;
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>
