@@ -1,0 +1,3105 @@
+diff --git a/.gitignore b/.gitignore
+index 3ca7045..05a3d34 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -24,3 +24,7 @@ logcat_capture.txt
+ # Python
+ *.pyc
+ knightlight.jks
++logcat_output.txt
++logcat_capture.txt
++*.log
++patch_*.sh
+diff --git a/battle.html b/battle.html
+new file mode 100644
+index 0000000..ead2ef4
+--- /dev/null
++++ b/battle.html
+@@ -0,0 +1,187 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>Battle.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>Battle.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/Battle.java</p>
++    <pre>package com.knightlight.game;
++
++import java.util.Random;
++import android.util.Log;
++
++public class Battle {
++    public enum Action { ATTACK, DEFEND, ITEM, RUN }
++    public enum State { PLAYER_TURN, ENEMY_TURN, VICTORY, DEFEAT, FLED }
++
++    private Player player;
++    private Enemy enemy;
++    private State state;
++    private String lastMessage;
++    private boolean defending;
++    private Random random;
++    private final Object stateLock = new Object();
++
++    public Battle(Player player, Enemy enemy) {
++        if (player == null || enemy == null) {
++            Log.e(&quot;Battle&quot;, &quot;Battle constructor called with null player or enemy&quot;);
++            throw new IllegalArgumentException(&quot;Player and Enemy cannot be null&quot;);
++        }
++        this.player = player;
++        this.enemy = enemy;
++        this.state = State.PLAYER_TURN;
++        this.defending = false;
++        this.lastMessage = &quot;Battle started!&quot;;
++        this.random = new Random(System.nanoTime());
++    }
++
++    public void playerAction(Action action) {
++        if (action == null) {
++            Log.w(&quot;Battle&quot;, &quot;playerAction called with null action&quot;);
++            return;
++        }
++
++        synchronized (stateLock) {
++            if (state != State.PLAYER_TURN) {
++                Log.w(&quot;Battle&quot;, &quot;playerAction called when state is &quot; + state);
++                return;
++            }
++            defending = false;
++
++            switch (action) {
++                case ATTACK:
++                    playerAttack();
++                    break;
++                case DEFEND:
++                    defending = true;
++                    lastMessage = &quot;You brace for impact!&quot;;
++                    break;
++                case ITEM:
++                    usePotion();
++                    break;
++                case RUN:
++                    if (random.nextDouble() &lt; 0.5) {
++                        state = State.FLED;
++                        lastMessage = &quot;You escaped!&quot;;
++                        return;
++                    } else {
++                        lastMessage = &quot;Couldn&#x27;t escape!&quot;;
++                    }
++                    break;
++            }
++
++            if (state != State.FLED &amp;&amp; state != State.VICTORY) {
++                state = State.ENEMY_TURN;
++            }
++        }
++    }
++
++    public void enemyTurn() {
++        synchronized (stateLock) {
++            if (state != State.ENEMY_TURN) {
++                Log.w(&quot;Battle&quot;, &quot;enemyTurn called when state is &quot; + state);
++                return;
++            }
++
++            enemyAttack();
++
++            if (player.getHealth() &lt;= 0) {
++                state = State.DEFEAT;
++                lastMessage = &quot;You were defeated...&quot;;
++            } else {
++                defending = false;
++                state = State.PLAYER_TURN;
++            }
++        }
++    }
++
++    private void playerAttack() {
++        // Damage range: 8-12 (base 8, variance 0-4)
++        int baseDamage = 8;
++        int variance = random.nextInt(5);
++        int damage = baseDamage + variance;
++        enemy.takeDamage(damage);
++        lastMessage = &quot;You deal &quot; + damage + &quot; damage!&quot;;
++
++        if (!enemy.isAlive()) {
++            state = State.VICTORY;
++            int goldReward = enemy.getGoldReward();
++            player.addGold(goldReward);
++            lastMessage = &quot;Victory! You gained &quot; + goldReward + &quot; gold!&quot;;
++
++            if (enemy.isBoss()) {
++                int bossBonus = 50;
++                player.addGold(bossBonus);
++                lastMessage += &quot; (Boss bonus: +&quot; + bossBonus + &quot; gold!)&quot;;
++            }
++        }
++    }
++
++    private void enemyAttack() {
++        int enemyAttackPower = enemy.getAttack();
++        int baseDamage = enemyAttackPower;
++        int variance = random.nextInt(3);
++        int damage = baseDamage + variance;
++
++        if (defending) {
++            damage = Math.max(1, damage / 2);
++            lastMessage = &quot;Enemy deals &quot; + damage + &quot; damage (reduced)!&quot;;
++        } else {
++            lastMessage = &quot;Enemy deals &quot; + damage + &quot; damage!&quot;;
++        }
++
++        player.takeDamage(damage);
++    }
++
++    private void usePotion() {
++        if (player.getHealthPotions() &gt; 0) {
++            int healAmount = 30;
++            int oldHealth = player.getHealth();
++            player.heal(healAmount);
++            int actualHealed = player.getHealth() - oldHealth;
++            player.usePotion();
++            lastMessage = &quot;You healed &quot; + actualHealed + &quot; HP!&quot;;
++            // Transition to ENEMY_TURN after using potion
++            state = State.ENEMY_TURN;
++        } else {
++            lastMessage = &quot;No potions left!&quot;;
++            // Stay in PLAYER_TURN; allow player to retry with ATTACK, DEFEND, or RUN
++        }
++    }
++
++    public State getState() {
++        synchronized (stateLock) {
++            return state;
++        }
++    }
++
++    public Player getPlayer() {
++        return player;
++    }
++
++    public Enemy getEnemy() {
++        return enemy;
++    }
++
++    public String getLastMessage() {
++        synchronized (stateLock) {
++            return lastMessage;
++        }
++    }
++
++    public boolean isDefending() {
++        synchronized (stateLock) {
++            return defending;
++        }
++    }
++}
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/battleactivity.html b/battleactivity.html
+new file mode 100644
+index 0000000..f8b9fc1
+--- /dev/null
++++ b/battleactivity.html
+@@ -0,0 +1,146 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>BattleActivity.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>BattleActivity.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/BattleActivity.java</p>
++    <pre>package com.knightlight.game;
++
++import android.widget.Toast;
++import android.util.Log;
++import android.content.Intent;
++import android.os.Bundle;
++import android.os.Handler;
++import android.os.Looper;
++import android.widget.Button;
++import androidx.appcompat.app.AppCompatActivity;
++
++public class BattleActivity extends AppCompatActivity {
++    private static final String EXTRA_PLAYER = &quot;player&quot;;
++    private static final String EXTRA_ENEMY = &quot;enemy&quot;;
++    private static final long TURN_DELAY_MS = 1000;
++    private static final long RESULT_DELAY_MS = 2000;
++    private static final String TAG = &quot;BattleActivity&quot;;
++
++    private Battle battle;
++    private BattleView battleView;
++    private Player player;
++    private Enemy enemy;
++    private Handler handler;
++    private boolean isDestroyed = false;
++
++    private Button btnAttack, btnDefend, btnFlee;
++
++    @Override
++    protected void onCreate(Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.activity_battle);
++
++        battleView = findViewById(R.id.battle_view);
++        if (battleView == null) {
++            Log.e(TAG, &quot;BattleView not found in layout&quot;);
++            finish();
++            return;
++        }
++
++        handler = new Handler(Looper.getMainLooper());
++
++        Intent intent = getIntent();
++        Bundle extras = intent.getExtras();
++        if (extras != null) {
++            player = (Player) extras.getSerializable(EXTRA_PLAYER);
++            enemy = (Enemy) extras.getSerializable(EXTRA_ENEMY);
++        }
++
++        if (player != null &amp;&amp; enemy != null) {
++            battle = new Battle(player, enemy);
++            battleView.setBattle(battle);
++        }
++
++        // Wire up buttons
++        btnAttack = findViewById(R.id.btnAttack);
++        btnDefend = findViewById(R.id.btnDefend);
++        btnFlee = findViewById(R.id.btnFlee);
++
++        if (btnAttack != null) {
++            btnAttack.setOnClickListener(v -&gt; playerAction(Battle.Action.ATTACK));
++        }
++        if (btnDefend != null) {
++            btnDefend.setOnClickListener(v -&gt; playerAction(Battle.Action.DEFEND));
++        }
++        if (btnFlee != null) {
++            btnFlee.setOnClickListener(v -&gt; playerAction(Battle.Action.RUN));
++        }
++    }
++
++    @Override
++    protected void onDestroy() {
++        super.onDestroy();
++        isDestroyed = true;
++        handler.removeCallbacksAndMessages(null);
++    }
++
++    public void playerAction(Battle.Action action) {
++        if (battle == null || isDestroyed) {
++            Log.w(TAG, &quot;playerAction: battle is null or activity destroyed&quot;);
++            return;
++        }
++
++        Log.d(TAG, &quot;Player action: &quot; + action);
++        battle.playerAction(action);
++        battleView.invalidate();
++
++        // Schedule enemy turn after player animation
++        handler.postDelayed(this::processTurn, TURN_DELAY_MS);
++    }
++
++    private void processTurn() {
++        if (battle == null || isDestroyed) {
++            return;
++        }
++
++        Log.d(TAG, &quot;Processing enemy turn&quot;);
++        battle.enemyTurn();
++        battleView.invalidate();
++
++        Log.d(TAG, &quot;After enemy turn - Battle state: &quot; + battle.getState());
++        if (isBattleOver()) {
++            Log.d(TAG, &quot;Battle over after enemy action&quot;);
++            handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
++        }
++    }
++
++    private boolean isBattleOver() {
++        if (battle == null) return false;
++        Battle.State state = battle.getState();
++        return state == Battle.State.VICTORY ||
++               state == Battle.State.DEFEAT ||
++               state == Battle.State.FLED;
++    }
++
++    private void showBattleResult() {
++        Log.d(TAG, &quot;Showing battle result&quot;);
++        if (isDestroyed) return;
++
++        Intent resultIntent = new Intent();
++        resultIntent.putExtra(&quot;enemyId&quot;, enemy.getEnemyId());
++        enemy.setDead(true);
++        resultIntent.putExtra(&quot;enemy&quot;, enemy);
++        resultIntent.putExtra(&quot;player&quot;, player);
++        resultIntent.putExtra(&quot;battle_won&quot;, battle.getState() == Battle.State.VICTORY);
++        setResult(RESULT_OK, resultIntent);
++
++        finish();
++    }
++}
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/battleview.html b/battleview.html
+new file mode 100644
+index 0000000..5afb43d
+--- /dev/null
++++ b/battleview.html
+@@ -0,0 +1,133 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>BattleView.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>BattleView.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/BattleView.java</p>
++    <pre>package com.knightlight.game;
++
++import android.util.AttributeSet;
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.Color;
++import android.graphics.Paint;
++import android.util.Log;
++import android.view.View;
++
++public class BattleView extends View {
++    private Battle battle;
++    private Paint healthBarBackPaint, healthBarFillPaint, textPaint;
++
++    public BattleView(Context context, AttributeSet attrs) {
++        super(context, attrs);
++        Log.d(&quot;RoguelikeApp&quot;, &quot;BattleView constructor called&quot;);
++        initPaints();
++    }
++
++    public BattleView(Context context, Battle battle) {
++        super(context);
++        this.battle = battle;
++        initPaints();
++    }
++
++    public void setBattle(Battle battle) {
++        this.battle = battle;
++        invalidate();
++    }
++
++    private void initPaints() {
++        healthBarBackPaint = new Paint();
++        healthBarBackPaint.setColor(Color.parseColor(&quot;#333333&quot;));
++        healthBarBackPaint.setStyle(Paint.Style.FILL);
++
++        healthBarFillPaint = new Paint();
++        healthBarFillPaint.setColor(Color.parseColor(&quot;#00FF00&quot;));
++        healthBarFillPaint.setStyle(Paint.Style.FILL);
++
++        textPaint = new Paint();
++        textPaint.setColor(Color.WHITE);
++        textPaint.setTextSize(36);
++        textPaint.setTextAlign(Paint.Align.LEFT);
++    }
++
++    @Override
++    protected void onDraw(Canvas canvas) {
++        super.onDraw(canvas);
++
++        if (battle == null) {
++            Log.w(&quot;BattleView&quot;, &quot;Battle is null in onDraw&quot;);
++            return;
++        }
++
++        int height = getHeight();
++        int statusAreaHeight = (int) (height * 0.75);
++
++        drawHealthBars(canvas, statusAreaHeight);
++        drawMessage(canvas, statusAreaHeight / 2);
++    }
++
++    private void drawHealthBars(Canvas canvas, int statusAreaHeight) {
++        Player player = battle.getPlayer();
++        Enemy enemy = battle.getEnemy();
++
++        if (player == null || enemy == null) {
++            Log.w(&quot;BattleView&quot;, &quot;Player or Enemy is null in drawHealthBars&quot;);
++            return;
++        }
++
++        int barWidth = getWidth() / 2 - 20;
++        int barHeight = 30;
++        int barX = 10;
++
++        // Player health bar (always draw)
++        int playerMaxHealth = player.getMaxHealth();
++        int playerCurrentHealth = Math.min(player.getCurrentHealth(), playerMaxHealth);
++        playerCurrentHealth = Math.max(0, playerCurrentHealth);
++
++        int playerBarY = 10;
++        canvas.drawRect(barX, playerBarY, barX + barWidth, playerBarY + barHeight, healthBarBackPaint);
++        float playerHealthRatio = (float) playerCurrentHealth / playerMaxHealth;
++        canvas.drawRect(barX, playerBarY, barX + (int) (barWidth * playerHealthRatio), playerBarY + barHeight, healthBarFillPaint);
++        canvas.drawText(&quot;Player: &quot; + playerCurrentHealth + &quot;/&quot; + playerMaxHealth, barX + 5, playerBarY + 22, textPaint);
++
++        // Enemy health bar (only draw if alive)
++        int enemyHealth = enemy.getHealth();
++        if (enemyHealth &gt; 0) {
++            int enemyMaxHealth = enemy.getMaxHealth();
++            int enemyCurrentHealth = Math.min(enemyHealth, enemyMaxHealth);
++            enemyCurrentHealth = Math.max(0, enemyCurrentHealth);
++
++            int enemyBarX = barX + barWidth + 20;
++            int enemyBarY = 10;
++            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + barWidth, enemyBarY + barHeight, healthBarBackPaint);
++            float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
++            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio), enemyBarY + barHeight, healthBarFillPaint);
++            canvas.drawText(&quot;Enemy: &quot; + enemyCurrentHealth + &quot;/&quot; + enemyMaxHealth, enemyBarX + 5, enemyBarY + 22, textPaint);
++        }
++    }
++
++    private void drawMessage(Canvas canvas, int y) {
++        if (battle == null) {
++            Log.w(&quot;BattleView&quot;, &quot;Battle is null in drawMessage&quot;);
++            return;
++        }
++
++        String message = battle.getLastMessage();
++        if (message == null) {
++            message = &quot;Battle in progress...&quot;;
++        }
++
++        canvas.drawText(message, 10, y, textPaint);
++    }
++}
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/build.gradle b/build.gradle
+index 6fea0ab..5d62cf5 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -38,7 +38,7 @@ android {
+ 
+     sourceSets {
+         main {
+-            java.srcDirs = ['src']
++            java.srcDirs = ['src/main/java']
+             res.srcDirs = ['src/main/res']
+             assets.srcDirs = ['assets']
+         }
+diff --git a/dungeon.html b/dungeon.html
+new file mode 100644
+index 0000000..e39369f
+--- /dev/null
++++ b/dungeon.html
+@@ -0,0 +1,86 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>Dungeon.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>Dungeon.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/Dungeon.java</p>
++    <pre>package com.knightlight.game;
++
++import java.util.Random;
++
++public class Dungeon {
++    public static final char TILE_WALL = &#x27;#&#x27;;
++    public static final char TILE_FLOOR = &#x27;.&#x27;;
++    public static final char TILE_GOLD = &#x27;*&#x27;;
++
++    private int width;
++    private int height;
++    private char[][] grid;
++    private Random random = new Random(System.nanoTime());
++
++    public Dungeon(int width, int height) {
++        this.width = width;
++        this.height = height;
++        this.grid = new char[height][width];
++        generateMap();
++    }
++
++    private void generateMap() {
++        for (int y = 0; y &lt; height; y++) {
++            for (int x = 0; x &lt; width; x++) {
++                if (isBorderTile(x, y)) {
++                    grid[y][x] = TILE_WALL;
++                } else {
++                    double rand = random.nextDouble();
++                    if (rand &lt; 0.15) {
++                        grid[y][x] = TILE_WALL;
++                    } else if (rand &lt; 0.20) {
++                        grid[y][x] = TILE_GOLD;
++                    } else {
++                        grid[y][x] = TILE_FLOOR;
++                    }
++                }
++            }
++        }
++        grid[1][1] = TILE_FLOOR;
++    }
++
++    private boolean isBorderTile(int x, int y) {
++        return x == 0 || x == width - 1 || y == 0 || y == height - 1;
++    }
++
++    public char getTile(int x, int y) {
++        if (!isInBounds(x, y)) return TILE_WALL;
++        return grid[y][x];
++    }
++
++    public void setTile(int x, int y, char tile) {
++        if (!isInBounds(x, y)) {
++            throw new IllegalArgumentException(&quot;Tile out of bounds: (&quot; + x + &quot;, &quot; + y + &quot;)&quot;);
++        }
++        grid[y][x] = tile;
++    }
++
++    public boolean isWalkable(int x, int y) {
++        if (!isInBounds(x, y)) return false;
++        return grid[y][x] != TILE_WALL;
++    }
++
++    public boolean isInBounds(int x, int y) {
++        return x &gt;= 0 &amp;&amp; x &lt; width &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; height;
++    }
++
++    public int getWidth() { return width; }
++    public int getHeight() { return height; }
++}
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/enemy.html b/enemy.html
+new file mode 100644
+index 0000000..edcf8d0
+--- /dev/null
++++ b/enemy.html
+@@ -0,0 +1,83 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>Enemy.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>Enemy.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/Enemy.java</p>
++    <pre>package com.knightlight.game;
++import java.io.Serializable;
++
++import android.util.Log;
++
++public class Enemy implements Serializable {
++    private static final long serialVersionUID = 1L;
++    
++    private int x;
++    private int y;
++    private int health;
++    private int maxHealth;
++    private int attackPower;
++    private transient Dungeon dungeon;
++    private boolean boss;
++    private static int nextId = 0;
++    private final int enemyId;
++    private boolean isDead;
++
++    public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon) {
++        this.x = x;
++        this.y = y;
++        this.health = health;
++        this.maxHealth = health;
++        this.attackPower = attackPower;
++        this.dungeon = dungeon;
++        this.boss = false;
++        this.enemyId = nextId++;
++        this.isDead = false;
++    }
++
++    public synchronized int getX() { return x; }
++    public synchronized int getY() { return y; }
++    public synchronized int getHealth() { return health; }
++    public synchronized int getMaxHealth() { return maxHealth; }
++    public synchronized int getAttack() { return attackPower; }
++    public int getGoldReward() { return boss ? 100 : 25; }
++    public synchronized boolean isAlive() { return health &gt; 0; }
++    public boolean isBoss() { return boss; }
++    public synchronized int getEnemyId() { return enemyId; }
++    public synchronized boolean isDead() { return isDead; }
++    public synchronized void setDead(boolean dead) { this.isDead = dead; }
++
++    public static Enemy createBoss(int x, int y, Dungeon dungeon) {
++        Enemy boss = new Enemy(x, y, 50, 5, dungeon);
++        boss.boss = true;
++        return boss;
++    }
++
++    public synchronized void takeDamage(int damage) {
++        health = Math.max(0, health - damage);
++    }
++
++    public synchronized void moveToward(Player player) {
++        if (player == null || dungeon == null) {
++            Log.w(&quot;Enemy&quot;, &quot;moveToward called with null player or dungeon&quot;);
++            return;
++        }
++        int playerX = player.getX();
++        int playerY = player.getY();
++        if (x &lt; playerX &amp;&amp; dungeon.isWalkable(x + 1, y)) x++;
++        else if (x &gt; playerX &amp;&amp; dungeon.isWalkable(x - 1, y)) x--;
++        else if (y &lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) y++;
++        else if (y &gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) y--;
++    }
++}
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/game.html b/game.html
+new file mode 100644
+index 0000000..8700ad7
+--- /dev/null
++++ b/game.html
+@@ -0,0 +1,319 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>Game.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>Game.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/Game.java</p>
++    <pre>package com.knightlight.game;
++
++import android.util.Log;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Random;
++
++public class Game {
++    private static final String TAG = &quot;Game&quot;;
++
++    // Game constants
++    private static final int ENEMY_HEALTH = 10;
++    private static final int ENEMY_ATTACK_POWER = 5;
++    private static final int GOLD_PICKUP_AMOUNT = 10;
++    private static final int GOLD_WIN_CONDITION = 100;
++    private static final int SPAWN_ATTEMPTS = 100;
++
++    public enum GameState {
++        PLAYING, WON, LOST
++    }
++
++    private final Object stateLock = new Object();
++    private final Object enemyLock = new Object();
++    private final Object encounterLock = new Object();
++
++    private Dungeon dungeon;
++    private Player player;
++    private List&lt;Enemy&gt; enemies;
++    private GameState state;
++    private int turnCount;
++    private int initialEnemyCount;
++    private Random rng;
++
++    private Enemy encounteredEnemy = null;
++
++    public Game(int dungeonWidth, int dungeonHeight, int numEnemies) {
++        if (dungeonWidth &lt;= 0 || dungeonHeight &lt;= 0 || numEnemies &lt; 0) {
++            throw new IllegalArgumentException(
++                &quot;Dungeon width/height must be &gt; 0; numEnemies must be &gt;= 0&quot;);
++        }
++
++        this.dungeon = new Dungeon(dungeonWidth, dungeonHeight);
++        if (dungeon == null) {
++            throw new IllegalStateException(&quot;Failed to create Dungeon&quot;);
++        }
++
++        this.enemies = new ArrayList&lt;&gt;();
++        this.player = new Player(2, 2);
++        if (player == null) {
++            throw new IllegalStateException(&quot;Failed to create Player&quot;);
++        }
++
++        this.state = GameState.PLAYING;
++        this.turnCount = 0;
++        this.initialEnemyCount = numEnemies;
++        this.rng = new Random(System.nanoTime());
++
++        // Spawn enemies
++        for (int i = 0; i &lt; numEnemies; i++) {
++            Enemy enemy = spawnEnemy();
++            if (enemy != null) {
++                synchronized (enemyLock) {
++                    enemies.add(enemy);
++                }
++                Log.d(TAG, &quot;Spawned enemy &quot; + i + &quot; at (&quot; + enemy.getX() + &quot;, &quot; + enemy.getY() + &quot;)&quot;);
++            } else {
++                Log.w(TAG, &quot;Failed to spawn enemy &quot; + i + &quot; after &quot; + SPAWN_ATTEMPTS + &quot; attempts&quot;);
++            }
++        }
++
++        Log.d(TAG, &quot;Game initialized: &quot; + enemies.size() + &quot;/&quot; + numEnemies
++            + &quot; enemies spawned, dungeon: &quot; + dungeonWidth + &quot;x&quot; + dungeonHeight);
++    }
++
++    /**
++     * Spawn a single enemy at a random walkable location.
++     * Not player&#x27;s starting position (2,2).
++     */
++    private Enemy spawnEnemy() {
++        if (dungeon == null) {
++            Log.e(TAG, &quot;Dungeon is null; cannot spawn enemy&quot;);
++            return null;
++        }
++
++        for (int attempt = 0; attempt &lt; SPAWN_ATTEMPTS; attempt++) {
++            int x = rng.nextInt(dungeon.getWidth());
++            int y = rng.nextInt(dungeon.getHeight());
++
++            // Validate bounds and walkability
++            if (!dungeon.isInBounds(x, y)) {
++                continue;
++            }
++
++            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
++                return new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon);
++            }
++        }
++
++        Log.w(TAG, &quot;spawnEnemy() exhausted &quot; + SPAWN_ATTEMPTS + &quot; attempts&quot;);
++        return null;
++    }
++
++    /**
++     * Move player in direction (dx, dy) and process one turn.
++     * Returns true if an encounter was triggered, false otherwise.
++     * Synchronized to prevent race conditions with processTurn().
++     */
++    public synchronized boolean playerMove(int dx, int dy) {
++        synchronized (stateLock) {
++            if (state != GameState.PLAYING) {
++                Log.w(TAG, &quot;playerMove called but game state is &quot; + state);
++                return false;
++            }
++        }
++
++        // Validate movement direction
++        if ((dx &lt; -1 || dx &gt; 1) || (dy &lt; -1 || dy &gt; 1) || (dx == 0 &amp;&amp; dy == 0)) {
++            Log.w(TAG, &quot;Invalid move direction: dx=&quot; + dx + &quot;, dy=&quot; + dy);
++            return false;
++        }
++
++        if (player == null) {
++            Log.e(TAG, &quot;Player is null in playerMove&quot;);
++            return false;
++        }
++
++        player.move(dx, dy);
++        if (player.getX() &lt; 0 || player.getY() &lt; 0 || player.getX() &gt;= dungeon.getWidth() || player.getY() &gt;= dungeon.getHeight() || dungeon.getTile(player.getX(), player.getY()) == Dungeon.TILE_WALL) {
++            player.move(-dx, -dy);
++            return false;
++        }
++
++        processTurn();
++
++        // Return whether an encounter occurred
++        synchronized (encounterLock) {
++            return encounteredEnemy != null;
++        }
++    }
++
++    /**
++     * Process one turn: move enemies, check for encounters, pickup gold, check win/loss.
++     * Called only from playerMove() which is synchronized.
++     * If an encounter is detected, sets encounteredEnemy and returns without resolving combat.
++     */
++    private void processTurn() {
++        if (player == null) {
++            Log.e(TAG, &quot;Player is null in processTurn&quot;);
++            return;
++        }
++
++        turnCount++;
++
++        // Step 1: Move all alive enemies toward player
++        synchronized (enemyLock) {
++            for (Enemy enemy : enemies) {
++                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; !enemy.isDead()) {
++                    enemy.moveToward(player);
++                }
++            }
++        }
++
++        // Step 2: Check for encounter at player location
++        synchronized (enemyLock) {
++            for (Enemy enemy : enemies) {
++                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; !enemy.isDead()
++                    &amp;&amp; enemy.getX() == player.getX() &amp;&amp; enemy.getY() == player.getY()) {
++                    // Encounter detected: set encounteredEnemy and return
++                    synchronized (encounterLock) {
++                        encounteredEnemy = enemy;
++                    }
++                    Log.d(TAG, &quot;Encounter triggered with enemy at (&quot; + enemy.getX() + &quot;, &quot; + enemy.getY() + &quot;)&quot;);
++                    return;
++                }
++            }
++        }
++
++        // Step 3: Pickup gold if on gold tile
++        if (dungeon != null) {
++            int playerX = player.getX();
++            int playerY = player.getY();
++            if (dungeon.isInBounds(playerX, playerY)
++                &amp;&amp; dungeon.getTile(playerX, playerY) == Dungeon.TILE_GOLD) {
++                player.addGold(GOLD_PICKUP_AMOUNT);
++                dungeon.setTile(playerX, playerY, Dungeon.TILE_FLOOR);
++                Log.d(TAG, &quot;Player picked up gold. Total: &quot; + player.getGoldCollected());
++            }
++        }
++
++        // Step 4: Check win/loss conditions
++        synchronized (stateLock) {
++            if (!player.isAlive()) {
++                state = GameState.LOST;
++                Log.d(TAG, &quot;Player defeated. Game Over.&quot;);
++            } else if (player.getGoldCollected() &gt;= GOLD_WIN_CONDITION) {
++                state = GameState.WON;
++                Log.d(TAG, &quot;Player collected &quot; + GOLD_WIN_CONDITION
++                    + &quot; gold. Victory!&quot;);
++            }
++        }
++    }
++
++    /**
++     * Get and clear the encountered enemy (if any).
++     * Returns the enemy if an encounter occurred, null otherwise.
++     * Thread-safe and resets encounteredEnemy after retrieval.
++     */
++    public synchronized Enemy getAndClearEncounteredEnemy() {
++        synchronized (encounterLock) {
++            Enemy enemy = encounteredEnemy;
++            encounteredEnemy = null;
++            if (enemy != null) {
++                Log.d(TAG, &quot;Retrieved and cleared encountered enemy&quot;);
++            }
++            return enemy;
++        }
++    }
++
++    /**
++     * Get a defensive copy of the dungeon.
++     */
++    public synchronized Dungeon getDungeon() {
++        return dungeon;
++    }
++
++    /**
++     * Get a defensive copy of the player.
++     */
++    public synchronized Player getPlayer() {
++        return player;
++    }
++
++    /**
++     * Get a defensive copy of the enemies list.
++     */
++    public synchronized List&lt;Enemy&gt; getEnemies() {
++        synchronized (enemyLock) {
++            return new ArrayList&lt;&gt;(enemies);
++        }
++    }
++
++    /**
++     * Get current game state.
++     */
++    public synchronized GameState getState() {
++        synchronized (stateLock) {
++            return state;
++        }
++    }
++
++    /**
++     * Get turn count.
++     */
++    public synchronized int getTurnCount() {
++        return turnCount;
++    }
++
++    /**
++     * Reset game to initial state with same dungeon dimensions and initial enemy count.
++     */
++    public synchronized void reset() {
++        if (dungeon == null) {
++            Log.e(TAG, &quot;Dungeon is null; cannot reset&quot;);
++            return;
++        }
++
++        synchronized (stateLock) {
++            synchronized (enemyLock) {
++                dungeon = new Dungeon(dungeon.getWidth(), dungeon.getHeight());
++                enemies.clear();
++                player = new Player(2, 2);
++                state = GameState.PLAYING;
++                turnCount = 0;
++                rng = new Random(System.nanoTime());
++
++                // Respawn initial enemies
++                for (int i = 0; i &lt; initialEnemyCount; i++) {
++                    Enemy enemy = spawnEnemy();
++                    if (enemy != null) {
++                        enemies.add(enemy);
++                        Log.d(TAG, &quot;Reset: Spawned enemy &quot; + i);
++                    }
++                }
++
++                Log.d(TAG, &quot;Game reset. Enemies: &quot; + enemies.size() + &quot;/&quot; + initialEnemyCount);
++            }
++        }
++
++        // Clear any lingering encounter
++        synchronized (encounterLock) {
++            encounteredEnemy = null;
++        }
++    }
++
++    public synchronized void setGameState(GameState newState) {
++        synchronized (stateLock) {
++            this.state = newState;
++        }
++    }
++
++}
++
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/gameview.html b/gameview.html
+new file mode 100644
+index 0000000..c53d069
+--- /dev/null
++++ b/gameview.html
+@@ -0,0 +1,337 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>GameView.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>GameView.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/GameView.java</p>
++    <pre>package com.knightlight.game;
++
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.Color;
++import android.graphics.Paint;
++import android.graphics.Rect;
++import android.util.Log;
++import android.util.AttributeSet;
++import android.view.MotionEvent;
++import android.view.View;
++import java.util.List;
++
++public class GameView extends View {
++    private Game game;
++    private Paint tileWallPaint, tileFloorPaint, tileGoldPaint, playerPaint, enemyPaint, textPaint, buttonPaint, buttonPressPaint;
++    private float tileSize;
++    private GameListener listener;
++    private Rect btnUp, btnDown, btnLeft, btnRight, btnQuit;
++    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, emojiPaint;
++    
++    // Synchronized access to button press state
++    private final Object buttonLock = new Object();
++    private boolean btnUpPressed = false, btnDownPressed = false, btnLeftPressed = false, btnRightPressed = false;
++
++    public interface GameListener {
++        void onGameOver(Game.GameState state);
++        void onQuitRequested();
++    void onEncounter(Enemy enemy);
++    }
++
++    public GameView(Context context) {
++        super(context);
++        initPaints();
++        initButtons();
++    }
++
++    public GameView(Context context, AttributeSet attrs) {
++        super(context, attrs);
++        Log.d(&quot;RoguelikeApp&quot;, &quot;GameView constructor called&quot;);
++        initPaints();
++        initButtons();
++    }
++    private void initPaints() {
++        tileWallPaint = new Paint();
++        tileWallPaint.setColor(Color.parseColor(&quot;#1a1a1a&quot;));
++        tileWallPaint.setStyle(Paint.Style.FILL);
++        
++        tileFloorPaint = new Paint();
++        tileFloorPaint.setColor(Color.parseColor(&quot;#333333&quot;));
++        tileFloorPaint.setStyle(Paint.Style.FILL);
++        
++        tileGoldPaint = new Paint();
++        tileGoldPaint.setColor(Color.parseColor(&quot;#FFD700&quot;));
++        tileGoldPaint.setStyle(Paint.Style.FILL);
++        
++        playerPaint = new Paint();
++        playerPaint.setColor(Color.parseColor(&quot;#00FF00&quot;));
++        playerPaint.setStyle(Paint.Style.FILL);
++        
++        enemyPaint = new Paint();
++        enemyPaint.setColor(Color.parseColor(&quot;#FF0000&quot;));
++        enemyPaint.setStyle(Paint.Style.FILL);
++        
++        textPaint = new Paint();
++        emojiPaint = new Paint();
++                emojiPaint.setTextSize(tileSize * 0.8f);
++        
++        buttonPaint = new Paint();
++                emojiPaint.setTextAlign(Paint.Align.CENTER);
++        buttonPaint.setColor(Color.parseColor(&quot;#00FF00&quot;));
++        buttonPaint.setStyle(Paint.Style.FILL);
++        
++        buttonPressPaint = new Paint();
++        buttonPressPaint.setColor(Color.parseColor(&quot;#00AA00&quot;));
++        buttonPressPaint.setStyle(Paint.Style.FILL);
++        
++        overlayPaint = new Paint();
++        overlayPaint.setColor(Color.argb(200, 0, 0, 0));
++        
++        gameOverTextPaint = new Paint();
++        gameOverTextPaint.setColor(Color.WHITE);
++        gameOverTextPaint.setTextSize(64);
++        gameOverTextPaint.setTextAlign(Paint.Align.CENTER);
++        
++        buttonLabelPaint = new Paint();
++        buttonLabelPaint.setColor(Color.BLACK);
++        buttonLabelPaint.setTextSize(20);
++        buttonLabelPaint.setTextAlign(Paint.Align.CENTER);
++    }
++
++    // Pre-allocate button Rects to avoid per-frame allocation
++    private void initButtons() {
++        btnUp = new Rect();
++        btnDown = new Rect();
++        btnLeft = new Rect();
++        btnRight = new Rect();
++        btnQuit = new Rect();
++    }
++
++    public void setGame(Game game) {
++        this.game = game;
++    }
++
++    public void setGameListener(GameListener listener) {
++        this.listener = listener;
++    }
++
++    @Override
++    protected void onDraw(Canvas canvas) {
++        super.onDraw(canvas);
++        
++        if (game == null) {
++            Log.w(&quot;GameView&quot;, &quot;Game is null in onDraw&quot;);
++            return;
++        }
++        
++        int width = getWidth(), height = getHeight();
++        int gameAreaHeight = (int) (height * 0.75);
++        int buttonAreaHeight = height - gameAreaHeight;
++
++        Dungeon dungeon = game.getDungeon();
++        if (dungeon == null) {
++            Log.w(&quot;GameView&quot;, &quot;Dungeon is null in onDraw&quot;);
++            return;
++        }
++
++        tileSize = (float) width / dungeon.getWidth();
++        drawDungeon(canvas, dungeon);
++        drawPlayer(canvas);
++        drawEnemies(canvas);
++        drawStatus(canvas, gameAreaHeight);
++        drawButtons(canvas, gameAreaHeight, buttonAreaHeight);
++
++        Game.GameState state = game.getState();
++        if (state != Game.GameState.PLAYING) {
++            drawGameOverOverlay(canvas, width, gameAreaHeight);
++        }
++    }
++
++    private void drawDungeon(Canvas canvas, Dungeon dungeon) {
++        for (int y = 0; y &lt; dungeon.getHeight(); y++) {
++            for (int x = 0; x &lt; dungeon.getWidth(); x++) {
++                float left = x * tileSize, top = y * tileSize, right = left + tileSize, bottom = top + tileSize;
++                
++                // Cache getTile result to avoid redundant calls
++                char tile = dungeon.getTile(x, y);
++                Paint tilePaint;
++                if (tile == Dungeon.TILE_WALL) {
++                    tilePaint = tileWallPaint;
++                } else if (tile == Dungeon.TILE_GOLD) {
++                    tilePaint = tileGoldPaint;
++                } else {
++                    tilePaint = tileFloorPaint;
++                }
++                canvas.drawRect(left, top, right, bottom, tilePaint);
++            }
++        }
++    }
++
++    private void drawPlayer(Canvas canvas) {
++        Player player = game.getPlayer();
++        if (player == null) {
++            Log.w(&quot;GameView&quot;, &quot;Player is null in drawPlayer&quot;);
++            return;
++        }
++        
++        float x = player.getX() * tileSize + tileSize / 2;
++        float y = player.getY() * tileSize + tileSize / 2;
++        canvas.drawCircle(x, y, tileSize * 0.35f, playerPaint);
++    }
++
++    private static final float ENEMY_RADIUS = 0.35f;
++    private static final float EMOJI_OFFSET = 0.2f;
++    private static final float EMOJI_TEXT_SIZE_SCALE = 0.4f;
++    private void drawEnemies(Canvas canvas) {
++        List&lt;Enemy&gt; enemies = game.getEnemies();
++        if (enemies == null) {
++            Log.w(&quot;GameView&quot;, &quot;Enemies list is null in drawEnemies&quot;);
++            return;
++        }
++        for (Enemy enemy : enemies) {
++            if (enemy == null) continue;
++            
++            float x = enemy.getX() * tileSize + tileSize / 2;
++            float y = enemy.getY() * tileSize + tileSize / 2;
++            
++            if (!enemy.isDead()) {
++                canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
++            } else {
++            }
++                        // Draw skull emoji centered in tile
++                        Rect bounds = new Rect();
++                        emojiPaint.getTextBounds(&quot;☠️&quot;, 0, 1, bounds);
++                        float emojiY = y + (tileSize - (bounds.height())) / 2;
++                        canvas.drawText(&quot;☠️&quot;, x, emojiY, emojiPaint);
++        }
++                canvas.drawText(&quot;☠️&quot;, x, y + tileSize * 0.15f, emojiPaint);
++    private void drawStatus(Canvas canvas, int gameAreaHeight) {
++        Player player = game.getPlayer();
++        if (player == null) {
++            Log.w(&quot;GameView&quot;, &quot;Player is null in drawStatus&quot;);
++            return;
++        }
++        
++        String status = String.format(&quot;HP: %d/%d | Gold: %d | Turn: %d&quot;,
++                player.getCurrentHealth(),
++                player.getMaxHealth(),
++                player.getGoldCollected(),
++                game.getTurnCount());
++        canvas.drawText(status, 10, gameAreaHeight - 10, textPaint);
++    }
++
++    private void drawButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
++        int buttonWidth = getWidth() / 5;
++        int buttonHeight = buttonAreaHeight / 2;
++        int startY = gameAreaHeight;
++
++        // Update pre-allocated Rect objects instead of creating new ones
++        btnUp.set(0, startY, buttonWidth, startY + buttonHeight);
++        btnDown.set(buttonWidth, startY, 2 * buttonWidth, startY + buttonHeight);
++        btnLeft.set(2 * buttonWidth, startY, 3 * buttonWidth, startY + buttonHeight);
++        btnRight.set(3 * buttonWidth, startY, 4 * buttonWidth, startY + buttonHeight);
++        btnQuit.set(4 * buttonWidth, startY, 5 * buttonWidth, startY + buttonHeight);
++
++        // Read button state under lock for thread safety
++        synchronized (buttonLock) {
++            drawButton(canvas, btnUp, &quot;UP&quot;, btnUpPressed);
++            drawButton(canvas, btnDown, &quot;DOWN&quot;, btnDownPressed);
++            drawButton(canvas, btnLeft, &quot;LEFT&quot;, btnLeftPressed);
++            drawButton(canvas, btnRight, &quot;RIGHT&quot;, btnRightPressed);
++        }
++        drawButton(canvas, btnQuit, &quot;QUIT&quot;, false);
++    }
++
++    private void drawButton(Canvas canvas, Rect rect, String label, boolean pressed) {
++        Paint paint = pressed ? buttonPressPaint : buttonPaint;
++        canvas.drawRect(rect, paint);
++        canvas.drawText(label, rect.centerX(), rect.centerY() + 10, buttonLabelPaint);
++    }
++
++    private void drawGameOverOverlay(Canvas canvas, int width, int gameAreaHeight) {
++        canvas.drawRect(0, 0, width, gameAreaHeight, overlayPaint);
++        String message = game.getState() == Game.GameState.WON ? &quot;YOU WIN!&quot; : &quot;GAME OVER&quot;;
++        canvas.drawText(message, width / 2, gameAreaHeight / 2, gameOverTextPaint);
++    }
++
++    @Override
++    public boolean onTouchEvent(MotionEvent event) {
++        int action = event.getAction();
++        float x = event.getX(), y = event.getY();
++        
++        switch (action) {
++            case MotionEvent.ACTION_DOWN:
++                handleButtonPress(x, y);
++                break;
++            case MotionEvent.ACTION_UP:
++                handleButtonRelease();
++                break;
++        }
++        
++        invalidate();
++        return true;
++    }
++
++    private void handleButtonPress(float x, float y) {
++        if (game == null) {
++            Log.w(&quot;GameView&quot;, &quot;Game is null in handleButtonPress&quot;);
++            return;
++        }
++
++        boolean encounterOccurred = false;
++
++        if (btnUp != null &amp;&amp; btnUp.contains((int) x, (int) y)) {
++            synchronized (buttonLock) {
++                btnUpPressed = true;
++            }
++            encounterOccurred = game.playerMove(0, -1);
++        } else if (btnDown != null &amp;&amp; btnDown.contains((int) x, (int) y)) {
++            synchronized (buttonLock) {
++                btnDownPressed = true;
++            }
++            encounterOccurred = game.playerMove(0, 1);
++        } else if (btnLeft != null &amp;&amp; btnLeft.contains((int) x, (int) y)) {
++            synchronized (buttonLock) {
++                btnLeftPressed = true;
++            }
++            encounterOccurred = game.playerMove(-1, 0);
++        } else if (btnRight != null &amp;&amp; btnRight.contains((int) x, (int) y)) {
++            synchronized (buttonLock) {
++                btnRightPressed = true;
++            }
++            encounterOccurred = game.playerMove(1, 0);
++        } else if (btnQuit != null &amp;&amp; btnQuit.contains((int) x, (int) y)) {
++            if (listener != null) {
++                listener.onQuitRequested();
++            }
++        }
++
++        if (encounterOccurred &amp;&amp; listener != null) {
++            Enemy enemy = game.getAndClearEncounteredEnemy();
++            if (enemy != null) {
++                listener.onEncounter(enemy);
++            }
++        }
++
++        Game.GameState state = game.getState();
++        if (state != Game.GameState.PLAYING &amp;&amp; listener != null) {
++            listener.onGameOver(state);
++        }
++    }
++    private void handleButtonRelease() {
++        synchronized (buttonLock) {
++            btnUpPressed = false;
++            btnDownPressed = false;
++            btnLeftPressed = false;
++            btnRightPressed = false;
++        }
++    }
++}
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/index.html b/index.html
+new file mode 100644
+index 0000000..1420078
+--- /dev/null
++++ b/index.html
+@@ -0,0 +1,20 @@
++<!DOCTYPE html>
++<html>
++<head>
++  <title>Roguelike Debug</title>
++</head>
++<body>
++  <h1>Roguelike Debug Files</h1>
++  <ul>
++    <li><a href="battle.html">Battle.java</a></li>
++    <li><a href="battleactivity.html">BattleActivity.java</a></li>
++    <li><a href="battleview.html">BattleView.java</a></li>
++    <li><a href="dungeon.html">Dungeon.java</a></li>
++    <li><a href="enemy.html">Enemy.java</a></li>
++    <li><a href="game.html">Game.java</a></li>
++    <li><a href="gameview.html">GameView.java</a></li>
++    <li><a href="mainactivity.html">MainActivity.java</a></li>
++    <li><a href="player.html">Player.java</a></li>
++  </ul>
++</body>
++</html>
+diff --git a/mainactivity.html b/mainactivity.html
+new file mode 100644
+index 0000000..938f584
+--- /dev/null
++++ b/mainactivity.html
+@@ -0,0 +1,297 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>MainActivity.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>MainActivity.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/MainActivity.java</p>
++    <pre>package com.knightlight.game;
++import java.io.*;
++import java.text.SimpleDateFormat;
++import java.util.*;
++import java.io.File;
++
++import android.app.AlertDialog;
++import android.content.Intent;
++import android.widget.Toast;
++import android.os.Bundle;
++import android.util.Log;
++import androidx.appcompat.app.AppCompatActivity;
++
++public class MainActivity extends AppCompatActivity implements GameView.GameListener {
++    private static final String LOG_FILE = &quot;/data/data/com.knightlight.game/roguelike_debug.log&quot;;
++    private static final String TAG = &quot;MainActivity&quot;;
++    private static final int DUNGEON_WIDTH = 40;
++    private static final int DUNGEON_HEIGHT = 16;
++    private static final int INITIAL_ENEMIES = 5;
++    private static final int BATTLE_REQUEST_CODE = 100;
++
++    private Game game;
++    private GameView gameView;
++    private AlertDialog currentDialog;
++    @Override
++    protected void onCreate(Bundle savedInstanceState) {
++        writeLog(&quot;onCreate() START&quot;);
++        writeLog(&quot;About to create Game&quot;);
++        writeLog(&quot;MainActivity.onCreate() START&quot;);
++        super.onCreate(savedInstanceState);
++        writeLog(&quot;super.onCreate() OK&quot;);
++        
++        try {
++            writeLog(&quot;About to call setContentView()&quot;);
++            setContentView(R.layout.activity_main);
++        Log.d(&quot;RoguelikeApp&quot;, &quot;Setting content view&quot;);
++            writeLog(&quot;setContentView() completed successfully&quot;);
++        } catch (Exception e) {
++            writeLog(&quot;CRASH during setContentView(): &quot; + e.getClass().getName() + &quot; - &quot; + e.getMessage());
++            Log.e(TAG, &quot;CRASH during setContentView()&quot;, e);
++            e.printStackTrace();
++            finish();
++            return;
++        }
++
++        Log.d(TAG, &quot;Layout inflated&quot;);
++
++        // Initialize game if not already created
++        if (savedInstanceState == null) {
++            Log.d(TAG, &quot;Creating new Game with dimensions &quot; + DUNGEON_WIDTH + &quot;x&quot; + DUNGEON_HEIGHT + &quot;, enemies=&quot; + INITIAL_ENEMIES);
++            try {
++                game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
++                writeLog(&quot;Game created successfully&quot;);
++                Log.d(TAG, &quot;Game created successfully&quot;);
++            } catch (Exception e) {
++                Log.e(TAG, &quot;Exception during Game creation&quot;, e);
++                writeLog(&quot;Exception during Game creation: &quot; + e.getMessage());
++                throw new RuntimeException(&quot;Failed to create Game&quot;, e);
++            }
++        } else {
++            Log.d(TAG, &quot;savedInstanceState is not null, game not recreated&quot;);
++        }
++
++        // Retrieve GameView from layout
++        gameView = findViewById(R.id.game_view);
++        writeLog(&quot;GameView findViewById done&quot;);
++        if (gameView == null) {
++            Log.e(TAG, &quot;GameView not found in layout&quot;);
++            writeLog(&quot;ERROR: GameView not found in layout&quot;);
++            finish();
++            return;
++        }
++
++        if (game == null) {
++            Log.e(TAG, &quot;Game is null after onCreate&quot;);
++            finish();
++            return;
++        }
++
++        Log.d(TAG, &quot;Setting game on GameView and attaching listener&quot;);
++        gameView.setGame(game);
++        Log.d(&quot;MainActivity&quot;, &quot;GameView.setGame() called&quot;);
++        gameView.setGameListener(this);
++        writeLog(&quot;onCreate() COMPLETE&quot;);
++        Log.d(TAG, &quot;onCreate completed successfully&quot;);
++    }
++
++    @Override
++    public void onGameOver(Game.GameState state) {
++        if (game == null) {
++            Log.w(TAG, &quot;Game is null in onGameOver&quot;);
++            return;
++        }
++
++        String title, message;
++        if (state == Game.GameState.WON) {
++            title = &quot;Victory!&quot;;
++            message = &quot;You&#x27;ve collected 100 gold and won the game!&quot;;
++        } else {
++            title = &quot;Defeat&quot;;
++            message = &quot;You were defeated. Game Over.&quot;;
++        }
++
++        showGameOverDialog(title, message);
++    }
++
++    @Override
++    public void onQuitRequested() {
++        showQuitConfirmDialog();
++    }
++
++    @Override
++    public void onEncounter(Enemy enemy) {
++        Toast.makeText(this, &quot;onEncounter: started&quot;, Toast.LENGTH_SHORT).show();
++        if (enemy == null) {
++            Log.w(TAG, &quot;Encountered enemy is null&quot;);
++            return;
++        }
++        
++        Log.d(TAG, &quot;Encounter triggered with enemy at (&quot; + enemy.getX() + &quot;, &quot; + enemy.getY() + &quot;)&quot;);
++        Toast.makeText(this, &quot;onEncounter: before Intent&quot;, Toast.LENGTH_SHORT).show();
++        
++        Intent battleIntent = new Intent(this, BattleActivity.class);
++        battleIntent.putExtra(&quot;enemy&quot;, enemy);
++        Toast.makeText(this, &quot;onEncounter: enemy added&quot;, Toast.LENGTH_SHORT).show();
++        battleIntent.putExtra(&quot;player&quot;, game.getPlayer());
++        startActivityForResult(battleIntent, BATTLE_REQUEST_CODE);
++    }
++
++
++    private void showGameOverDialog(String title, String message) {
++        if (currentDialog != null &amp;&amp; currentDialog.isShowing()) {
++            currentDialog.dismiss();
++        }
++
++        currentDialog = new AlertDialog.Builder(this)
++                .setTitle(title)
++                .setMessage(message)
++                .setCancelable(false)
++                .setPositiveButton(&quot;Play Again&quot;, (dialog, which) -&gt; {
++                    dialog.dismiss();
++                    currentDialog = null;
++                    restartGame();
++                })
++                .setNegativeButton(&quot;Exit&quot;, (dialog, which) -&gt; {
++                    dialog.dismiss();
++                    currentDialog = null;
++                    finish();
++                })
++                .show();
++    }
++
++    private void showQuitConfirmDialog() {
++        if (currentDialog != null &amp;&amp; currentDialog.isShowing()) {
++            currentDialog.dismiss();
++        }
++
++        currentDialog = new AlertDialog.Builder(this)
++                .setTitle(&quot;Quit Game?&quot;)
++                .setMessage(&quot;Are you sure you want to quit?&quot;)
++                .setPositiveButton(&quot;Yes&quot;, (dialog, which) -&gt; {
++                    dialog.dismiss();
++                    currentDialog = null;
++                    finish();
++                })
++                .setNegativeButton(&quot;No&quot;, (dialog, which) -&gt; {
++                    dialog.dismiss();
++                    currentDialog = null;
++                })
++                .show();
++    }
++
++    private void restartGame() {
++        game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
++        writeLog(&quot;Game created successfully&quot;);
++        if (gameView != null) {
++            gameView.setGame(game);
++            Log.d(&quot;MainActivity&quot;, &quot;GameView.setGame() called&quot;);
++            gameView.invalidate();
++        }
++        Log.d(TAG, &quot;Game restarted&quot;);
++    }
++
++    @Override
++    protected void onPause() {
++        super.onPause();
++        Log.d(TAG, &quot;onPause called&quot;);
++    }
++
++    @Override
++    protected void onResume() {
++        super.onResume();
++        Log.d(TAG, &quot;onResume called&quot;);
++    }
++
++    @Override
++    protected void onDestroy() {
++        if (currentDialog != null &amp;&amp; currentDialog.isShowing()) {
++            currentDialog.dismiss();
++            currentDialog = null;
++        }
++
++        if (gameView != null) {
++            gameView.setGameListener(null);
++        }
++
++        game = null;
++        gameView = null;
++
++        super.onDestroy();
++        Log.d(TAG, &quot;onDestroy called&quot;);
++    }
++
++    @Override
++    protected void onSaveInstanceState(Bundle outState) {
++        super.onSaveInstanceState(outState);
++        Log.d(TAG, &quot;onSaveInstanceState called&quot;);
++    }
++
++    @Override
++    protected void onRestoreInstanceState(Bundle savedInstanceState) {
++        super.onRestoreInstanceState(savedInstanceState);
++        Log.d(TAG, &quot;onRestoreInstanceState called&quot;);
++    }
++
++    private void writeLog(String msg) {
++        try {
++            File logFile = new File(getFilesDir(), &quot;roguelike_debug.log&quot;);
++            java.io.FileWriter fw = new java.io.FileWriter(logFile, true);
++            fw.write(System.currentTimeMillis() + &quot; &quot; + msg + &quot;\n&quot;);
++            fw.close();
++        } catch (Exception e) {
++            e.printStackTrace();
++        }
++    }
++
++
++    @Override
++    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
++        super.onActivityResult(requestCode, resultCode, data);
++        
++        if (requestCode == BATTLE_REQUEST_CODE &amp;&amp; data != null) {
++            try {
++                Player updatedPlayer = (Player) data.getSerializableExtra(&quot;player&quot;);
++                boolean battleWon = data.getBooleanExtra(&quot;battle_won&quot;, false);
++                
++                if (updatedPlayer != null &amp;&amp; game != null) {
++                    Player currentPlayer = game.getPlayer();
++                    if (currentPlayer != null) {
++                        currentPlayer.setHealth(updatedPlayer.getCurrentHealth());
++                        currentPlayer.setGoldCollected(updatedPlayer.getGoldCollected());
++                        Log.d(TAG, &quot;Player synced: HP=&quot; + currentPlayer.getCurrentHealth() + &quot;, Gold=&quot; + currentPlayer.getGoldCollected());
++                                                                                     int defeatedEnemyId = data.getIntExtra(&quot;enemyId&quot;, -1);
++                                                            if (defeatedEnemyId != -1 &amp;&amp; game != null &amp;&amp; battleWon) {
++                                                                List&lt;Enemy&gt; currentEnemies = game.getEnemies();
++                                                                for (Enemy e : currentEnemies) {
++                                                                    if (e != null &amp;&amp; e.getEnemyId() == defeatedEnemyId) {
++                                                                        e.setDead(true);
++                                                                        Log.d(TAG, &quot;Enemy &quot; + defeatedEnemyId + &quot; marked as dead&quot;);
++                                                                        break;
++                                                                    }
++                                                                }
++                                                            }
++                        
++                        if (gameView != null) {
++                            gameView.invalidate();
++                        }
++                    }
++                }
++                
++                if (!battleWon &amp;&amp; game != null) {
++                    game.setGameState(Game.GameState.LOST);
++                }
++            } catch (Exception e) {
++                Log.e(TAG, &quot;Error processing battle result&quot;, e);
++            }
++        }
++    }
++
++}
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/player.html b/player.html
+new file mode 100644
+index 0000000..e778de2
+--- /dev/null
++++ b/player.html
+@@ -0,0 +1,170 @@
++<!DOCTYPE html>
++<html>
++<head>
++    <title>Player.java</title>
++    <style>
++        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
++        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; line-height: 1.4; }
++        h1 { color: #333; margin-bottom: 10px; }
++        .path { color: #666; font-size: 0.9em; }
++    </style>
++</head>
++<body>
++    <h1>Player.java</h1>
++    <p class="path">src/main/java/com/knightlight/game/Player.java</p>
++    <pre>package com.knightlight.game;
++
++import java.io.Serializable;
++import android.util.Log;
++
++public class Player implements Serializable {
++    private static final long serialVersionUID = 1L;
++
++    private int x;
++    private int y;
++    private int maxHealth;
++    private int currentHealth;
++    private int goldCollected;
++    private int healthPotions;
++    private final transient Object stateLock = new Object();
++
++    public Player(int startX, int startY) {
++        if (startX &lt; 0 || startY &lt; 0) {
++            Log.w(&quot;Player&quot;, &quot;Negative starting position: (&quot; + startX + &quot;, &quot; + startY + &quot;)&quot;);
++        }
++        if (startX &lt; 0 || startY &lt; 0) throw new IllegalArgumentException(&quot;Negative coordinates not allowed&quot;);
++        this.x = startX;
++        this.y = startY;
++        this.maxHealth = 30;
++        if (this.maxHealth &lt;= 0) {
++            Log.w(&quot;Player&quot;, &quot;Invalid maxHealth: &quot; + this.maxHealth + &quot;; defaulting to 30&quot;);
++            this.maxHealth = 30;
++        }
++        this.currentHealth = this.maxHealth;
++        this.goldCollected = 0;
++        this.healthPotions = 3;
++    }
++
++    public synchronized void move(int dx, int dy) {
++        x += dx;
++        y += dy;
++    }
++
++    public synchronized void setPosition(int newX, int newY) {
++        if (newX &lt; 0 || newY &lt; 0) {
++            Log.w(&quot;Player&quot;, &quot;setPosition called with negative values: (&quot; + newX + &quot;, &quot; + newY + &quot;)&quot;);
++        }
++        x = newX;
++        y = newY;
++    }
++
++    public synchronized int getX() {
++        return x;
++    }
++
++    public synchronized int getY() {
++        return y;
++    }
++
++    public synchronized int getHealth() {
++        return currentHealth;
++    }
++
++    public synchronized int getCurrentHealth() {
++        return currentHealth;
++    }
++
++    public synchronized int getMaxHealth() {
++        return maxHealth;
++    }
++
++    public synchronized void takeDamage(int damage) {
++        int oldHealth = currentHealth;
++        currentHealth = Math.max(0, currentHealth - damage);
++        if (currentHealth != oldHealth) {
++            Log.d(&quot;Player&quot;, &quot;Took &quot; + damage + &quot; damage: &quot; + oldHealth + &quot; -&gt; &quot; + currentHealth);
++        }
++    }
++
++    public synchronized void heal(int amount) {
++        int oldHealth = currentHealth;
++        currentHealth = Math.min(currentHealth + amount, maxHealth);
++        if (currentHealth != oldHealth) {
++            Log.d(&quot;Player&quot;, &quot;Healed &quot; + (currentHealth - oldHealth) + &quot; HP: &quot; + oldHealth + &quot; -&gt; &quot; + currentHealth);
++        }
++    }
++
++    public synchronized void addGold(int amount) {
++        if (amount &lt; 0) {
++            Log.w(&quot;Player&quot;, &quot;addGold called with negative amount: &quot; + amount);
++            return;
++        }
++        int oldGold = goldCollected;
++        goldCollected += amount;
++        Log.d(&quot;Player&quot;, &quot;Collected &quot; + amount + &quot; gold: &quot; + oldGold + &quot; -&gt; &quot; + goldCollected);
++    }
++
++    public synchronized int getGold() {
++        return goldCollected;
++    }
++
++    public synchronized int getGoldCollected() {
++        return goldCollected;
++    }
++
++    public synchronized void setHealth(int health) {
++        if (health &lt; 0) {
++            Log.w(&quot;Player&quot;, &quot;setHealth called with negative value: &quot; + health + &quot;; clamping to 0&quot;);
++            currentHealth = 0;
++        } else if (health &gt; maxHealth) {
++            Log.w(&quot;Player&quot;, &quot;setHealth called with value &gt; maxHealth: &quot; + health + &quot;; clamping to &quot; + maxHealth);
++            currentHealth = maxHealth;
++        } else {
++            currentHealth = health;
++        }
++        Log.d(&quot;Player&quot;, &quot;Health set to &quot; + currentHealth);
++    }
++
++    public synchronized void setGoldCollected(int gold) {
++        if (gold &lt; 0) {
++            Log.w(&quot;Player&quot;, &quot;setGoldCollected called with negative value: &quot; + gold + &quot;; clamping to 0&quot;);
++            goldCollected = 0;
++        } else {
++            goldCollected = gold;
++        }
++        Log.d(&quot;Player&quot;, &quot;Gold set to &quot; + goldCollected);
++    }
++
++    public synchronized int getHealthPotions() {
++        return healthPotions;
++    }
++
++    public synchronized boolean usePotion() {
++        if (healthPotions &gt; 0) {
++            healthPotions--;
++            int healAmount = 15;
++            int oldHealth = currentHealth;
++            currentHealth = Math.min(currentHealth + healAmount, maxHealth);
++            Log.d(&quot;Player&quot;, &quot;Used potion: &quot; + oldHealth + &quot; -&gt; &quot; + currentHealth);
++            return true;
++        } else {
++            Log.w(&quot;Player&quot;, &quot;Attempted to use potion but none available&quot;);
++            return false;
++        }
++    }
++
++    public synchronized boolean isAlive() {
++        return currentHealth &gt; 0;
++    }
++
++    public synchronized void reset() {
++        currentHealth = maxHealth;
++        goldCollected = 0;
++        healthPotions = 3;
++        Log.d(&quot;Player&quot;, &quot;Player reset to initial state&quot;);
++    }
++}
++
++</pre>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/proguard-rules.pro b/proguard-rules.pro
+index e69de29..49dd832 100644
+--- a/proguard-rules.pro
++++ b/proguard-rules.pro
+@@ -0,0 +1,27 @@
++# Keep all custom views
++-keep public class com.knightlight.game.** extends android.view.View {
++    public <init>(android.content.Context, android.util.AttributeSet);
++}
++
++# Keep all classes in package (safest for game)
++-keep class com.knightlight.game.** { *; }
++
++# Keep enum types
++-keepclassmembers enum com.knightlight.game.** {
++    public static **[] values();
++    public static ** valueOf(java.lang.String);
++}
++
++# Keep native methods
++-keepclasseswithmembernames class * {
++    native <methods>;
++}
++
++# Keep animation callbacks
++-keep class * implements android.animation.Animator$AnimatorListener
++-keep class * implements android.animation.ValueAnimator$AnimatorUpdateListener
++
++# Keep parcelable and serializable
++-keep class * implements android.os.Parcelable { *; }
++-keep class * implements java.io.Serializable { *; }
++-dontwarn java.awt.Color
+diff --git a/src/main/AndroidManifest.xml b/src/main/AndroidManifest.xml
+index 85daaf5..dc0353f 100644
+--- a/src/main/AndroidManifest.xml
++++ b/src/main/AndroidManifest.xml
+@@ -19,7 +19,7 @@
+             </intent-filter>
+         </activity>
+ 
+-        <activity android:name=".BattleActivity" />
++        <activity android:name=".BattleActivity" android:exported="false" />
+ 
+     </application>
+ 
+diff --git a/src/main/java/com/knightlight/game/BattleActivity.java b/src/main/java/com/knightlight/game/BattleActivity.java
+index 3c988b4..8c004f1 100644
+--- a/src/main/java/com/knightlight/game/BattleActivity.java
++++ b/src/main/java/com/knightlight/game/BattleActivity.java
+@@ -1,9 +1,12 @@
+ package com.knightlight.game;
+ 
++import android.widget.Toast;
++import android.util.Log;
+ import android.content.Intent;
+ import android.os.Bundle;
+ import android.os.Handler;
+ import android.os.Looper;
++import android.widget.Button;
+ import androidx.appcompat.app.AppCompatActivity;
+ 
+ public class BattleActivity extends AppCompatActivity {
+@@ -11,6 +14,7 @@ public class BattleActivity extends AppCompatActivity {
+     private static final String EXTRA_ENEMY = "enemy";
+     private static final long TURN_DELAY_MS = 1000;
+     private static final long RESULT_DELAY_MS = 2000;
++    private static final String TAG = "BattleActivity";
+ 
+     private Battle battle;
+     private BattleView battleView;
+@@ -19,12 +23,20 @@ public class BattleActivity extends AppCompatActivity {
+     private Handler handler;
+     private boolean isDestroyed = false;
+ 
++    private Button btnAttack, btnDefend, btnFlee;
++
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
+         super.onCreate(savedInstanceState);
+         setContentView(R.layout.activity_battle);
+ 
+         battleView = findViewById(R.id.battle_view);
++        if (battleView == null) {
++            Log.e(TAG, "BattleView not found in layout");
++            finish();
++            return;
++        }
++
+         handler = new Handler(Looper.getMainLooper());
+ 
+         Intent intent = getIntent();
+@@ -38,6 +50,21 @@ public class BattleActivity extends AppCompatActivity {
+             battle = new Battle(player, enemy);
+             battleView.setBattle(battle);
+         }
++
++        // Wire up buttons
++        btnAttack = findViewById(R.id.btnAttack);
++        btnDefend = findViewById(R.id.btnDefend);
++        btnFlee = findViewById(R.id.btnFlee);
++
++        if (btnAttack != null) {
++            btnAttack.setOnClickListener(v -> playerAction(Battle.Action.ATTACK));
++        }
++        if (btnDefend != null) {
++            btnDefend.setOnClickListener(v -> playerAction(Battle.Action.DEFEND));
++        }
++        if (btnFlee != null) {
++            btnFlee.setOnClickListener(v -> playerAction(Battle.Action.RUN));
++        }
+     }
+ 
+     @Override
+@@ -48,56 +75,54 @@ public class BattleActivity extends AppCompatActivity {
+     }
+ 
+     public void playerAction(Battle.Action action) {
+-        if (battle == null || isDestroyed) return;
+-
+-        synchronized (battle) {
+-            battle.playerAction(action);
++        if (battle == null || isDestroyed) {
++            Log.w(TAG, "playerAction: battle is null or activity destroyed");
++            return;
+         }
+ 
+-        handler.postDelayed(() -> {
+-            if (!isDestroyed) {
+-                battleView.invalidate();
+-
+-                synchronized (battle) {
+-                    if (battle.getState() == Battle.State.VICTORY || 
+-                        battle.getState() == Battle.State.DEFEAT ||
+-                        battle.getState() == Battle.State.FLED) {
+-                        handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
+-                    } else {
+-                        handler.postDelayed(this::processTurn, TURN_DELAY_MS);
+-                    }
+-                }
+-            }
+-        }, TURN_DELAY_MS);
++        Log.d(TAG, "Player action: " + action);
++        battle.playerAction(action);
++        battleView.invalidate();
++
++        // Schedule enemy turn after player animation
++        handler.postDelayed(this::processTurn, TURN_DELAY_MS);
+     }
+ 
+     private void processTurn() {
+-        if (battle == null || isDestroyed) return;
+-
+-        synchronized (battle) {
+-            battle.enemyTurn();
++        if (battle == null || isDestroyed) {
++            return;
+         }
+ 
++        Log.d(TAG, "Processing enemy turn");
++        battle.enemyTurn();
+         battleView.invalidate();
+ 
+-        synchronized (battle) {
+-            if (battle.getState() == Battle.State.VICTORY || 
+-                battle.getState() == Battle.State.DEFEAT ||
+-                battle.getState() == Battle.State.FLED) {
+-                handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
+-            }
++        Log.d(TAG, "After enemy turn - Battle state: " + battle.getState());
++        if (isBattleOver()) {
++            Log.d(TAG, "Battle over after enemy action");
++            handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
+         }
+     }
+ 
++    private boolean isBattleOver() {
++        if (battle == null) return false;
++        Battle.State state = battle.getState();
++        return state == Battle.State.VICTORY ||
++               state == Battle.State.DEFEAT ||
++               state == Battle.State.FLED;
++    }
++
+     private void showBattleResult() {
++        Log.d(TAG, "Showing battle result");
+         if (isDestroyed) return;
+ 
+-        synchronized (battle) {
+-            Intent resultIntent = new Intent();
+-            resultIntent.putExtra("player", player);
+-            resultIntent.putExtra("battle_won", battle.getState() == Battle.State.VICTORY);
+-            setResult(RESULT_OK, resultIntent);
+-        }
++        Intent resultIntent = new Intent();
++        resultIntent.putExtra("enemyId", enemy.getEnemyId());
++        enemy.setDead(true);
++        resultIntent.putExtra("enemy", enemy);
++        resultIntent.putExtra("player", player);
++        resultIntent.putExtra("battle_won", battle.getState() == Battle.State.VICTORY);
++        setResult(RESULT_OK, resultIntent);
+ 
+         finish();
+     }
+diff --git a/src/main/java/com/knightlight/game/BattleView.java b/src/main/java/com/knightlight/game/BattleView.java
+index 54128e6..bb06855 100644
+--- a/src/main/java/com/knightlight/game/BattleView.java
++++ b/src/main/java/com/knightlight/game/BattleView.java
+@@ -1,40 +1,34 @@
+ package com.knightlight.game;
+-import android.util.AttributeSet;
+ 
++import android.util.AttributeSet;
+ import android.content.Context;
+ import android.graphics.Canvas;
+ import android.graphics.Color;
+ import android.graphics.Paint;
+-import android.graphics.Rect;
+ import android.util.Log;
+-import android.view.MotionEvent;
+ import android.view.View;
+ 
+ public class BattleView extends View {
+     private Battle battle;
+-    private Paint healthBarBackPaint, healthBarFillPaint, textPaint, buttonPaint, buttonPressPaint, buttonLabelPaint;
+-    private Rect btnAttack, btnDefend, btnItem, btnRun;
+-    private final Object buttonLock = new Object();
+-    private boolean btnAttackPressed = false, btnDefendPressed = false, btnItemPressed = false, btnRunPressed = false;
++    private Paint healthBarBackPaint, healthBarFillPaint, textPaint;
+ 
+     public BattleView(Context context, AttributeSet attrs) {
+         super(context, attrs);
+         Log.d("RoguelikeApp", "BattleView constructor called");
+         initPaints();
+-        initButtons();
+     }
++
+     public BattleView(Context context, Battle battle) {
+         super(context);
+         this.battle = battle;
+         initPaints();
+-        initButtons();
+     }
+ 
+-
+     public void setBattle(Battle battle) {
+         this.battle = battle;
+         invalidate();
+     }
++
+     private void initPaints() {
+         healthBarBackPaint = new Paint();
+         healthBarBackPaint.setColor(Color.parseColor("#333333"));
+@@ -48,27 +42,6 @@ public class BattleView extends View {
+         textPaint.setColor(Color.WHITE);
+         textPaint.setTextSize(36);
+         textPaint.setTextAlign(Paint.Align.LEFT);
+-
+-        buttonPaint = new Paint();
+-        buttonPaint.setColor(Color.parseColor("#0066FF"));
+-        buttonPaint.setStyle(Paint.Style.FILL);
+-
+-        buttonPressPaint = new Paint();
+-        buttonPressPaint.setColor(Color.parseColor("#0044AA"));
+-        buttonPressPaint.setStyle(Paint.Style.FILL);
+-
+-        buttonLabelPaint = new Paint();
+-        buttonLabelPaint.setColor(Color.WHITE);
+-        buttonLabelPaint.setTextSize(20);
+-        buttonLabelPaint.setTextAlign(Paint.Align.CENTER);
+-    }
+-
+-    // Pre-allocate button Rects to avoid per-frame allocation
+-    private void initButtons() {
+-        btnAttack = new Rect();
+-        btnDefend = new Rect();
+-        btnItem = new Rect();
+-        btnRun = new Rect();
+     }
+ 
+     @Override
+@@ -80,15 +53,11 @@ public class BattleView extends View {
+             return;
+         }
+ 
+-        int width = getWidth();
+         int height = getHeight();
+-        int buttonAreaHeight = (int) (height * 0.25);
+-        int statusAreaHeight = height - buttonAreaHeight;
++        int statusAreaHeight = (int) (height * 0.75);
+ 
+-        // Draw battle status and health bars
+         drawHealthBars(canvas, statusAreaHeight);
+         drawMessage(canvas, statusAreaHeight / 2);
+-        drawButtons(canvas, statusAreaHeight, buttonAreaHeight);
+     }
+ 
+     private void drawHealthBars(Canvas canvas, int statusAreaHeight) {
+@@ -104,7 +73,7 @@ public class BattleView extends View {
+         int barHeight = 30;
+         int barX = 10;
+ 
+-        // Player health bar (top-left)
++        // Player health bar (always draw)
+         int playerMaxHealth = player.getMaxHealth();
+         int playerCurrentHealth = Math.min(player.getCurrentHealth(), playerMaxHealth);
+         playerCurrentHealth = Math.max(0, playerCurrentHealth);
+@@ -115,17 +84,20 @@ public class BattleView extends View {
+         canvas.drawRect(barX, playerBarY, barX + (int) (barWidth * playerHealthRatio), playerBarY + barHeight, healthBarFillPaint);
+         canvas.drawText("Player: " + playerCurrentHealth + "/" + playerMaxHealth, barX + 5, playerBarY + 22, textPaint);
+ 
+-        // Enemy health bar (top-right)
+-        int enemyMaxHealth = enemy.getMaxHealth();
+-        int enemyCurrentHealth = Math.min(enemy.getHealth(), enemyMaxHealth);
+-        enemyCurrentHealth = Math.max(0, enemyCurrentHealth);
+-
+-        int enemyBarX = barX + barWidth + 20;
+-        int enemyBarY = 10;
+-        canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + barWidth, enemyBarY + barHeight, healthBarBackPaint);
+-        float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
+-        canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio), enemyBarY + barHeight, healthBarFillPaint);
+-        canvas.drawText("Enemy: " + enemyCurrentHealth + "/" + enemyMaxHealth, enemyBarX + 5, enemyBarY + 22, textPaint);
++        // Enemy health bar (only draw if alive)
++        int enemyHealth = enemy.getHealth();
++        if (enemyHealth > 0) {
++            int enemyMaxHealth = enemy.getMaxHealth();
++            int enemyCurrentHealth = Math.min(enemyHealth, enemyMaxHealth);
++            enemyCurrentHealth = Math.max(0, enemyCurrentHealth);
++
++            int enemyBarX = barX + barWidth + 20;
++            int enemyBarY = 10;
++            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + barWidth, enemyBarY + barHeight, healthBarBackPaint);
++            float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
++            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio), enemyBarY + barHeight, healthBarFillPaint);
++            canvas.drawText("Enemy: " + enemyCurrentHealth + "/" + enemyMaxHealth, enemyBarX + 5, enemyBarY + 22, textPaint);
++        }
+     }
+ 
+     private void drawMessage(Canvas canvas, int y) {
+@@ -134,7 +106,6 @@ public class BattleView extends View {
+             return;
+         }
+ 
+-        // Cache message to avoid repeated calls
+         String message = battle.getLastMessage();
+         if (message == null) {
+             message = "Battle in progress...";
+@@ -142,90 +113,4 @@ public class BattleView extends View {
+ 
+         canvas.drawText(message, 10, y, textPaint);
+     }
+-
+-    private void drawButtons(Canvas canvas, int statusAreaHeight, int buttonAreaHeight) {
+-        int buttonWidth = getWidth() / 4;
+-        int buttonHeight = buttonAreaHeight / 2;
+-        int startY = statusAreaHeight;
+-
+-        // Update pre-allocated Rect objects
+-        btnAttack.set(0, startY, buttonWidth, startY + buttonHeight);
+-        btnDefend.set(buttonWidth, startY, 2 * buttonWidth, startY + buttonHeight);
+-        btnItem.set(2 * buttonWidth, startY, 3 * buttonWidth, startY + buttonHeight);
+-        btnRun.set(3 * buttonWidth, startY, 4 * buttonWidth, startY + buttonHeight);
+-
+-        // Read button state under lock for thread safety
+-        synchronized (buttonLock) {
+-            drawButton(canvas, btnAttack, "ATTACK", btnAttackPressed);
+-            drawButton(canvas, btnDefend, "DEFEND", btnDefendPressed);
+-            drawButton(canvas, btnItem, "ITEM", btnItemPressed);
+-            drawButton(canvas, btnRun, "RUN", btnRunPressed);
+-        }
+-    }
+-
+-    private void drawButton(Canvas canvas, Rect rect, String label, boolean pressed) {
+-        Paint paint = pressed ? buttonPressPaint : buttonPaint;
+-        canvas.drawRect(rect, paint);
+-        canvas.drawText(label, rect.centerX(), rect.centerY() + 10, buttonLabelPaint);
+-    }
+-
+-    @Override
+-    public boolean onTouchEvent(MotionEvent event) {
+-        int action = event.getAction();
+-        float x = event.getX();
+-        float y = event.getY();
+-
+-        switch (action) {
+-            case MotionEvent.ACTION_DOWN:
+-                handleButtonPress(x, y);
+-                break;
+-            case MotionEvent.ACTION_UP:
+-                handleButtonRelease();
+-                break;
+-        }
+-
+-        invalidate();
+-        return true;
+-    }
+-
+-    private void handleButtonPress(float x, float y) {
+-        if (battle == null) {
+-            Log.w("BattleView", "Battle is null in handleButtonPress");
+-            return;
+-        }
+-
+-        int ix = (int) x;
+-        int iy = (int) y;
+-
+-        if (btnAttack != null && btnAttack.contains(ix, iy)) {
+-            synchronized (buttonLock) {
+-                btnAttackPressed = true;
+-            }
+-            battle.playerAction(Battle.Action.ATTACK);
+-        } else if (btnDefend != null && btnDefend.contains(ix, iy)) {
+-            synchronized (buttonLock) {
+-                btnDefendPressed = true;
+-            }
+-            battle.playerAction(Battle.Action.DEFEND);
+-        } else if (btnItem != null && btnItem.contains(ix, iy)) {
+-            synchronized (buttonLock) {
+-                btnItemPressed = true;
+-            }
+-            battle.playerAction(Battle.Action.ITEM);
+-        } else if (btnRun != null && btnRun.contains(ix, iy)) {
+-            synchronized (buttonLock) {
+-                btnRunPressed = true;
+-            }
+-            battle.playerAction(Battle.Action.RUN);
+-        }
+-    }
+-
+-    private void handleButtonRelease() {
+-        synchronized (buttonLock) {
+-            btnAttackPressed = false;
+-            btnDefendPressed = false;
+-            btnItemPressed = false;
+-            btnRunPressed = false;
+-        }
+-    }
+ }
+diff --git a/src/main/java/com/knightlight/game/Enemy.java b/src/main/java/com/knightlight/game/Enemy.java
+index 06788a0..b41f8ac 100644
+--- a/src/main/java/com/knightlight/game/Enemy.java
++++ b/src/main/java/com/knightlight/game/Enemy.java
+@@ -1,6 +1,6 @@
+ package com.knightlight.game;
+-
+ import java.io.Serializable;
++
+ import android.util.Log;
+ 
+ public class Enemy implements Serializable {
+@@ -11,8 +11,11 @@ public class Enemy implements Serializable {
+     private int health;
+     private int maxHealth;
+     private int attackPower;
+-    private Dungeon dungeon;
++    private transient Dungeon dungeon;
+     private boolean boss;
++    private static int nextId = 0;
++    private final int enemyId;
++    private boolean isDead;
+ 
+     public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon) {
+         this.x = x;
+@@ -22,6 +25,8 @@ public class Enemy implements Serializable {
+         this.attackPower = attackPower;
+         this.dungeon = dungeon;
+         this.boss = false;
++        this.enemyId = nextId++;
++        this.isDead = false;
+     }
+ 
+     public synchronized int getX() { return x; }
+@@ -32,6 +37,9 @@ public class Enemy implements Serializable {
+     public int getGoldReward() { return boss ? 100 : 25; }
+     public synchronized boolean isAlive() { return health > 0; }
+     public boolean isBoss() { return boss; }
++    public synchronized int getEnemyId() { return enemyId; }
++    public synchronized boolean isDead() { return isDead; }
++    public synchronized void setDead(boolean dead) { this.isDead = dead; }
+ 
+     public static Enemy createBoss(int x, int y, Dungeon dungeon) {
+         Enemy boss = new Enemy(x, y, 50, 5, dungeon);
+diff --git a/src/main/java/com/knightlight/game/Game.java b/src/main/java/com/knightlight/game/Game.java
+index b8c14d8..5c60f88 100644
+--- a/src/main/java/com/knightlight/game/Game.java
++++ b/src/main/java/com/knightlight/game/Game.java
+@@ -7,21 +7,22 @@ import java.util.Random;
+ 
+ public class Game {
+     private static final String TAG = "Game";
+-    
++
+     // Game constants
+     private static final int ENEMY_HEALTH = 10;
+     private static final int ENEMY_ATTACK_POWER = 5;
+     private static final int GOLD_PICKUP_AMOUNT = 10;
+     private static final int GOLD_WIN_CONDITION = 100;
+     private static final int SPAWN_ATTEMPTS = 100;
+-    
++
+     public enum GameState {
+         PLAYING, WON, LOST
+     }
+ 
+     private final Object stateLock = new Object();
+     private final Object enemyLock = new Object();
+-    
++    private final Object encounterLock = new Object();
++
+     private Dungeon dungeon;
+     private Player player;
+     private List<Enemy> enemies;
+@@ -30,6 +31,8 @@ public class Game {
+     private int initialEnemyCount;
+     private Random rng;
+ 
++    private Enemy encounteredEnemy = null;
++
+     public Game(int dungeonWidth, int dungeonHeight, int numEnemies) {
+         if (dungeonWidth <= 0 || dungeonHeight <= 0 || numEnemies < 0) {
+             throw new IllegalArgumentException(
+@@ -65,7 +68,7 @@ public class Game {
+             }
+         }
+ 
+-        Log.d(TAG, "Game initialized: " + enemies.size() + "/" + numEnemies 
++        Log.d(TAG, "Game initialized: " + enemies.size() + "/" + numEnemies
+             + " enemies spawned, dungeon: " + dungeonWidth + "x" + dungeonHeight);
+     }
+ 
+@@ -99,38 +102,46 @@ public class Game {
+ 
+     /**
+      * Move player in direction (dx, dy) and process one turn.
++     * Returns true if an encounter was triggered, false otherwise.
+      * Synchronized to prevent race conditions with processTurn().
+      */
+-    public synchronized void playerMove(int dx, int dy) {
++    public synchronized boolean playerMove(int dx, int dy) {
+         synchronized (stateLock) {
+             if (state != GameState.PLAYING) {
+                 Log.w(TAG, "playerMove called but game state is " + state);
+-                return;
++                return false;
+             }
+         }
+ 
+         // Validate movement direction
+         if ((dx < -1 || dx > 1) || (dy < -1 || dy > 1) || (dx == 0 && dy == 0)) {
+             Log.w(TAG, "Invalid move direction: dx=" + dx + ", dy=" + dy);
+-            return;
++            return false;
+         }
+ 
+         if (player == null) {
+             Log.e(TAG, "Player is null in playerMove");
+-            return;
++            return false;
+         }
+ 
+         player.move(dx, dy);
+         if (player.getX() < 0 || player.getY() < 0 || player.getX() >= dungeon.getWidth() || player.getY() >= dungeon.getHeight() || dungeon.getTile(player.getX(), player.getY()) == Dungeon.TILE_WALL) {
+             player.move(-dx, -dy);
+-            return;
++            return false;
+         }
++
+         processTurn();
++
++        // Return whether an encounter occurred
++        synchronized (encounterLock) {
++            return encounteredEnemy != null;
++        }
+     }
+ 
+     /**
+-     * Process one turn: move enemies, resolve combat, pickup gold, check win/loss.
++     * Process one turn: move enemies, check for encounters, pickup gold, check win/loss.
+      * Called only from playerMove() which is synchronized.
++     * If an encounter is detected, sets encounteredEnemy and returns without resolving combat.
+      */
+     private void processTurn() {
+         if (player == null) {
+@@ -143,22 +154,23 @@ public class Game {
+         // Step 1: Move all alive enemies toward player
+         synchronized (enemyLock) {
+             for (Enemy enemy : enemies) {
+-                if (enemy != null && enemy.isAlive()) {
++                if (enemy != null && enemy.isAlive() && !enemy.isDead()) {
+                     enemy.moveToward(player);
+                 }
+             }
+         }
+ 
+-        // Step 2: Resolve combat: check all enemies at player location
++        // Step 2: Check for encounter at player location
+         synchronized (enemyLock) {
+             for (Enemy enemy : enemies) {
+-                if (enemy != null && enemy.isAlive() 
++                if (enemy != null && enemy.isAlive() && !enemy.isDead()
+                     && enemy.getX() == player.getX() && enemy.getY() == player.getY()) {
+-                    
+-                    player.takeDamage(enemy.getAttack());
+-                    enemy.takeDamage(5);
+-                    Log.d(TAG, "Combat: Player takes " + enemy.getAttack() 
+-                        + " damage, enemy takes 5 damage");
++                    // Encounter detected: set encounteredEnemy and return
++                    synchronized (encounterLock) {
++                        encounteredEnemy = enemy;
++                    }
++                    Log.d(TAG, "Encounter triggered with enemy at (" + enemy.getX() + ", " + enemy.getY() + ")");
++                    return;
+                 }
+             }
+         }
+@@ -167,10 +179,8 @@ public class Game {
+         if (dungeon != null) {
+             int playerX = player.getX();
+             int playerY = player.getY();
+-            
+-            if (dungeon.isInBounds(playerX, playerY) 
++            if (dungeon.isInBounds(playerX, playerY)
+                 && dungeon.getTile(playerX, playerY) == Dungeon.TILE_GOLD) {
+-                
+                 player.addGold(GOLD_PICKUP_AMOUNT);
+                 dungeon.setTile(playerX, playerY, Dungeon.TILE_FLOOR);
+                 Log.d(TAG, "Player picked up gold. Total: " + player.getGoldCollected());
+@@ -184,12 +194,28 @@ public class Game {
+                 Log.d(TAG, "Player defeated. Game Over.");
+             } else if (player.getGoldCollected() >= GOLD_WIN_CONDITION) {
+                 state = GameState.WON;
+-                Log.d(TAG, "Player collected " + GOLD_WIN_CONDITION 
++                Log.d(TAG, "Player collected " + GOLD_WIN_CONDITION
+                     + " gold. Victory!");
+             }
+         }
+     }
+ 
++    /**
++     * Get and clear the encountered enemy (if any).
++     * Returns the enemy if an encounter occurred, null otherwise.
++     * Thread-safe and resets encounteredEnemy after retrieval.
++     */
++    public synchronized Enemy getAndClearEncounteredEnemy() {
++        synchronized (encounterLock) {
++            Enemy enemy = encounteredEnemy;
++            encounteredEnemy = null;
++            if (enemy != null) {
++                Log.d(TAG, "Retrieved and cleared encountered enemy");
++            }
++            return enemy;
++        }
++    }
++
+     /**
+      * Get a defensive copy of the dungeon.
+      */
+@@ -259,5 +285,18 @@ public class Game {
+                 Log.d(TAG, "Game reset. Enemies: " + enemies.size() + "/" + initialEnemyCount);
+             }
+         }
++
++        // Clear any lingering encounter
++        synchronized (encounterLock) {
++            encounteredEnemy = null;
++        }
+     }
++
++    public synchronized void setGameState(GameState newState) {
++        synchronized (stateLock) {
++            this.state = newState;
++        }
++    }
++
+ }
++
+diff --git a/src/main/java/com/knightlight/game/GameView.java b/src/main/java/com/knightlight/game/GameView.java
+index 8640872..c084c47 100644
+--- a/src/main/java/com/knightlight/game/GameView.java
++++ b/src/main/java/com/knightlight/game/GameView.java
+@@ -17,7 +17,7 @@ public class GameView extends View {
+     private float tileSize;
+     private GameListener listener;
+     private Rect btnUp, btnDown, btnLeft, btnRight, btnQuit;
+-    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint;
++    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, emojiPaint;
+     
+     // Synchronized access to button press state
+     private final Object buttonLock = new Object();
+@@ -26,6 +26,7 @@ public class GameView extends View {
+     public interface GameListener {
+         void onGameOver(Game.GameState state);
+         void onQuitRequested();
++    void onEncounter(Enemy enemy);
+     }
+ 
+     public GameView(Context context) {
+@@ -62,11 +63,11 @@ public class GameView extends View {
+         enemyPaint.setStyle(Paint.Style.FILL);
+         
+         textPaint = new Paint();
+-        textPaint.setColor(Color.WHITE);
+-        textPaint.setTextSize(36);
+-        textPaint.setTextAlign(Paint.Align.LEFT);
++        emojiPaint = new Paint();
++                emojiPaint.setTextSize(tileSize * 0.8f);
+         
+         buttonPaint = new Paint();
++                emojiPaint.setTextAlign(Paint.Align.CENTER);
+         buttonPaint.setColor(Color.parseColor("#00FF00"));
+         buttonPaint.setStyle(Paint.Style.FILL);
+         
+@@ -169,22 +170,32 @@ public class GameView extends View {
+         canvas.drawCircle(x, y, tileSize * 0.35f, playerPaint);
+     }
+ 
++    private static final float ENEMY_RADIUS = 0.35f;
++    private static final float EMOJI_OFFSET = 0.2f;
++    private static final float EMOJI_TEXT_SIZE_SCALE = 0.4f;
+     private void drawEnemies(Canvas canvas) {
+         List<Enemy> enemies = game.getEnemies();
+         if (enemies == null) {
+             Log.w("GameView", "Enemies list is null in drawEnemies");
+             return;
+         }
+-        
+         for (Enemy enemy : enemies) {
+-            if (enemy != null && enemy.isAlive()) {
+-                float x = enemy.getX() * tileSize + tileSize / 2;
+-                float y = enemy.getY() * tileSize + tileSize / 2;
+-                canvas.drawCircle(x, y, tileSize * 0.35f, enemyPaint);
++            if (enemy == null) continue;
++            
++            float x = enemy.getX() * tileSize + tileSize / 2;
++            float y = enemy.getY() * tileSize + tileSize / 2;
++            
++            if (!enemy.isDead()) {
++                canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
++            } else {
+             }
++                        // Draw skull emoji centered in tile
++                        Rect bounds = new Rect();
++                        emojiPaint.getTextBounds("☠️", 0, 1, bounds);
++                        float emojiY = y + (tileSize - (bounds.height())) / 2;
++                        canvas.drawText("☠️", x, emojiY, emojiPaint);
+         }
+-    }
+-
++                canvas.drawText("☠️", x, y + tileSize * 0.15f, emojiPaint);
+     private void drawStatus(Canvas canvas, int gameAreaHeight) {
+         Player player = game.getPlayer();
+         if (player == null) {
+@@ -257,38 +268,47 @@ public class GameView extends View {
+             Log.w("GameView", "Game is null in handleButtonPress");
+             return;
+         }
++
++        boolean encounterOccurred = false;
++
+         if (btnUp != null && btnUp.contains((int) x, (int) y)) {
+             synchronized (buttonLock) {
+                 btnUpPressed = true;
+             }
+-            game.playerMove(0, -1);
++            encounterOccurred = game.playerMove(0, -1);
+         } else if (btnDown != null && btnDown.contains((int) x, (int) y)) {
+             synchronized (buttonLock) {
+                 btnDownPressed = true;
+             }
+-            game.playerMove(0, 1);
++            encounterOccurred = game.playerMove(0, 1);
+         } else if (btnLeft != null && btnLeft.contains((int) x, (int) y)) {
+             synchronized (buttonLock) {
+                 btnLeftPressed = true;
+             }
+-            game.playerMove(-1, 0);
++            encounterOccurred = game.playerMove(-1, 0);
+         } else if (btnRight != null && btnRight.contains((int) x, (int) y)) {
+             synchronized (buttonLock) {
+                 btnRightPressed = true;
+             }
+-            game.playerMove(1, 0);
++            encounterOccurred = game.playerMove(1, 0);
+         } else if (btnQuit != null && btnQuit.contains((int) x, (int) y)) {
+             if (listener != null) {
+                 listener.onQuitRequested();
+             }
+         }
+ 
++        if (encounterOccurred && listener != null) {
++            Enemy enemy = game.getAndClearEncounteredEnemy();
++            if (enemy != null) {
++                listener.onEncounter(enemy);
++            }
++        }
++
+         Game.GameState state = game.getState();
+         if (state != Game.GameState.PLAYING && listener != null) {
+             listener.onGameOver(state);
+         }
+     }
+-
+     private void handleButtonRelease() {
+         synchronized (buttonLock) {
+             btnUpPressed = false;
+diff --git a/src/main/java/com/knightlight/game/MainActivity.java b/src/main/java/com/knightlight/game/MainActivity.java
+index 4b1d8cf..f394164 100644
+--- a/src/main/java/com/knightlight/game/MainActivity.java
++++ b/src/main/java/com/knightlight/game/MainActivity.java
+@@ -2,15 +2,17 @@ package com.knightlight.game;
+ import java.io.*;
+ import java.text.SimpleDateFormat;
+ import java.util.*;
++import java.io.File;
+ 
+ import android.app.AlertDialog;
+ import android.content.Intent;
++import android.widget.Toast;
+ import android.os.Bundle;
+ import android.util.Log;
+ import androidx.appcompat.app.AppCompatActivity;
+ 
+ public class MainActivity extends AppCompatActivity implements GameView.GameListener {
+-    private static final String LOG_FILE = "/sdcard/roguelike_debug.log";
++    private static final String LOG_FILE = "/data/data/com.knightlight.game/roguelike_debug.log";
+     private static final String TAG = "MainActivity";
+     private static final int DUNGEON_WIDTH = 40;
+     private static final int DUNGEON_HEIGHT = 16;
+@@ -107,6 +109,25 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
+         showQuitConfirmDialog();
+     }
+ 
++    @Override
++    public void onEncounter(Enemy enemy) {
++        Toast.makeText(this, "onEncounter: started", Toast.LENGTH_SHORT).show();
++        if (enemy == null) {
++            Log.w(TAG, "Encountered enemy is null");
++            return;
++        }
++        
++        Log.d(TAG, "Encounter triggered with enemy at (" + enemy.getX() + ", " + enemy.getY() + ")");
++        Toast.makeText(this, "onEncounter: before Intent", Toast.LENGTH_SHORT).show();
++        
++        Intent battleIntent = new Intent(this, BattleActivity.class);
++        battleIntent.putExtra("enemy", enemy);
++        Toast.makeText(this, "onEncounter: enemy added", Toast.LENGTH_SHORT).show();
++        battleIntent.putExtra("player", game.getPlayer());
++        startActivityForResult(battleIntent, BATTLE_REQUEST_CODE);
++    }
++
++
+     private void showGameOverDialog(String title, String message) {
+         if (currentDialog != null && currentDialog.isShowing()) {
+             currentDialog.dismiss();
+@@ -203,10 +224,57 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
+     }
+ 
+     private void writeLog(String msg) {
+-        try (java.io.FileWriter fw = new java.io.FileWriter(LOG_FILE, true)) {
++        try {
++            File logFile = new File(getFilesDir(), "roguelike_debug.log");
++            java.io.FileWriter fw = new java.io.FileWriter(logFile, true);
+             fw.write(System.currentTimeMillis() + " " + msg + "\n");
++            fw.close();
+         } catch (Exception e) {
+             e.printStackTrace();
+         }
+     }
++
++
++    @Override
++    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
++        super.onActivityResult(requestCode, resultCode, data);
++        
++        if (requestCode == BATTLE_REQUEST_CODE && data != null) {
++            try {
++                Player updatedPlayer = (Player) data.getSerializableExtra("player");
++                boolean battleWon = data.getBooleanExtra("battle_won", false);
++                
++                if (updatedPlayer != null && game != null) {
++                    Player currentPlayer = game.getPlayer();
++                    if (currentPlayer != null) {
++                        currentPlayer.setHealth(updatedPlayer.getCurrentHealth());
++                        currentPlayer.setGoldCollected(updatedPlayer.getGoldCollected());
++                        Log.d(TAG, "Player synced: HP=" + currentPlayer.getCurrentHealth() + ", Gold=" + currentPlayer.getGoldCollected());
++                                                                                     int defeatedEnemyId = data.getIntExtra("enemyId", -1);
++                                                            if (defeatedEnemyId != -1 && game != null && battleWon) {
++                                                                List<Enemy> currentEnemies = game.getEnemies();
++                                                                for (Enemy e : currentEnemies) {
++                                                                    if (e != null && e.getEnemyId() == defeatedEnemyId) {
++                                                                        e.setDead(true);
++                                                                        Log.d(TAG, "Enemy " + defeatedEnemyId + " marked as dead");
++                                                                        break;
++                                                                    }
++                                                                }
++                                                            }
++                        
++                        if (gameView != null) {
++                            gameView.invalidate();
++                        }
++                    }
++                }
++                
++                if (!battleWon && game != null) {
++                    game.setGameState(Game.GameState.LOST);
++                }
++            } catch (Exception e) {
++                Log.e(TAG, "Error processing battle result", e);
++            }
++        }
++    }
++
+ }
+diff --git a/src/main/java/com/knightlight/game/Player.java b/src/main/java/com/knightlight/game/Player.java
+index b7a287f..a2e58e1 100644
+--- a/src/main/java/com/knightlight/game/Player.java
++++ b/src/main/java/com/knightlight/game/Player.java
+@@ -12,7 +12,7 @@ public class Player implements Serializable {
+     private int currentHealth;
+     private int goldCollected;
+     private int healthPotions;
+-    private final Object stateLock = new Object();
++    private final transient Object stateLock = new Object();
+ 
+     public Player(int startX, int startY) {
+         if (startX < 0 || startY < 0) {
+@@ -22,12 +22,10 @@ public class Player implements Serializable {
+         this.x = startX;
+         this.y = startY;
+         this.maxHealth = 30;
+-        
+         if (this.maxHealth <= 0) {
+             Log.w("Player", "Invalid maxHealth: " + this.maxHealth + "; defaulting to 30");
+             this.maxHealth = 30;
+         }
+-        
+         this.currentHealth = this.maxHealth;
+         this.goldCollected = 0;
+         this.healthPotions = 3;
+@@ -69,7 +67,6 @@ public class Player implements Serializable {
+     public synchronized void takeDamage(int damage) {
+         int oldHealth = currentHealth;
+         currentHealth = Math.max(0, currentHealth - damage);
+-        
+         if (currentHealth != oldHealth) {
+             Log.d("Player", "Took " + damage + " damage: " + oldHealth + " -> " + currentHealth);
+         }
+@@ -78,7 +75,6 @@ public class Player implements Serializable {
+     public synchronized void heal(int amount) {
+         int oldHealth = currentHealth;
+         currentHealth = Math.min(currentHealth + amount, maxHealth);
+-        
+         if (currentHealth != oldHealth) {
+             Log.d("Player", "Healed " + (currentHealth - oldHealth) + " HP: " + oldHealth + " -> " + currentHealth);
+         }
+@@ -102,6 +98,29 @@ public class Player implements Serializable {
+         return goldCollected;
+     }
+ 
++    public synchronized void setHealth(int health) {
++        if (health < 0) {
++            Log.w("Player", "setHealth called with negative value: " + health + "; clamping to 0");
++            currentHealth = 0;
++        } else if (health > maxHealth) {
++            Log.w("Player", "setHealth called with value > maxHealth: " + health + "; clamping to " + maxHealth);
++            currentHealth = maxHealth;
++        } else {
++            currentHealth = health;
++        }
++        Log.d("Player", "Health set to " + currentHealth);
++    }
++
++    public synchronized void setGoldCollected(int gold) {
++        if (gold < 0) {
++            Log.w("Player", "setGoldCollected called with negative value: " + gold + "; clamping to 0");
++            goldCollected = 0;
++        } else {
++            goldCollected = gold;
++        }
++        Log.d("Player", "Gold set to " + goldCollected);
++    }
++
+     public synchronized int getHealthPotions() {
+         return healthPotions;
+     }
+@@ -131,3 +150,4 @@ public class Player implements Serializable {
+         Log.d("Player", "Player reset to initial state");
+     }
+ }
++
+diff --git a/src/main/proguard-rules.pro b/src/main/proguard-rules.pro
+new file mode 100644
+index 0000000..b8347ea
+--- /dev/null
++++ b/src/main/proguard-rules.pro
+@@ -0,0 +1,7 @@
++
++# Keep lanterna library classes
++-keep class com.googlecode.lanterna.** { *; }
++-dontwarn com.googlecode.lanterna.**
++
++# Keep java.awt classes used by lanterna
++-dontwarn java.awt.**
+diff --git a/src/main/res/drawable/button_blue.xml b/src/main/res/drawable/button_blue.xml
+new file mode 100644
+index 0000000..f856760
+--- /dev/null
++++ b/src/main/res/drawable/button_blue.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<ripple xmlns:android="http://schemas.android.com/apk/res/android"
++    android:color="#00AAFF">
++    <item>
++        <shape android:shape="rectangle">
++            <solid android:color="#0066FF"/>
++            <corners android:radius="4dp"/>
++        </shape>
++    </item>
++</ripple>
+diff --git a/src/main/res/drawable/button_flee.xml b/src/main/res/drawable/button_flee.xml
+new file mode 100644
+index 0000000..6f3c216
+--- /dev/null
++++ b/src/main/res/drawable/button_flee.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<ripple xmlns:android="http://schemas.android.com/apk/res/android"
++    android:color="#FF6666">
++    <item>
++        <shape android:shape="rectangle">
++            <solid android:color="#CC0000"/>
++            <corners android:radius="4dp"/>
++        </shape>
++    </item>
++</ripple>
+diff --git a/src/main/res/drawable/button_state.xml b/src/main/res/drawable/button_state.xml
+new file mode 100644
+index 0000000..94fd981
+--- /dev/null
++++ b/src/main/res/drawable/button_state.xml
+@@ -0,0 +1,15 @@
++<?xml version="1.0" encoding="utf-8"?>
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_pressed="true">
++        <shape android:shape="rectangle">
++            <solid android:color="#0044AA"/>
++            <corners android:radius="8dp"/>
++        </shape>
++    </item>
++    <item>
++        <shape android:shape="rectangle">
++            <solid android:color="#0066FF"/>
++            <corners android:radius="8dp"/>
++        </shape>
++    </item>
++</selector>
+diff --git a/src/main/res/layout/activity_battle.xml b/src/main/res/layout/activity_battle.xml
+index 550a8c1..d5d293f 100644
+--- a/src/main/res/layout/activity_battle.xml
++++ b/src/main/res/layout/activity_battle.xml
+@@ -17,7 +17,7 @@
+         android:padding="8dp"
+         android:background="#1a1a1a" />
+ 
+-    <BattleView
++    <com.knightlight.game.BattleView
+         android:id="@+id/battle_view"
+         android:layout_width="match_parent"
+         android:layout_height="0dp"
+@@ -37,7 +37,8 @@
+             android:layout_height="wrap_content"
+             android:text="ATTACK"
+             android:textColor="#FFFFFF"
+-            android:background="#333333" />
++            android:background="#0066FF"
++            android:layout_marginBottom="4dp" />
+ 
+         <Button
+             android:id="@+id/btnDefend"
+@@ -45,7 +46,8 @@
+             android:layout_height="wrap_content"
+             android:text="DEFEND"
+             android:textColor="#FFFFFF"
+-            android:background="#333333" />
++            android:background="#0066FF"
++            android:layout_marginBottom="4dp" />
+ 
+         <Button
+             android:id="@+id/btnFlee"
+diff --git a/src/main/res/layout/activity_main.xml b/src/main/res/layout/activity_main.xml
+index 929c5fe..b063420 100644
+--- a/src/main/res/layout/activity_main.xml
++++ b/src/main/res/layout/activity_main.xml
+@@ -23,63 +23,4 @@
+         android:layout_weight="1"
+         android:background="#000000" />
+ 
+-    <LinearLayout
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:orientation="vertical"
+-        android:padding="8dp"
+-        android:background="#1a1a1a">
+-
+-        <Button
+-            android:id="@+id/btnUp"
+-            android:layout_width="match_parent"
+-            android:layout_height="wrap_content"
+-            android:text="↑ UP"
+-            android:textColor="#FFFFFF"
+-            android:background="#333333" />
+-
+-        <LinearLayout
+-            android:layout_width="match_parent"
+-            android:layout_height="wrap_content"
+-            android:orientation="horizontal">
+-
+-            <Button
+-                android:id="@+id/btnLeft"
+-                android:layout_width="0dp"
+-                android:layout_height="wrap_content"
+-                android:layout_weight="1"
+-                android:text="← LEFT"
+-                android:textColor="#FFFFFF"
+-                android:background="#333333" />
+-
+-            <Button
+-                android:id="@+id/btnDown"
+-                android:layout_width="0dp"
+-                android:layout_height="wrap_content"
+-                android:layout_weight="1"
+-                android:text="↓ DOWN"
+-                android:textColor="#FFFFFF"
+-                android:background="#333333" />
+-
+-            <Button
+-                android:id="@+id/btnRight"
+-                android:layout_width="0dp"
+-                android:layout_height="wrap_content"
+-                android:layout_weight="1"
+-                android:text="RIGHT →"
+-                android:textColor="#FFFFFF"
+-                android:background="#333333" />
+-
+-        </LinearLayout>
+-
+-        <Button
+-            android:id="@+id/btnQuit"
+-            android:layout_width="match_parent"
+-            android:layout_height="wrap_content"
+-            android:text="QUIT"
+-            android:textColor="#FF3333"
+-            android:background="#333333" />
+-
+-    </LinearLayout>
+-
+ </LinearLayout>
+diff --git a/src/main/res/values/attrs.xml b/src/main/res/values/attrs.xml
+new file mode 100644
+index 0000000..89e6c9c
+--- /dev/null
++++ b/src/main/res/values/attrs.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <attr name="colorPrimaryVariant" format="color" />
++    <attr name="colorSecondary" format="color" />
++    <attr name="colorSecondaryVariant" format="color" />
++    <attr name="colorSurface" format="color" />
++    <attr name="colorOnPrimary" format="color" />
++    <attr name="colorOnSecondary" format="color" />
++    <attr name="colorOnError" format="color" />
++    <attr name="colorOnSurface" format="color" />
++</resources>
+diff --git a/src/main/res/values/colors.xml b/src/main/res/values/colors.xml
+index bf3b48e..ecf5b04 100644
+--- a/src/main/res/values/colors.xml
++++ b/src/main/res/values/colors.xml
+@@ -1,7 +1,29 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+-    <color name="primary">#1a1a1a</color>
+-    <color name="accent">#00FF00</color>
++    <!-- Material Design Colors -->
++    <color name="purple_500">#6200EE</color>
++    <color name="purple_700">#3700B3</color>
++    <color name="teal_200">#03DAC6</color>
++    <color name="teal_700">#018786</color>
++    <color name="red_500">#CF6679</color>
+     <color name="white">#FFFFFF</color>
+     <color name="black">#000000</color>
++
++    <!-- Primary Colors -->
++    <color name="colorPrimary">#6200EE</color>
++    <color name="colorPrimaryVariant">#3700B3</color>
++
++    <!-- Secondary Colors -->
++    <color name="colorSecondary">#03DAC6</color>
++    <color name="colorSecondaryVariant">#018786</color>
++
++    <!-- Surface & Text Colors -->
++    <color name="colorSurface">#FFFFFF</color>
++    <color name="colorError">#CF6679</color>
++
++    <!-- On* Colors (text/icon on colored backgrounds) -->
++    <color name="colorOnPrimary">#FFFFFF</color>
++    <color name="colorOnSecondary">#000000</color>
++    <color name="colorOnError">#000000</color>
++    <color name="colorOnSurface">#000000</color>
+ </resources>
+diff --git a/src/main/res/values/styles.xml b/src/main/res/values/styles.xml
+index 3f1e657..1a4f7f2 100644
+--- a/src/main/res/values/styles.xml
++++ b/src/main/res/values/styles.xml
+@@ -1,9 +1,15 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+     <style name="Theme.RoguelikeGame" parent="Theme.AppCompat.Light.DarkActionBar">
+-        <item name="colorPrimary">@color/primary</item>
+-        <item name="colorAccent">@color/accent</item>
+-        <item name="android:colorBackground">@color/black</item>
+-        <item name="android:textColorPrimary">@color/white</item>
++        <item name="colorPrimary">@color/purple_500</item>
++        <item name="colorPrimaryVariant">@color/purple_700</item>
++        <item name="colorSecondary">@color/teal_200</item>
++        <item name="colorSecondaryVariant">@color/teal_700</item>
++        <item name="colorError">@color/red_500</item>
++        <item name="colorSurface">@color/white</item>
++        <item name="colorOnPrimary">@color/white</item>
++        <item name="colorOnSecondary">@color/black</item>
++        <item name="colorOnError">@color/white</item>
++        <item name="colorOnSurface">@color/black</item>
+     </style>
+ </resources>
