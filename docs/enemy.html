@@ -25,9 +25,12 @@ package com.knightlight.game;
 import android.util.Log;
 import java.io.Serializable;
 
+/**
+ * Represents an enemy in the roguelike dungeon.
+ * Enemies have position, health, attack power, rewards, and can be defeated.
+ */
 public class Enemy implements Serializable {
     private static final long serialVersionUID = 1L;
-    
     private int x;
     private int y;
     private int health;
@@ -36,6 +39,7 @@ public class Enemy implements Serializable {
     private transient Dungeon dungeon;
     private boolean isBoss;
     private static int nextId = 0;
+    private static final Object ID_LOCK = new Object();
     private final int enemyId;
     private String name;
     private int defense;
@@ -46,29 +50,43 @@ public class Enemy implements Serializable {
     public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon, String name, int defense, int experienceReward, int level) {
         this.x = x;
         this.y = y;
-        this.health = health;
-        this.maxHealth = health;
-        this.attackPower = attackPower;
+        this.maxHealth = Math.max(1, health);
+        this.health = Math.max(1, Math.min(health, this.maxHealth));
+        this.attackPower = Math.max(1, Math.min(attackPower, 150));
         this.dungeon = dungeon;
         this.isBoss = false;
-        this.enemyId = nextId++;
-        this.name = name;
-        this.defense = defense;
-        this.experienceReward = experienceReward;
-        this.level = level;
-        this.goldReward = 25;
+        synchronized (ID_LOCK) {
+            this.enemyId = nextId++;
+        }
+        this.name = name != null ? name : "quot;Unknown Enemy"quot;;
+        this.defense = Math.max(0, Math.min(defense, 100));
+        this.experienceReward = Math.max(1, Math.min(experienceReward, Integer.MAX_VALUE / 2));
+        this.level = Math.max(1, Math.min(level, 100));
+        this.goldReward = Math.max(0, Math.min(25, Integer.MAX_VALUE / 2));
     }
     
     public synchronized int getX() {
         return x;
     }
     
+    public synchronized void setX(int x) {
+        this.x = x;
+    }
+    
     public synchronized int getY() {
         return y;
     }
     
+    public synchronized void setY(int y) {
+        this.y = y;
+    }
+    
     public synchronized int getHealth() {
         return health;
+    }
+    
+    public synchronized void setHealth(int newHealth) {
+        this.health = Math.max(0, Math.min(newHealth, this.maxHealth));
     }
     
     public synchronized int getMaxHealth() {
@@ -79,104 +97,121 @@ public class Enemy implements Serializable {
         return attackPower;
     }
     
-    public int getGoldReward() {
-        return isBoss ? 100 : 25;
+    public synchronized void setAttack(int newAttack) {
+        this.attackPower = Math.max(1, Math.min(newAttack, 150));
+    }
+    
+    public synchronized int getDefense() {
+        return defense;
+    }
+    
+    public synchronized void setDefense(int newDefense) {
+        this.defense = Math.max(0, Math.min(newDefense, 100));
+    }
+    
+    public synchronized String getName() {
+        return name;
+    }
+    
+    public synchronized void setName(String newName) {
+        this.name = newName != null ? newName : "quot;Unknown Enemy"quot;;
+    }
+    
+    public synchronized int getExperienceReward() {
+        return experienceReward;
+    }
+    
+    public synchronized void setExperienceReward(int reward) {
+        this.experienceReward = Math.max(1, Math.min(reward, Integer.MAX_VALUE / 2));
+    }
+    
+    public synchronized int getGoldReward() {
+        return isBoss ? 100 : goldReward;
+    }
+    
+    public synchronized void setGoldReward(int reward) {
+        this.goldReward = Math.max(0, Math.min(reward, Integer.MAX_VALUE / 2));
+    }
+    
+    public synchronized int getLevel() {
+        return level;
+    }
+    
+    public synchronized void setLevel(int newLevel) {
+        this.level = Math.max(1, Math.min(newLevel, 100));
     }
     
     public synchronized boolean isAlive() {
         return health >gt; 0;
     }
     
-    public synchronized int getEnemyId() {
-        return enemyId;
+    public synchronized boolean isDefeated() {
+        return health <lt;= 0;
     }
     
     public synchronized boolean isDead() {
         return health <lt;= 0;
     }
     
-    public synchronized void setDead(boolean dead) {
-        if (dead) {
-            this.health = 0;
-        }
+    public synchronized int getId() {
+        return enemyId;
     }
     
+    public synchronized int getEnemyId() {
+        return enemyId;
+    }
+    
+    public synchronized void setIsBoss(boolean boss) {
+        this.isBoss = boss;
+    }
+    
+    public synchronized boolean isBoss() {
+        return isBoss;
+    }
+    
+    /**
+     * Take damage from combat.
+     */
     public synchronized void takeDamage(int damage) {
-        health -= damage;
-        if (health <lt;= 0) {
-            Log.d("quot;Enemy"quot;, this.getName() + "quot; has been defeated!"quot;);
+        if (damage >gt; 0) {
+            this.health = Math.max(0, this.health - damage);
         }
     }
     
     /**
-     * FIX #12: Restore truncated moveToward() X-axis and Y-axis movement logic
-     * Move enemy toward player if possible
+     * Move enemy toward player (simple pathfinding).
      */
     public synchronized void moveToward(Player player) {
-        if (player == null || dungeon == null) {
-            Log.w("quot;Enemy"quot;, "quot;moveToward called with null player or dungeon"quot;);
+        if (dungeon == null || player == null) {
             return;
         }
         
         int playerX = player.getX();
         int playerY = player.getY();
         
-        // X-axis movement (prioritize horizontal distance)
-        if (x >gt; playerX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
-            x--;
-        } else if (x <lt; playerX &amp;&amp; dungeon.isWalkable(x + 1, y)) {
+        // Move horizontally if possible
+        if (x <lt; playerX &amp;&amp; dungeon.isWalkable(x + 1, y)) {
             x++;
+        } else if (x >gt; playerX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
+            x--;
         }
-        // Y-axis movement (prioritize vertical distance)
-        else if (y >gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
-            y--;
-        } else if (y <lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) {
+        // Move vertically if possible
+        else if (y <lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) {
             y++;
+        } else if (y >gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
+            y--;
         }
     }
     
-    public String getName() {
-        return name;
-    }
-    
-    public synchronized void setName(String name) {
-        this.name = name;
-    }
-    
-    public int getDefense() {
-        return defense;
-    }
-    
-    public synchronized void setDefense(int defense) {
-        this.defense = defense;
-    }
-    
-    public int getExperienceReward() {
-        return experienceReward;
-    }
-    
-    public synchronized void setExperienceReward(int experienceReward) {
-        this.experienceReward = experienceReward;
-    }
-    
-    public int getLevel() {
-        return level;
-    }
-    
-    public synchronized void setLevel(int level) {
-        this.level = level;
-    }
-    
-    public boolean isBoss() {
-        return isBoss;
-    }
-    
-    public synchronized void setIsBoss(boolean boss) {
-        isBoss = boss;
-    }
-    
-    public void setDungeon(Dungeon dungeon) {
-        this.dungeon = dungeon;
+    @Override
+    public String toString() {
+        return "quot;Enemy{"quot; +
+                "quot;id="quot; + enemyId +
+                "quot;, name='#39;"quot; + name + '#39;\'#39;'#39; +
+                "quot;, pos=("quot; + x + "quot;,"quot; + y + "quot;)"quot; +
+                "quot;, hp="quot; + health + "quot;/"quot; + maxHealth +
+                "quot;, level="quot; + level +
+                '#39;}'#39;;
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>

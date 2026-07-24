@@ -21,8 +21,8 @@
         <h1>BattleActivity</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/BattleActivity.java</div>
 package com.knightlight.game;
-import android.util.Log;
 
+import android.util.Log;
 import android.widget.Toast;
 import java.util.logging.Logger;
 import android.content.Intent;
@@ -32,53 +32,56 @@ import android.os.Looper;
 import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
 
+/**
+ * Battle activity that manages combat encounters between player and enemy.
+ * Handles turn-based combat, UI updates, and result reporting back to MainActivity.
+ */
 public class BattleActivity extends AppCompatActivity {
     private static final String EXTRA_PLAYER = "quot;player"quot;;
     private static final String EXTRA_ENEMY = "quot;enemy"quot;;
     private static final long TURN_DELAY_MS = 1000;
     private static final long RESULT_DELAY_MS = 2000;
     private static final String TAG = "quot;BattleActivity"quot;;
-
+    
     private Battle battle;
     private BattleView battleView;
     private Player player;
     private Enemy enemy;
     private Handler handler;
     private boolean isDestroyed = false;
-
     private Button btnAttack, btnDefend, btnFlee;
-
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_battle);
-
+        
         battleView = findViewById(R.id.battle_view);
         if (battleView == null) {
             Log.e(TAG, "quot;BattleView not found in layout"quot;);
             finish();
             return;
         }
-
+        
         handler = new Handler(Looper.getMainLooper());
-
+        
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
         if (extras != null) {
             player = (Player) extras.getSerializable(EXTRA_PLAYER);
             enemy = (Enemy) extras.getSerializable(EXTRA_ENEMY);
         }
-
+        
         if (player != null &amp;&amp; enemy != null) {
             battle = new Battle(player, enemy);
             battleView.setBattle(battle);
         }
-
+        
         // Wire up buttons
         btnAttack = findViewById(R.id.btnAttack);
         btnDefend = findViewById(R.id.btnDefend);
         btnFlee = findViewById(R.id.btnFlee);
-
+        
         if (btnAttack != null) {
             btnAttack.setOnClickListener(v ->gt; playerAction(Battle.Action.ATTACK));
         }
@@ -89,79 +92,111 @@ public class BattleActivity extends AppCompatActivity {
             btnFlee.setOnClickListener(v ->gt; playerAction(Battle.Action.RUN));
         }
     }
-
+    
     @Override
     protected void onDestroy() {
         super.onDestroy();
         isDestroyed = true;
         handler.removeCallbacksAndMessages(null);
     }
-
+    
+    /**
+     * Handles player action and schedules enemy turn.
+     */
     public void playerAction(Battle.Action action) {
         if (battle == null || isDestroyed) {
             Log.w(TAG, "quot;playerAction: battle is null or activity destroyed"quot;);
             return;
         }
-
+        
         Log.d(TAG, "quot;Player action: "quot; + action);
         battle.playerAction(action);
         battleView.invalidate();
-
+        
         // Schedule enemy turn after player animation
         handler.postDelayed(this::processTurn, TURN_DELAY_MS);
     }
-
+    
+    /**
+     * Processes enemy turn and checks for battle completion.
+     */
     private void processTurn() {
         if (battle == null || isDestroyed) {
             return;
         }
-
+        
         Log.d(TAG, "quot;Processing enemy turn"quot;);
         battle.enemyTurn();
         battleView.invalidate();
-
         Log.d(TAG, "quot;After enemy turn - Battle state: "quot; + battle.getState());
+        
         if (isBattleOver()) {
             Log.d(TAG, "quot;Battle over after enemy action"quot;);
             handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
         }
     }
-
+    
+    /**
+     * Checks if battle has reached a terminal state.
+     */
     private boolean isBattleOver() {
         if (battle == null) return false;
         Battle.State state = battle.getState();
-        return state == Battle.State.VICTORY ||
-               state == Battle.State.DEFEAT ||
-               state == Battle.State.FLED;
+        return state == Battle.State.VICTORY || state == Battle.State.DEFEAT || state == Battle.State.FLED;
     }
-
+    
+    /**
+     * Shows battle result and returns to MainActivity.
+     * Only passes enemy ID (int) and updated player (Serializable), never the Enemy object itself.
+     */
     private void showBattleResult() {
-        player.addGold(enemy.getGoldReward());
         Log.d(TAG, "quot;Showing battle result"quot;);
         if (isDestroyed) return;
-
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra("quot;enemyId"quot;, enemy.getEnemyId());
-        enemy.setDead(true);
-        resultIntent.putExtra("quot;enemy"quot;, enemy);
-        resultIntent.putExtra("quot;player"quot;, player);
-        resultIntent.putExtra("quot;battle_won"quot;, battle.getState() == Battle.State.VICTORY);
-        if (battle.getState() == Battle.State.VICTORY) {
-            player.addGold(enemy.getGoldReward());
-            player.addExperience(enemy.getExperienceReward());
+        
+        // Validate state
+        if (battle == null || player == null || enemy == null) {
+            Log.e(TAG, "quot;showBattleResult: null state detected"quot;);
+            setResult(RESULT_CANCELED);
+            finish();
+            return;
+        }
+        
+        boolean battleWon = battle.getState() == Battle.State.VICTORY;
+        
+        // Apply rewards only on victory
+        if (battleWon) {
+            int goldReward = enemy.getGoldReward();
+            int xpReward = enemy.getExperienceReward();
             
+            player.addGold(goldReward);
+            player.addExperience(xpReward);
+            
+            // Generate and add loot
             LootTable lootTable = LootTable.builder().build();
             Equipment loot = lootTable.generateLoot(1, 0.3);
             if (loot != null) {
                 player.getInventory().addEquipment(loot);
                 Log.d(TAG, "quot;Dropped: "quot; + loot.getName());
             }
-
-        Log.d(TAG, "quot;Victory: +"quot; + enemy.getGoldReward() + "quot; gold, +"quot; + enemy.getExperienceReward() + "quot; XP"quot;);
+            
+            Log.d(TAG, "quot;Victory: +"quot; + goldReward + "quot; gold, +"quot; + xpReward + "quot; XP"quot;);
+        } else {
+            Log.d(TAG, "quot;Defeat: Battle lost"quot;);
         }
-
+        
+        // Build result intent with ONLY safe types
+        Intent resultIntent = new Intent();
+        
+        // Pass only enemy ID (int) - never the Enemy object itself
+        resultIntent.putExtra("quot;enemyId"quot;, enemy.getId());
+        
+        // Pass updated player (Serializable)
+        resultIntent.putExtra("quot;updatedPlayer"quot;, player);
+        
+        // Pass battle result
+        resultIntent.putExtra("quot;battleWon"quot;, battleWon);
+        
         setResult(RESULT_OK, resultIntent);
-
         finish();
     }
 }

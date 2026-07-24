@@ -21,214 +21,248 @@
         <h1>Player</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Player.java</div>
 package com.knightlight.game;
-import android.util.Log;
-import java.util.logging.Logger;
 
 import java.io.Serializable;
 
+/**
+ * Represents the player character in the roguelike game.
+ * Manages position, health, experience, gold, inventory, and combat stats.
+ */
 public class Player implements Serializable {
     private static final long serialVersionUID = 1L;
-    private static final int EXPERIENCE_PER_LEVEL = 100;
-
     private int x;
     private int y;
-    private int maxHealth;
     private int currentHealth;
+    private int maxHealth;
+    private int experience;
     private int goldCollected;
-    private int healthPotions;
-    private int level = 1;
-    private int experience = 0;
-    private InventorySystem inventory;
-    private final transient Object stateLock = new Object();
-
-    public Player(int startX, int startY) {
-        this.x = startX;
-        this.y = startY;
-        this.maxHealth = 50;
-        this.currentHealth = maxHealth;
+    private int level;
+    private Inventory inventory;
+    private int attack;
+    private int defense;
+    private String name;
+    private int potions;
+    
+    /**
+     * Minimal constructor used by Game.
+     */
+    public Player(int x, int y) {
+        this(x, y, 100, 100, new Inventory());
+    }
+    
+    /**
+     * Full constructor.
+     */
+    public Player(int x, int y, int health, int maxHealth, Inventory inventory) {
+        this.x = x;
+        this.y = y;
+        this.maxHealth = Math.max(1, maxHealth);
+        this.currentHealth = Math.max(1, Math.min(health, this.maxHealth));
+        this.experience = 0;
         this.goldCollected = 0;
-        this.healthPotions = 3;
-        this.inventory = new InventorySystem();
-        Log.d("quot;Player"quot;, "quot;Player initialized at ("quot; + startX + "quot;, "quot; + startY + "quot;)"quot;);
+        this.level = 1;
+        this.inventory = inventory != null ? inventory : new Inventory();
+        this.attack = 10;
+        this.defense = 5;
+        this.name = "quot;Adventurer"quot;;
+        this.potions = 0;
     }
-
-    public synchronized void addExperience(int amount) {
-        this.experience += amount;  // ADD the experience
-        Log.d("quot;Player"quot;, "quot;Gained "quot; + amount + "quot; XP. Total: "quot; + experience);
-        
-        while (experience >gt;= EXPERIENCE_PER_LEVEL) {  // Level up when threshold reached
-            this.experience -= EXPERIENCE_PER_LEVEL;
-            this.level++;
-            this.maxHealth += 5;
-            this.currentHealth = maxHealth;
-            Log.d("quot;Player"quot;, "quot;LEVEL UP! Now level "quot; + level + "quot;. Max health: "quot; + maxHealth);
-        }
+    
+    public synchronized int getX() {
+        return x;
     }
-
-    public synchronized void setExperience(int xp) {
-        if (xp <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;Invalid experience value: "quot; + xp);
-            return;
-        }
-        this.experience = xp;
-        this.addExperience(0);
+    
+    public synchronized void setX(int x) {
+        this.x = x;
     }
-
-    public InventorySystem getInventory() {
-        return inventory;
+    
+    public synchronized int getY() {
+        return y;
     }
-
-    public synchronized int getHealth() {
-        return currentHealth;
+    
+    public synchronized void setY(int y) {
+        this.y = y;
     }
-
+    
+    /**
+     * Move player by relative offset (dx, dy).
+     */
+    public synchronized void move(int dx, int dy) {
+        this.x += dx;
+        this.y += dy;
+    }
+    
+    /**
+     * Get current health.
+     */
     public synchronized int getCurrentHealth() {
         return currentHealth;
     }
-
+    
+    /**
+     * Set current health with bounds clamping [0, maxHealth].
+     */
+    public synchronized void setCurrentHealth(int newHealth) {
+        this.currentHealth = Math.max(0, Math.min(newHealth, this.maxHealth));
+    }
+    
+    /**
+     * Backward-compatibility alias for getCurrentHealth().
+     */
+    public synchronized int getHealth() {
+        return currentHealth;
+    }
+    
+    /**
+     * Backward-compatibility alias for setCurrentHealth().
+     */
+    public synchronized void setHealth(int newHealth) {
+        this.currentHealth = Math.max(0, Math.min(newHealth, this.maxHealth));
+    }
+    
     public synchronized int getMaxHealth() {
         return maxHealth;
     }
-
-    public synchronized void takeDamage(int damage) {
-        int oldHealth = currentHealth;
-        currentHealth = Math.max(0, currentHealth - damage);
-        if (currentHealth != oldHealth) {
-            Log.d("quot;Player"quot;, "quot;Took "quot; + damage + "quot; damage: "quot; + oldHealth + "quot; ->gt; "quot; + currentHealth);
+    
+    public synchronized int getExperience() {
+        return experience;
+    }
+    
+    /**
+     * Set experience with non-negative validation.
+     */
+    public synchronized void setExperience(int exp) {
+        this.experience = Math.max(0, exp);
+    }
+    
+    /**
+     * Add experience (non-negative, clamped to MAX/2).
+     */
+    public synchronized void addExperience(int exp) {
+        if (exp >gt; 0) {
+            this.experience = Math.min(this.experience + exp, Integer.MAX_VALUE / 2);
         }
     }
-
-    public synchronized void heal(int amount) {
-        int oldHealth = currentHealth;
-        currentHealth = Math.min(currentHealth + amount, maxHealth);
-        if (currentHealth != oldHealth) {
-            Log.d("quot;Player"quot;, "quot;Healed "quot; + (currentHealth - oldHealth) + "quot; HP: "quot; + oldHealth + "quot; ->gt; "quot; + currentHealth);
-        }
-    }
-
-    public synchronized void addGold(int amount) {
-        if (amount <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;Negative gold attempted: "quot; + amount);
-            return;
-        }
-        this.goldCollected += amount;
-        Log.d("quot;Player"quot;, "quot;Collected "quot; + amount + "quot; gold. Total: "quot; + goldCollected);
-    }
-
-    public synchronized int getGold() {
-        return goldCollected;
-    }
-
+    
     public synchronized int getGoldCollected() {
         return goldCollected;
     }
-
-    public synchronized void setHealth(int health) {
-        if (health >gt; maxHealth) {
-            Log.w("quot;Player"quot;, "quot;setHealth called with value >gt; maxHealth: "quot; + health + "quot;; clamping to "quot; + maxHealth);
-            currentHealth = maxHealth;
-        } else {
-            currentHealth = Math.max(0, health);
-        }
-        Log.d("quot;Player"quot;, "quot;Health set to "quot; + currentHealth);
-    }
-
+    
+    /**
+     * Set gold collected with non-negative validation.
+     */
     public synchronized void setGoldCollected(int gold) {
-        if (gold <lt; 0) {
-            Log.w("quot;Player"quot;, "quot;Negative gold attempted in setGoldCollected: "quot; + gold);
-            return;
-        }
-        this.goldCollected = gold;
-        Log.d("quot;Player"quot;, "quot;Gold set to "quot; + gold);
+        this.goldCollected = Math.max(0, gold);
     }
-
+    
+    /**
+     * Add gold (non-negative, clamped to MAX/2).
+     */
+    public synchronized void addGold(int gold) {
+        if (gold >gt; 0) {
+            this.goldCollected = Math.min(this.goldCollected + gold, Integer.MAX_VALUE / 2);
+        }
+    }
+    
+    public synchronized int getLevel() {
+        return level;
+    }
+    
+    public synchronized void setLevel(int level) {
+        this.level = Math.max(1, level);
+    }
+    
+    /**
+     * Get player'#39;s attack power.
+     */
+    public synchronized int getAttack() {
+        return attack;
+    }
+    
+    /**
+     * Set attack power with bounds clamping [1, 150].
+     */
+    public synchronized void setAttack(int newAttack) {
+        this.attack = Math.max(1, Math.min(newAttack, 150));
+    }
+    
+    /**
+     * Get player'#39;s defense value.
+     */
+    public synchronized int getDefense() {
+        return defense;
+    }
+    
+    /**
+     * Set defense with bounds clamping [0, 100].
+     */
+    public synchronized void setDefense(int newDefense) {
+        this.defense = Math.max(0, Math.min(newDefense, 100));
+    }
+    
+    /**
+     * Get player'#39;s name.
+     */
+    public synchronized String getName() {
+        return name;
+    }
+    
+    /**
+     * Set player'#39;s name.
+     */
+    public synchronized void setName(String newName) {
+        this.name = newName != null ? newName : "quot;Adventurer"quot;;
+    }
+    
+    public Inventory getInventory() {
+        return inventory;
+    }
+    
+    /**
+     * Use a potion to restore health.
+     */
     public synchronized boolean usePotion() {
-        if (healthPotions >gt; 0) {
-            healthPotions--;
-            int healAmount = 15;
-            int oldHealth = currentHealth;
-            currentHealth = Math.min(currentHealth + healAmount, maxHealth);
-            Log.d("quot;Player"quot;, "quot;Used potion: "quot; + oldHealth + "quot; ->gt; "quot; + currentHealth);
+        if (potions >gt; 0) {
+            potions--;
+            this.currentHealth = Math.min(this.currentHealth + 30, this.maxHealth);
             return true;
-        } else {
-            Log.w("quot;Player"quot;, "quot;Attempted to use potion but none available"quot;);
-            return false;
+        }
+        return false;
+    }
+    
+    /**
+     * Add potions to inventory.
+     */
+    public synchronized void addPotions(int count) {
+        this.potions += Math.max(0, count);
+    }
+    
+    /**
+     * Get potion count.
+     */
+    public synchronized int getPotions() {
+        return potions;
+    }
+    
+    public synchronized void takeDamage(int damage) {
+        if (damage >gt; 0) {
+            this.currentHealth = Math.max(0, this.currentHealth - damage);
         }
     }
-
+    
     public synchronized boolean isAlive() {
         return currentHealth >gt; 0;
     }
-
-    public synchronized void reset() {
-        currentHealth = maxHealth;
-        goldCollected = 0;
-        healthPotions = 3;
-        experience = 0;
-        level = 1;
-        Log.d("quot;Player"quot;, "quot;Player reset to initial state"quot;);
-    }
-
-    public String getName() {
-        return "quot;Player"quot;;
-    }
-
-    public int getDefense() {
-        return 5 + (level - 1);
-    }
-
-    public int getAttack() {
-        return 8 + (level - 1) * 2;
-    }
-
-    public Equipment getMainHandEquipment() {
-        return null;
-    }
-
-    public Equipment getOffHandEquipment() {
-        return null;
-    }
-
-    public Equipment getArmorEquipment() {
-        return null;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
-
-    public int getLevel() {
-        return level;
-    }
-
-    public int getExperience() {
-        return experience;
-    }
-
-    public int getHealthPotions() {
-        return healthPotions;
-    }
-
-    public synchronized void move(int dx, int dy) {
-        if (Math.abs(dx) >gt; 1 || Math.abs(dy) >gt; 1) {
-            Log.w("quot;Player"quot;, "quot;Invalid move: dx="quot; + dx + "quot;, dy="quot; + dy);
-            return;
-        }
-        this.x += dx;
-        this.y += dy;
-        Log.d("quot;Player"quot;, "quot;Moved to ("quot; + x + "quot;, "quot; + y + "quot;)"quot;);
+    
+    @Override
+    public String toString() {
+        return "quot;Player{"quot; +
+                "quot;pos=("quot; + x + "quot;,"quot; + y + "quot;)"quot; +
+                "quot;, hp="quot; + currentHealth + "quot;/"quot; + maxHealth +
+                "quot;, exp="quot; + experience +
+                "quot;, gold="quot; + goldCollected +
+                "quot;, level="quot; + level +
+                '#39;}'#39;;
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>
