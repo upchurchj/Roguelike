@@ -22,196 +22,75 @@
         <div class="source-path">Source: src/main/java/com/knightlight/game/Enemy.java</div>
 package com.knightlight.game;
 
-import android.util.Log;
-import java.io.Serializable;
-
-/**
- * Represents an enemy in the roguelike dungeon.
- * Enemies have position, health, attack power, rewards, and can be defeated.
- */
-public class Enemy implements Serializable {
-    private static final long serialVersionUID = 1L;
-    private int x;
-    private int y;
-    private int health;
-    private int maxHealth;
-    private int attackPower;
-    private transient Dungeon dungeon;
-    private boolean isBoss;
-    private static int nextId = 0;
-    private static final Object ID_LOCK = new Object();
-    private final int enemyId;
+public class Enemy extends Character {
+    private Dungeon dungeon;
     private String name;
-    private int defense;
-    private int experienceReward;
-    private int level;
+    private String id;
     private int goldReward;
+    private int experienceReward;
+    private boolean isBoss;
     
-    public Enemy(int x, int y, int health, int attackPower, Dungeon dungeon, String name, int defense, int experienceReward, int level) {
-        this.x = x;
-        this.y = y;
-        this.maxHealth = Math.max(1, health);
-        this.health = Math.max(1, Math.min(health, this.maxHealth));
-        this.attackPower = Math.max(1, Math.min(attackPower, 150));
+    public Enemy(int x, int y, int maxHealth, int attack, Dungeon dungeon, String name, int armor, int dodge, int critChance) {
+        super(x, y, maxHealth, attack);
         this.dungeon = dungeon;
+        this.name = name;
+        this.id = name + "quot;_"quot; + System.nanoTime();
+        this.armor = armor;
+        this.dodgeChance = dodge;
+        this.criticalChance = critChance;
+        this.goldReward = 5 + (int)(Math.random() * 10);
+        this.experienceReward = 10 + (int)(Math.random() * 20);
         this.isBoss = false;
-        synchronized (ID_LOCK) {
-            this.enemyId = nextId++;
-        }
-        this.name = name != null ? name : "quot;Unknown Enemy"quot;;
-        this.defense = Math.max(0, Math.min(defense, 100));
-        this.experienceReward = Math.max(1, Math.min(experienceReward, Integer.MAX_VALUE / 2));
-        this.level = Math.max(1, Math.min(level, 100));
-        this.goldReward = Math.max(0, Math.min(25, Integer.MAX_VALUE / 2));
     }
     
-    public synchronized int getX() {
-        return x;
-    }
-    
-    public synchronized void setX(int x) {
-        this.x = x;
-    }
-    
-    public synchronized int getY() {
-        return y;
-    }
-    
-    public synchronized void setY(int y) {
-        this.y = y;
-    }
-    
-    public synchronized int getHealth() {
-        return health;
-    }
-    
-    public synchronized void setHealth(int newHealth) {
-        this.health = Math.max(0, Math.min(newHealth, this.maxHealth));
-    }
-    
-    public synchronized int getMaxHealth() {
-        return maxHealth;
-    }
-    
-    public synchronized int getAttack() {
-        return attackPower;
-    }
-    
-    public synchronized void setAttack(int newAttack) {
-        this.attackPower = Math.max(1, Math.min(newAttack, 150));
-    }
-    
-    public synchronized int getDefense() {
-        return defense;
-    }
-    
-    public synchronized void setDefense(int newDefense) {
-        this.defense = Math.max(0, Math.min(newDefense, 100));
-    }
-    
-    public synchronized String getName() {
-        return name;
-    }
-    
-    public synchronized void setName(String newName) {
-        this.name = newName != null ? newName : "quot;Unknown Enemy"quot;;
-    }
-    
-    public synchronized int getExperienceReward() {
-        return experienceReward;
-    }
-    
-    public synchronized void setExperienceReward(int reward) {
-        this.experienceReward = Math.max(1, Math.min(reward, Integer.MAX_VALUE / 2));
-    }
-    
-    public synchronized int getGoldReward() {
-        return isBoss ? 100 : goldReward;
-    }
-    
-    public synchronized void setGoldReward(int reward) {
-        this.goldReward = Math.max(0, Math.min(reward, Integer.MAX_VALUE / 2));
-    }
-    
-    public synchronized int getLevel() {
-        return level;
-    }
-    
-    public synchronized void setLevel(int newLevel) {
-        this.level = Math.max(1, Math.min(newLevel, 100));
-    }
-    
-    public synchronized boolean isAlive() {
-        return health >gt; 0;
-    }
-    
-    public synchronized boolean isDefeated() {
-        return health <lt;= 0;
-    }
-    
-    public synchronized boolean isDead() {
-        return health <lt;= 0;
-    }
-    
-    public synchronized int getId() {
-        return enemyId;
-    }
-    
-    public synchronized int getEnemyId() {
-        return enemyId;
-    }
-    
-    public synchronized void setIsBoss(boolean boss) {
-        this.isBoss = boss;
-    }
-    
-    public synchronized boolean isBoss() {
-        return isBoss;
-    }
-    
-    /**
-     * Take damage from combat.
-     */
-    public synchronized void takeDamage(int damage) {
-        if (damage >gt; 0) {
-            this.health = Math.max(0, this.health - damage);
-        }
-    }
-    
-    /**
-     * Move enemy toward player (simple pathfinding).
-     */
-    public synchronized void moveToward(Player player) {
-        if (dungeon == null || player == null) {
+    public void moveToward(Character target) {
+        if (target == null || dungeon == null) {
             return;
         }
+        int targetX = target.getX();
+        int targetY = target.getY();
         
-        int playerX = player.getX();
-        int playerY = player.getY();
-        
-        // Move horizontally if possible
-        if (x <lt; playerX &amp;&amp; dungeon.isWalkable(x + 1, y)) {
+        if (x <lt; targetX &amp;&amp; dungeon.isWalkable(x + 1, y)) {
             x++;
-        } else if (x >gt; playerX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
+        } else if (x >gt; targetX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
             x--;
-        }
-        // Move vertically if possible
-        else if (y <lt; playerY &amp;&amp; dungeon.isWalkable(x, y + 1)) {
+        } else if (y <lt; targetY &amp;&amp; dungeon.isWalkable(x, y + 1)) {
             y++;
-        } else if (y >gt; playerY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
+        } else if (y >gt; targetY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
             y--;
         }
     }
     
-    @Override
-    public String toString() {
-        return "quot;Enemy{"quot; +
-                "quot;id="quot; + enemyId +
-                "quot;, name='#39;"quot; + name + '#39;\'#39;'#39; +
-                "quot;, pos=("quot; + x + "quot;,"quot; + y + "quot;)"quot; +
-                "quot;, hp="quot; + health + "quot;/"quot; + maxHealth +
-                "quot;, level="quot; + level +
-                '#39;}'#39;;
+    public String getName() {
+        return name;
+    }
+    
+    public String getId() {
+        return id;
+    }
+    
+    public int getGoldReward() {
+        return goldReward;
+    }
+    
+    public int getExperienceReward() {
+        return experienceReward;
+    }
+    
+    public boolean isDefeated() {
+        return !isAlive();
+    }
+    
+    public boolean isDead() {
+        return !isAlive();
+    }
+    
+    public boolean isBoss() {
+        return isBoss;
+    }
+    
+    public void setBoss(boolean boss) {
+        this.isBoss = boss;
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>
