@@ -56,7 +56,7 @@ public class CombatSystem {
         }
 
         int playerAttack = player.getAttack();
-        int enemyDefense = enemy.getDefense();
+        int enemyDefense = enemy.getArmor();
         
         // Damage calculation: max(1, attack - defense + random 0-4)
         int damage = Math.max(1, playerAttack - enemyDefense + (int)(Math.random() * 5));
@@ -74,7 +74,7 @@ public class CombatSystem {
         }
 
         int enemyAttack = enemy.getAttack();
-        int playerDefense = player.getDefense();
+        int playerDefense = player.getArmor();
         
         // Base damage calculation
         int baseDamage = Math.max(1, enemyAttack - playerDefense);

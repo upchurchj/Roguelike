@@ -28,7 +28,7 @@ import java.io.Serializable;
  * Represents the player character in the roguelike game.
  * Manages position, health, experience, gold, inventory, and combat stats.
  */
-public class Player implements Serializable {
+public class Player extends Character implements Serializable {
     private static final long serialVersionUID = 1L;
     private int x;
     private int y;
@@ -49,29 +49,20 @@ public class Player implements Serializable {
     public Player(int x, int y) {
         this(x, y, 100, 100, new Inventory());
     }
-    
     /**
      * Full constructor.
      */
-    public Player(int x, int y, int health, int maxHealth, Inventory inventory) {
-        this.x = x;
-        this.y = y;
-        this.maxHealth = Math.max(1, maxHealth);
-        this.currentHealth = Math.max(1, Math.min(health, this.maxHealth));
+    public Player(int x, int y, int currentHealth, int maxHealth, Inventory inventory) {
+        super(x, y, currentHealth, maxHealth);
         this.experience = 0;
         this.goldCollected = 0;
         this.level = 1;
-        this.inventory = inventory != null ? inventory : new Inventory();
-        this.attack = 10;
-        this.defense = 5;
-        this.name = "quot;Adventurer"quot;;
+        this.inventory = inventory;
+        this.attack = 5;
+        this.defense = 1;
+        this.name = "quot;Player"quot;;
         this.potions = 0;
     }
-    
-    public synchronized int getX() {
-        return x;
-    }
-    
     public synchronized void setX(int x) {
         this.x = x;
     }

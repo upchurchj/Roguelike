@@ -22,10 +22,13 @@
         <div class="source-path">Source: src/main/java/com/knightlight/game/MainActivity.java</div>
 package com.knightlight.game;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.Serializable;
@@ -35,23 +38,23 @@ import java.util.List;
  * Main activity for the Roguelike game.
  * Manages game initialization, state restoration, and battle result handling.
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements GameView.GameListener {
     private static final String TAG = "quot;MainActivity"quot;;
     private static final int BATTLE_REQUEST_CODE = 1;
     private static final int DUNGEON_WIDTH = 50;
     private static final int DUNGEON_HEIGHT = 50;
     private static final int INITIAL_ENEMIES = 10;
-    
+
     private Game game;
     private GameView gameView;
     private SaveGameManager saveGameManager;
     private Dungeon dungeon;
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        
+
         // Initialize UI components
         gameView = findViewById(R.id.game_view);
         if (gameView == null) {
@@ -59,9 +62,9 @@ public class MainActivity extends AppCompatActivity {
             finish();
             return;
         }
-        
+
         saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
-        
+
         // Create fresh game with standard dimensions
         game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
         if (game == null) {
@@ -69,20 +72,50 @@ public class MainActivity extends AppCompatActivity {
             finish();
             return;
         }
-        
+
+        // Ensure player spawns in a valid walkable position
+        ensurePlayerSpawned();
+
         // Attempt to restore saved game state
         SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
         if (saveData != null) {
             restoreGameState(saveData);
         }
-        
+
         // Get dungeon reference
         dungeon = game.getDungeon();
-        
+
         // Bind game to view
         gameView.setGame(game);
+        gameView.setGameListener(this);
     }
-    
+
+    /**
+     * Ensures the player is spawned at a valid walkable position in the dungeon.
+     */
+    private void ensurePlayerSpawned() {
+        if (game == null) {
+            return;
+        }
+
+        Player player = game.getPlayer();
+        Dungeon gameDungeon = game.getDungeon();
+        if (player == null || gameDungeon == null) {
+            Log.w(TAG, "quot;Cannot spawn player: player or dungeon is null"quot;);
+            return;
+        }
+
+        // Find a valid spawn position
+        int[] spawnPos = gameDungeon.findSpawnPosition();
+        if (spawnPos != null &amp;&amp; spawnPos.length >gt;= 2) {
+            player.setX(spawnPos[0]);
+            player.setY(spawnPos[1]);
+            Log.d(TAG, "quot;Player spawned at ("quot; + spawnPos[0] + "quot;, "quot; + spawnPos[1] + "quot;)"quot;);
+        } else {
+            Log.w(TAG, "quot;Could not find valid spawn position"quot;);
+        }
+    }
+
     /**
      * Restores game state from saved data with full validation.
      */
@@ -90,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         if (saveData == null) {
             return;
         }
-        
+
         // Restore player position
         if (saveData.playerX >gt;= 0 &amp;&amp; saveData.playerY >gt;= 0) {
             Player gamePlayer = game.getPlayer();
@@ -100,44 +133,47 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "quot;Restored player position to ("quot; + saveData.playerX + "quot;, "quot; + saveData.playerY + "quot;)"quot;);
             }
         }
-        
+
         // Restore player stats with bounds checking
         if (saveData.player != null) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
-                // Validate and set health (clamped to [1, 100] by Player)
-                int restoredHealth = Math.max(1, Math.min(saveData.player.getCurrentHealth(), 100));
+                // FIX #6: Recovery - ensure loaded health is never <lt;= 0
+                int loadedHealth = saveData.player.getCurrentHealth();
+                if (loadedHealth <lt;= 0) {
+                    Log.w(TAG, "quot;Loaded health was "quot; + loadedHealth + "quot; (invalid); resetting to max health"quot;);
+                    loadedHealth = gamePlayer.getMaxHealth();
+                }
+                int restoredHealth = Math.max(1, Math.min(loadedHealth, 100));
                 gamePlayer.setCurrentHealth(restoredHealth);
-                
+
                 // Validate and set experience (clamped by Player setter)
                 int restoredExp = Math.max(0, saveData.player.getExperience());
                 gamePlayer.setExperience(restoredExp);
-                
+
                 // Validate and set gold (clamped by Player setter)
                 int restoredGold = Math.max(0, saveData.player.getGoldCollected());
                 gamePlayer.setGoldCollected(restoredGold);
-                
+
                 Log.d(TAG, "quot;Restored player stats: exp="quot; + restoredExp + "quot; hp="quot; + restoredHealth + "quot; gold="quot; + restoredGold);
             }
         }
-        
+
         // Restore dungeon map
         if (saveData.dungeonMap != null) {
             Dungeon gameDungeon = game.getDungeon();
             if (gameDungeon != null &amp;&amp; saveData.dungeonMap.length >gt; 0) {
                 for (int y = 0; y <lt; saveData.dungeonMap.length; y++) {
-                    if (saveData.dungeonMap[y] != null) {
-                        for (int x = 0; x <lt; saveData.dungeonMap[y].length; x++) {
-                            gameDungeon.setTile(x, y, (char) saveData.dungeonMap[y][x]);
-                        }
+                    for (int x = 0; x <lt; saveData.dungeonMap[y].length; x++) {
+                        gameDungeon.setTile(x, y, (char)saveData.dungeonMap[y][x]);
                     }
                 }
                 Log.d(TAG, "quot;Restored dungeon map"quot;);
             }
         }
-        
+
         // Restore enemies
-        if (saveData.enemies != null &amp;&amp; !saveData.enemies.isEmpty()) {
+        if (saveData.enemies != null) {
             List<lt;Enemy>gt; currentEnemies = game.getEnemies();
             if (currentEnemies != null) {
                 currentEnemies.clear();
@@ -146,45 +182,45 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-    
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        
+
         // Validate request code
         if (requestCode != BATTLE_REQUEST_CODE) {
             return;
         }
-        
+
         // Validate result code
         if (resultCode != RESULT_OK) {
             Log.w(TAG, "quot;onActivityResult: Battle activity returned non-OK result"quot;);
             return;
         }
-        
+
         // Validate intent data
         if (data == null) {
             Log.w(TAG, "quot;onActivityResult: data is null"quot;);
             return;
         }
-        
+
         try {
             // Extract battle result
             boolean battleWon = data.getBooleanExtra("quot;battleWon"quot;, false);
-            
+
             // Extract and validate updated player
             Serializable playerExtra = data.getSerializableExtra("quot;updatedPlayer"quot;);
             if (!(playerExtra instanceof Player)) {
                 Log.w(TAG, "quot;onActivityResult: updatedPlayer is not a valid Player instance"quot;);
                 return;
             }
-            
+
             Player updatedPlayer = (Player) playerExtra;
             if (updatedPlayer == null) {
                 Log.w(TAG, "quot;onActivityResult: updatedPlayer is null"quot;);
                 return;
             }
-            
+
             // Safely update game player
             if (game != null) {
                 Player gamePlayer = game.getPlayer();
@@ -196,14 +232,14 @@ public class MainActivity extends AppCompatActivity {
                     gamePlayer.setGoldCollected(Math.max(0, updatedPlayer.getGoldCollected()));
                 }
             }
-            
+
             // Mark defeated enemy as dead
-            int defeatedEnemyId = data.getIntExtra("quot;enemyId"quot;, -1);
-            if (defeatedEnemyId >gt;= 0 &amp;&amp; game != null) {
+            String defeatedEnemyId = data.getStringExtra("quot;enemyId"quot;);
+            if (defeatedEnemyId != null &amp;&amp; game != null) {
                 List<lt;Enemy>gt; currentEnemies = game.getEnemies();
                 if (currentEnemies != null) {
                     for (Enemy e : currentEnemies) {
-                        if (e != null &amp;&amp; e.getId() == defeatedEnemyId) {
+                        if (e != null &amp;&amp; e.getId().equals(defeatedEnemyId)) {
                             // Enemy is defeated; can be removed or marked (setDefeated check)
                             if (e.isDefeated()) {
                                 currentEnemies.remove(e);
@@ -214,21 +250,91 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-            
+
             // Update game state if battle was lost
             if (!battleWon &amp;&amp; game != null) {
                 game.setGameState(Game.GameState.LOST);
                 Log.d(TAG, "quot;Battle lost; game state set to LOST"quot;);
             }
-            
+
             // Refresh UI
             if (gameView != null) {
                 gameView.invalidate();
             }
-            
         } catch (Exception e) {
             Log.e(TAG, "quot;Error processing battle result"quot;, e);
         }
+    }
+
+    @Override
+    public void onQuitRequested() {
+        // Show confirmation dialog before quitting
+        new AlertDialog.Builder(this)
+            .setTitle("quot;Quit Game"quot;)
+            .setMessage("quot;Are you sure you want to quit? Your progress will be saved."quot;)
+            .setPositiveButton("quot;Quit"quot;, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    saveAndQuit();
+                }
+            })
+            .setNegativeButton("quot;Cancel"quot;, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            })
+            .show();
+    }
+
+    /**
+     * Saves the current game state and closes the activity.
+     */
+    private void saveAndQuit() {
+        if (game != null &amp;&amp; saveGameManager != null) {
+            Player player = game.getPlayer();
+            List<lt;Enemy>gt; enemies = game.getEnemies();
+            Dungeon gameDungeon = game.getDungeon();
+
+            // Get char grid from dungeon and convert to int[][]
+            char[][] charGrid = gameDungeon.getGrid();
+            int[][] dungeonMap = null;
+            if (charGrid != null) {
+                dungeonMap = new int[charGrid.length][];
+                for (int y = 0; y <lt; charGrid.length; y++) {
+                    dungeonMap[y] = new int[charGrid[y].length];
+                    for (int x = 0; x <lt; charGrid[y].length; x++) {
+                        dungeonMap[y][x] = (int)charGrid[y][x];
+                    }
+                }
+            }
+
+            if (dungeonMap == null) {
+                Log.w(TAG, "quot;Dungeon map is null; cannot save game"quot;);
+                finish();
+                return;
+            }
+
+            int playerX = player.getX();
+            int playerY = player.getY();
+            SaveGameManager.SaveGameData saveData = new SaveGameManager.SaveGameData(player, enemies, dungeonMap, playerX, playerY);
+            saveGameManager.saveGame(saveData, "quot;save_game.dat"quot;);
+            Log.d(TAG, "quot;Game saved successfully"quot;);
+        }
+        finish();
+    }
+
+    @Override
+    public void onGameOver(Game.GameState state) {
+        Log.d(TAG, "quot;Game Over: "quot; + state);
+        if (gameView != null) {
+            gameView.invalidate();
+        }
+    }
+
+    @Override
+    public void onEncounter(Enemy enemy) {
+        Log.d(TAG, "quot;Encounter: "quot; + (enemy != null ? enemy.getName() : "quot;Unknown"quot;));
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>

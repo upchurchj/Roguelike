@@ -62,6 +62,16 @@ public class SaveGameManager {
     }
 
     public void saveGame(SaveGameData data, String filename) {
+        // FIX #6: Prevent saving if player is dead (death loop prevention)
+        if (data == null || data.player == null) {
+            Log.w(TAG, "quot;Cannot save: SaveGameData or player is null"quot;);
+            return;
+        }
+        if (data.player.getHealth() <lt;= 0) {
+            Log.w(TAG, "quot;Cannot save: Player health is "quot; + data.player.getHealth() + "quot; (dead)"quot;);
+            return;
+        }
+
         try {
             String savePath = getSavePath(filename);
             Log.d(TAG, "quot;Saving game to: "quot; + savePath);
