@@ -30,6 +30,7 @@ import java.io.Serializable;
  */
 public class Player extends Character implements Serializable {
     private static final long serialVersionUID = 1L;
+
     private int x;
     private int y;
     private int currentHealth;
@@ -42,13 +43,14 @@ public class Player extends Character implements Serializable {
     private int defense;
     private String name;
     private int potions;
-    
+
     /**
      * Minimal constructor used by Game.
      */
     public Player(int x, int y) {
         this(x, y, 100, 100, new Inventory());
     }
+
     /**
      * Full constructor.
      */
@@ -63,18 +65,19 @@ public class Player extends Character implements Serializable {
         this.name = "quot;Player"quot;;
         this.potions = 0;
     }
+
     public synchronized void setX(int x) {
         this.x = x;
     }
-    
+
     public synchronized int getY() {
         return y;
     }
-    
+
     public synchronized void setY(int y) {
         this.y = y;
     }
-    
+
     /**
      * Move player by relative offset (dx, dy).
      */
@@ -82,50 +85,50 @@ public class Player extends Character implements Serializable {
         this.x += dx;
         this.y += dy;
     }
-    
+
     /**
      * Get current health.
      */
     public synchronized int getCurrentHealth() {
         return currentHealth;
     }
-    
+
     /**
      * Set current health with bounds clamping [0, maxHealth].
      */
     public synchronized void setCurrentHealth(int newHealth) {
         this.currentHealth = Math.max(0, Math.min(newHealth, this.maxHealth));
     }
-    
+
     /**
      * Backward-compatibility alias for getCurrentHealth().
      */
     public synchronized int getHealth() {
         return currentHealth;
     }
-    
+
     /**
      * Backward-compatibility alias for setCurrentHealth().
      */
     public synchronized void setHealth(int newHealth) {
         this.currentHealth = Math.max(0, Math.min(newHealth, this.maxHealth));
     }
-    
+
     public synchronized int getMaxHealth() {
         return maxHealth;
     }
-    
+
     public synchronized int getExperience() {
         return experience;
     }
-    
+
     /**
      * Set experience with non-negative validation.
      */
     public synchronized void setExperience(int exp) {
         this.experience = Math.max(0, exp);
     }
-    
+
     /**
      * Add experience (non-negative, clamped to MAX/2).
      */
@@ -134,18 +137,18 @@ public class Player extends Character implements Serializable {
             this.experience = Math.min(this.experience + exp, Integer.MAX_VALUE / 2);
         }
     }
-    
+
     public synchronized int getGoldCollected() {
         return goldCollected;
     }
-    
+
     /**
      * Set gold collected with non-negative validation.
      */
     public synchronized void setGoldCollected(int gold) {
         this.goldCollected = Math.max(0, gold);
     }
-    
+
     /**
      * Add gold (non-negative, clamped to MAX/2).
      */
@@ -154,61 +157,61 @@ public class Player extends Character implements Serializable {
             this.goldCollected = Math.min(this.goldCollected + gold, Integer.MAX_VALUE / 2);
         }
     }
-    
+
     public synchronized int getLevel() {
         return level;
     }
-    
+
     public synchronized void setLevel(int level) {
         this.level = Math.max(1, level);
     }
-    
+
     /**
      * Get player'#39;s attack power.
      */
     public synchronized int getAttack() {
         return attack;
     }
-    
+
     /**
      * Set attack power with bounds clamping [1, 150].
      */
     public synchronized void setAttack(int newAttack) {
         this.attack = Math.max(1, Math.min(newAttack, 150));
     }
-    
+
     /**
      * Get player'#39;s defense value.
      */
     public synchronized int getDefense() {
         return defense;
     }
-    
+
     /**
      * Set defense with bounds clamping [0, 100].
      */
     public synchronized void setDefense(int newDefense) {
         this.defense = Math.max(0, Math.min(newDefense, 100));
     }
-    
+
     /**
      * Get player'#39;s name.
      */
     public synchronized String getName() {
         return name;
     }
-    
+
     /**
      * Set player'#39;s name.
      */
     public synchronized void setName(String newName) {
         this.name = newName != null ? newName : "quot;Adventurer"quot;;
     }
-    
+
     public Inventory getInventory() {
         return inventory;
     }
-    
+
     /**
      * Use a potion to restore health.
      */
@@ -220,31 +223,31 @@ public class Player extends Character implements Serializable {
         }
         return false;
     }
-    
+
     /**
      * Add potions to inventory.
      */
     public synchronized void addPotions(int count) {
         this.potions += Math.max(0, count);
     }
-    
+
     /**
      * Get potion count.
      */
     public synchronized int getPotions() {
         return potions;
     }
-    
+
     public synchronized void takeDamage(int damage) {
         if (damage >gt; 0) {
             this.currentHealth = Math.max(0, this.currentHealth - damage);
         }
     }
-    
+
     public synchronized boolean isAlive() {
         return currentHealth >gt; 0;
     }
-    
+
     @Override
     public String toString() {
         return "quot;Player{"quot; +

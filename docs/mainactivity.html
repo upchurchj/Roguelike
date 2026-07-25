@@ -27,10 +27,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-
 import java.io.Serializable;
 import java.util.List;
 
@@ -40,7 +38,7 @@ import java.util.List;
  */
 public class MainActivity extends AppCompatActivity implements GameView.GameListener {
     private static final String TAG = "quot;MainActivity"quot;;
-    private static final int BATTLE_REQUEST_CODE = 1;
+    private static final int BATTLE_REQUEST = 1;
     private static final int DUNGEON_WIDTH = 50;
     private static final int DUNGEON_HEIGHT = 50;
     private static final int INITIAL_ENEMIES = 10;
@@ -100,6 +98,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         Player player = game.getPlayer();
         Dungeon gameDungeon = game.getDungeon();
+
         if (player == null || gameDungeon == null) {
             Log.w(TAG, "quot;Cannot spawn player: player or dungeon is null"quot;);
             return;
@@ -138,37 +137,11 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         if (saveData.player != null) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
-                // FIX #6: Recovery - ensure loaded health is never <lt;= 0
-                int loadedHealth = saveData.player.getCurrentHealth();
-                if (loadedHealth <lt;= 0) {
-                    Log.w(TAG, "quot;Loaded health was "quot; + loadedHealth + "quot; (invalid); resetting to max health"quot;);
-                    loadedHealth = gamePlayer.getMaxHealth();
-                }
-                int restoredHealth = Math.max(1, Math.min(loadedHealth, 100));
-                gamePlayer.setCurrentHealth(restoredHealth);
-
-                // Validate and set experience (clamped by Player setter)
-                int restoredExp = Math.max(0, saveData.player.getExperience());
-                gamePlayer.setExperience(restoredExp);
-
-                // Validate and set gold (clamped by Player setter)
-                int restoredGold = Math.max(0, saveData.player.getGoldCollected());
-                gamePlayer.setGoldCollected(restoredGold);
-
-                Log.d(TAG, "quot;Restored player stats: exp="quot; + restoredExp + "quot; hp="quot; + restoredHealth + "quot; gold="quot; + restoredGold);
-            }
-        }
-
-        // Restore dungeon map
-        if (saveData.dungeonMap != null) {
-            Dungeon gameDungeon = game.getDungeon();
-            if (gameDungeon != null &amp;&amp; saveData.dungeonMap.length >gt; 0) {
-                for (int y = 0; y <lt; saveData.dungeonMap.length; y++) {
-                    for (int x = 0; x <lt; saveData.dungeonMap[y].length; x++) {
-                        gameDungeon.setTile(x, y, (char)saveData.dungeonMap[y][x]);
-                    }
-                }
-                Log.d(TAG, "quot;Restored dungeon map"quot;);
+                int newHealth = Math.max(0, Math.min(saveData.player.getCurrentHealth(), 100));
+                gamePlayer.setCurrentHealth(newHealth);
+                gamePlayer.setExperience(Math.max(0, saveData.player.getExperience()));
+                gamePlayer.setGoldCollected(Math.max(0, saveData.player.getGoldCollected()));
+                Log.d(TAG, "quot;Restored player stats"quot;);
             }
         }
 
@@ -188,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         super.onActivityResult(requestCode, resultCode, data);
 
         // Validate request code
-        if (requestCode != BATTLE_REQUEST_CODE) {
+        if (requestCode != BATTLE_REQUEST) {
             return;
         }
 
@@ -225,7 +198,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             if (game != null) {
                 Player gamePlayer = game.getPlayer();
                 if (gamePlayer != null) {
-                    // Clamp health to valid range [0, 100]
                     int newHealth = Math.max(0, Math.min(updatedPlayer.getCurrentHealth(), 100));
                     gamePlayer.setCurrentHealth(newHealth);
                     gamePlayer.setExperience(Math.max(0, updatedPlayer.getExperience()));
@@ -240,7 +212,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 if (currentEnemies != null) {
                     for (Enemy e : currentEnemies) {
                         if (e != null &amp;&amp; e.getId().equals(defeatedEnemyId)) {
-                            // Enemy is defeated; can be removed or marked (setDefeated check)
                             if (e.isDefeated()) {
                                 currentEnemies.remove(e);
                                 Log.d(TAG, "quot;Enemy "quot; + defeatedEnemyId + "quot; removed from active enemies"quot;);
@@ -267,24 +238,42 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 
     @Override
+    public void onEncounter(Enemy enemy) {
+        if (enemy != null &amp;&amp; game != null) {
+            Intent battleIntent = new Intent(MainActivity.this, BattleActivity.class);
+            battleIntent.putExtra("quot;player"quot;, game.getPlayer());
+            battleIntent.putExtra("quot;enemy_id"quot;, enemy.getId());
+            startActivityForResult(battleIntent, BATTLE_REQUEST);
+        }
+    }
+
+    @Override
     public void onQuitRequested() {
         // Show confirmation dialog before quitting
         new AlertDialog.Builder(this)
-            .setTitle("quot;Quit Game"quot;)
-            .setMessage("quot;Are you sure you want to quit? Your progress will be saved."quot;)
-            .setPositiveButton("quot;Quit"quot;, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    saveAndQuit();
-                }
-            })
-            .setNegativeButton("quot;Cancel"quot;, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    dialog.dismiss();
-                }
-            })
-            .show();
+                .setTitle("quot;Quit Game"quot;)
+                .setMessage("quot;Are you sure you want to quit? Your progress will be saved."quot;)
+                .setPositiveButton("quot;Quit"quot;, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        saveAndQuit();
+                    }
+                })
+                .setNegativeButton("quot;Cancel"quot;, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
+                .show();
+    }
+
+    @Override
+    public void onGameOver(Game.GameState state) {
+        Log.d(TAG, "quot;Game over: "quot; + state);
+        if (game != null) {
+            game.setGameState(Game.GameState.LOST);
+        }
     }
 
     /**
@@ -304,37 +293,23 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 for (int y = 0; y <lt; charGrid.length; y++) {
                     dungeonMap[y] = new int[charGrid[y].length];
                     for (int x = 0; x <lt; charGrid[y].length; x++) {
-                        dungeonMap[y][x] = (int)charGrid[y][x];
+                        dungeonMap[y][x] = charGrid[y][x];
                     }
                 }
             }
 
-            if (dungeonMap == null) {
-                Log.w(TAG, "quot;Dungeon map is null; cannot save game"quot;);
-                finish();
-                return;
-            }
-
-            int playerX = player.getX();
-            int playerY = player.getY();
-            SaveGameManager.SaveGameData saveData = new SaveGameManager.SaveGameData(player, enemies, dungeonMap, playerX, playerY);
-            saveGameManager.saveGame(saveData, "quot;save_game.dat"quot;);
-            Log.d(TAG, "quot;Game saved successfully"quot;);
+            // Create SaveGameData and save
+            SaveGameManager.SaveGameData data = new SaveGameManager.SaveGameData();
+            data.player = player;
+            data.playerX = (player != null) ? player.getX() : -1;
+            data.playerY = (player != null) ? player.getY() : -1;
+            data.enemies = (enemies != null) ? enemies : new java.util.ArrayList<lt;>gt;();
+            data.dungeonMap = dungeonMap;
+            saveGameManager.saveGame(data);
+            Log.d(TAG, "quot;Game saved"quot;);
         }
+
         finish();
-    }
-
-    @Override
-    public void onGameOver(Game.GameState state) {
-        Log.d(TAG, "quot;Game Over: "quot; + state);
-        if (gameView != null) {
-            gameView.invalidate();
-        }
-    }
-
-    @Override
-    public void onEncounter(Enemy enemy) {
-        Log.d(TAG, "quot;Encounter: "quot; + (enemy != null ? enemy.getName() : "quot;Unknown"quot;));
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>

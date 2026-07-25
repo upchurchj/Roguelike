@@ -21,14 +21,13 @@
         <h1>BattleView</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/BattleView.java</div>
 package com.knightlight.game;
-import android.util.Log;
 
+import android.util.Log;
 import android.util.AttributeSet;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import java.util.logging.Logger;
 import android.view.View;
 
 public class BattleView extends View {
@@ -132,9 +131,11 @@ public class BattleView extends View {
 
         // Skull shape: main cranium
         canvas.drawCircle(x + size / 2, y + size / 3, size / 3, skullPaint);
+
         // Eye sockets
         canvas.drawCircle(x + size / 4, y + size / 3, size / 5, skullPaint);
         canvas.drawCircle(x + 3 * size / 4, y + size / 3, size / 5, skullPaint);
+
         // Jaw
         canvas.drawRect(x + size / 4, y + 2 * size / 3, x + 3 * size / 4, y + size, skullPaint);
 

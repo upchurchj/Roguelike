@@ -22,6 +22,10 @@
         <div class="source-path">Source: src/main/java/com/knightlight/game/Character.java</div>
 package com.knightlight.game;
 
+/**
+ * Base class for all characters in the game (player and enemies).
+ * Manages position, health, and combat stats.
+ */
 public class Character {
     protected int x;
     protected int y;
@@ -31,7 +35,10 @@ public class Character {
     protected int armor;
     protected int dodgeChance;
     protected int criticalChance;
-    
+
+    /**
+     * Constructor for Character.
+     */
     public Character(int x, int y, int maxHealth, int attack) {
         this.x = x;
         this.y = y;
@@ -42,71 +49,71 @@ public class Character {
         this.dodgeChance = 0;
         this.criticalChance = 0;
     }
-    
+
     public int getX() {
         return x;
     }
-    
+
     public void setX(int x) {
         this.x = x;
     }
-    
+
     public int getY() {
         return y;
     }
-    
+
     public void setY(int y) {
         this.y = y;
     }
-    
+
     public int getHealth() {
         return currentHealth;
     }
-    
+
     public int getMaxHealth() {
         return maxHealth;
     }
-    
+
     public void takeDamage(int damage) {
         this.currentHealth = Math.max(0, currentHealth - damage);
     }
-    
+
     public void heal(int amount) {
         this.currentHealth = Math.min(maxHealth, currentHealth + amount);
     }
-    
+
     public boolean isAlive() {
         return currentHealth >gt; 0;
     }
-    
+
     public int getAttack() {
         return attack;
     }
-    
+
     public void setAttack(int attack) {
         this.attack = attack;
     }
-    
+
     public int getArmor() {
         return armor;
     }
-    
+
     public void setArmor(int armor) {
         this.armor = armor;
     }
-    
+
     public int getDodgeChance() {
         return dodgeChance;
     }
-    
+
     public void setDodgeChance(int dodge) {
         this.dodgeChance = dodge;
     }
-    
+
     public int getCriticalChance() {
         return criticalChance;
     }
-    
+
     public void setCriticalChance(int crit) {
         this.criticalChance = crit;
     }

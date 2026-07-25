@@ -29,7 +29,7 @@ public class Enemy extends Character {
     private int goldReward;
     private int experienceReward;
     private boolean isBoss;
-    
+
     public Enemy(int x, int y, int maxHealth, int attack, Dungeon dungeon, String name, int armor, int dodge, int critChance) {
         super(x, y, maxHealth, attack);
         this.dungeon = dungeon;
@@ -42,53 +42,48 @@ public class Enemy extends Character {
         this.experienceReward = 10 + (int)(Math.random() * 20);
         this.isBoss = false;
     }
-    
+
     public void moveToward(Character target) {
         if (target == null || dungeon == null) {
             return;
         }
         int targetX = target.getX();
         int targetY = target.getY();
-        
-        if (x <lt; targetX &amp;&amp; dungeon.isWalkable(x + 1, y)) {
-            x++;
-        } else if (x >gt; targetX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
+        if (x >gt; targetX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
             x--;
-        } else if (y <lt; targetY &amp;&amp; dungeon.isWalkable(x, y + 1)) {
-            y++;
         } else if (y >gt; targetY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
             y--;
         }
     }
-    
+
     public String getName() {
         return name;
     }
-    
+
     public String getId() {
         return id;
     }
-    
+
     public int getGoldReward() {
         return goldReward;
     }
-    
+
     public int getExperienceReward() {
         return experienceReward;
     }
-    
+
     public boolean isDefeated() {
         return !isAlive();
     }
-    
+
     public boolean isDead() {
         return !isAlive();
     }
-    
+
     public boolean isBoss() {
         return isBoss;
     }
-    
+
     public void setBoss(boolean boss) {
         this.isBoss = boss;
     }

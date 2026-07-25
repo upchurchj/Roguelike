@@ -40,12 +40,10 @@ public class SaveGameManager {
         }
     }
 
-    // FIX #5: Add filename validation to prevent path traversal vulnerabilities
     private String validateFilename(String filename) {
         if (filename == null || filename.isEmpty()) {
             throw new IllegalArgumentException("quot;Filename cannot be null or empty"quot;);
         }
-        // Remove any path traversal attempts
         String sanitized = filename.replaceAll("quot;[^a-zA-Z0-9._-]"quot;, "quot;"quot;);
         if (sanitized.isEmpty()) {
             throw new IllegalArgumentException("quot;Filename contains no valid characters"quot;);
@@ -62,43 +60,49 @@ public class SaveGameManager {
     }
 
     public void saveGame(SaveGameData data, String filename) {
-        // FIX #6: Prevent saving if player is dead (death loop prevention)
         if (data == null || data.player == null) {
             Log.w(TAG, "quot;Cannot save: SaveGameData or player is null"quot;);
             return;
         }
         if (data.player.getHealth() <lt;= 0) {
-            Log.w(TAG, "quot;Cannot save: Player health is "quot; + data.player.getHealth() + "quot; (dead)"quot;);
+            Log.w(TAG, "quot;Cannot save: player is dead"quot;);
             return;
         }
 
         try {
             String savePath = getSavePath(filename);
-            Log.d(TAG, "quot;Saving game to: "quot; + savePath);
             FileOutputStream fos = new FileOutputStream(savePath);
             ObjectOutputStream oos = new ObjectOutputStream(fos);
             oos.writeObject(data);
             oos.close();
             fos.close();
-            Log.d(TAG, "quot;Game saved successfully to: "quot; + filename);
-        } catch (IOException | IllegalArgumentException e) {
-            Log.e(TAG, "quot;Error saving game to "quot; + filename, e);
+            Log.d(TAG, "quot;Game saved to: "quot; + savePath);
+        } catch (IOException e) {
+            Log.e(TAG, "quot;Error saving game"quot;, e);
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "quot;Invalid filename: "quot; + filename, e);
         }
+    }
+
+    public void saveGame(SaveGameData data) {
+        saveGame(data, "quot;savegame_"quot; + System.currentTimeMillis() + "quot;.sav"quot;);
     }
 
     public SaveGameData loadGame(String filename) {
         try {
             String savePath = getSavePath(filename);
-            Log.d(TAG, "quot;Loading game from: "quot; + savePath);
             FileInputStream fis = new FileInputStream(savePath);
             ObjectInputStream ois = new ObjectInputStream(fis);
             SaveGameData data = (SaveGameData) ois.readObject();
             ois.close();
             fis.close();
-            Log.d(TAG, "quot;Game loaded successfully from: "quot; + filename);
+            Log.d(TAG, "quot;Game loaded from: "quot; + savePath);
             return data;
-        } catch (IOException | ClassNotFoundException | IllegalArgumentException e) {
-            Log.e(TAG, "quot;Error loading game from "quot; + filename, e);
+        } catch (IOException | ClassNotFoundException e) {
+            Log.e(TAG, "quot;Error loading game"quot;, e);
+            return null;
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "quot;Invalid filename: "quot; + filename, e);
             return null;
         }
     }
@@ -107,12 +111,10 @@ public class SaveGameManager {
         try {
             File saveDir = new File(basePath, SAVE_DIR);
             if (!saveDir.exists()) {
-                Log.w(TAG, "quot;Save directory does not exist"quot;);
                 return null;
             }
             File[] saves = saveDir.listFiles();
             if (saves == null || saves.length == 0) {
-                Log.w(TAG, "quot;No save files found"quot;);
                 return null;
             }
             Arrays.sort(saves, (a, b) ->gt; Long.compare(b.lastModified(), a.lastModified()));
@@ -167,6 +169,7 @@ public class SaveGameManager {
 
     public static class SaveGameData implements Serializable {
         private static final long serialVersionUID = 1L;
+
         public Player player;
         public List<lt;Enemy>gt; enemies;
         public int[][] dungeonMap;
@@ -179,6 +182,9 @@ public class SaveGameManager {
             this.dungeonMap = dungeonMap;
             this.playerX = playerX;
             this.playerY = playerY;
+        }
+
+        public SaveGameData() {
         }
     }
 }

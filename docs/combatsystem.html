@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CombatSystem {
+    private static final String TAG = "quot;CombatSystem"quot;;
+
     private Player player;
     private Enemy enemy;
     private List<lt;String>gt; combatLog;
@@ -37,7 +39,7 @@ public class CombatSystem {
         this.enemy = enemy;
         this.combatLog = new ArrayList<lt;>gt;();
         this.lastLogEntry = "quot;"quot;;
-        Log.d("quot;CombatSystem"quot;, "quot;CombatSystem initialized with player vs "quot; + enemy.getName());
+        Log.d(TAG, "quot;CombatSystem initialized with player vs "quot; + enemy.getName());
     }
 
     public String getLastLogEntry() {
@@ -51,102 +53,85 @@ public class CombatSystem {
 
     public void playerAttack() {
         if (player == null || enemy == null) {
-            Log.w("quot;CombatSystem"quot;, "quot;playerAttack called with null player or enemy"quot;);
+            Log.w(TAG, "quot;playerAttack called with null player or enemy"quot;);
             return;
         }
 
         int playerAttack = player.getAttack();
         int enemyDefense = enemy.getArmor();
-        
+
         // Damage calculation: max(1, attack - defense + random 0-4)
-        int damage = Math.max(1, playerAttack - enemyDefense + (int)(Math.random() * 5));
-        
+        int damage = Math.max(1, playerAttack - enemyDefense + (int) (Math.random() * 5));
+
         enemy.takeDamage(damage);
         lastLogEntry = "quot;You attack for "quot; + damage + "quot; damage!"quot;;
         combatLog.add(lastLogEntry);
-        Log.d("quot;CombatSystem"quot;, lastLogEntry);
+        Log.d(TAG, lastLogEntry);
     }
 
     public void enemyAttack() {
         if (player == null || enemy == null) {
-            Log.w("quot;CombatSystem"quot;, "quot;enemyAttack called with null player or enemy"quot;);
+            Log.w(TAG, "quot;enemyAttack called with null player or enemy"quot;);
             return;
         }
 
         int enemyAttack = enemy.getAttack();
         int playerDefense = player.getArmor();
-        
+
         // Base damage calculation
         int baseDamage = Math.max(1, enemyAttack - playerDefense);
-        
+
         // Apply variance (±0-3)
-        int variance = (int)(Math.random() * 4) - 1;  // -1 to +3
+        int variance = (int) (Math.random() * 4) - 1; // -1 to +3
         int damage = Math.max(1, baseDamage + variance);
-        
+
         player.takeDamage(damage);
         lastLogEntry = enemy.getName() + "quot; attacks for "quot; + damage + "quot; damage!"quot;;
         combatLog.add(lastLogEntry);
-        Log.d("quot;CombatSystem"quot;, lastLogEntry);
+        Log.d(TAG, lastLogEntry);
     }
 
     public boolean attemptFlee() {
         double fleeChance = 0.3;
         boolean success = Math.random() <lt; fleeChance;
-        
-        if (success) {
-            lastLogEntry = "quot;You fled successfully!"quot;;
-        } else {
-            lastLogEntry = "quot;Failed to flee!"quot;;
-        }
-        
+        lastLogEntry = success ? "quot;You escaped!"quot; : "quot;Failed to escape!"quot;;
         combatLog.add(lastLogEntry);
-        Log.d("quot;CombatSystem"quot;, lastLogEntry);
-        
+        Log.d(TAG, lastLogEntry);
         return success;
     }
 
     /**
-     * Ends combat and processes rewards (victory) or consequences (defeat).
-     * CRITICAL: Call this only when combat concludes (victory or defeat).
-     * Returns a CombatResult with outcome and reward data.
+     * Called when combat ends. Handles victory/defeat/ongoing state.
+     * Returns CombatResult with outcome and any rewards.
      */
     public CombatResult endCombat() {
-        if (player == null || enemy == null) {
-            Log.e("quot;CombatSystem"quot;, "quot;endCombat called with null player or enemy"quot;);
-            return CombatResult.ongoing();  // Safety fallback
-        }
-
         // Victory: Enemy defeated
         if (!enemy.isAlive()) {
-            int xpReward = Math.max(0, enemy.getExperienceReward());
-            int goldReward = Math.max(0, enemy.getGoldReward());
-            
-            // Clamp rewards to prevent integer overflow
-            xpReward = Math.min(xpReward, Integer.MAX_VALUE / 2);
-            goldReward = Math.min(goldReward, Integer.MAX_VALUE / 2);
-            
+            int xpReward = 50 * enemy.getHealth();
+            int goldReward = 10 * enemy.getHealth();
+
             if (xpReward >gt; 0) {
                 player.addExperience(xpReward);
                 combatLog.add("quot;Gained "quot; + xpReward + "quot; experience!"quot;);
             }
-            
+
             if (goldReward >gt; 0) {
                 player.addGold(goldReward);
                 combatLog.add("quot;Gained "quot; + goldReward + "quot; gold!"quot;);
             }
-            
-            Log.d("quot;CombatSystem"quot;, "quot;Victory - Player gained "quot; + xpReward + "quot;xp and "quot; + goldReward + "quot;g"quot;);
+
+            Log.d(TAG, "quot;Victory - Player gained "quot; + xpReward + "quot;xp and "quot; + goldReward + "quot;g"quot;);
             return CombatResult.victory(player.getName() + "quot; defeated "quot; + enemy.getName() + "quot;!"quot;, xpReward, goldReward);
         }
-        
+
         // Defeat: Player defeated
         if (!player.isAlive()) {
-            Log.d("quot;CombatSystem"quot;, "quot;Defeat - Player defeated by "quot; + enemy.getName());
+            Log.d(TAG, "quot;Defeat - Player defeated by "quot; + enemy.getName());
             return CombatResult.defeat(player.getName() + "quot; was defeated by "quot; + enemy.getName() + "quot;!"quot;);
         }
-        
+
         // Combat still ongoing (neither party defeated)
-        Log.w("quot;CombatSystem"quot;, "quot;endCombat called but combat is still ongoing"quot;);
+        Log.w(TAG, "quot;endCombat called but combat is still ongoing"quot;);
         return CombatResult.ongoing();
     }
 
