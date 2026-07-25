@@ -84,6 +84,9 @@ public class Dungeon implements Serializable {
         }
     }
 
+    /**
+     * Constructor: Initialize dungeon with given dimensions.
+     */
     public Dungeon(int width, int height) {
         this.width = width;
         this.height = height;
@@ -116,38 +119,43 @@ public class Dungeon implements Serializable {
     }
 
     /**
-     * Generate non-overlapping rooms using random placement with constraint checks.
+     * Generate rooms and carve them into the dungeon.
      */
     private void generateRooms() {
-        for (int attempt = 0; attempt <lt; ROOM_PLACEMENT_ATTEMPTS &amp;&amp; rooms.size() <lt; NUM_ROOMS; attempt++) {
-            int roomWidth = MIN_ROOM_WIDTH + random.nextInt(MAX_ROOM_WIDTH - MIN_ROOM_WIDTH + 1);
-            int roomHeight = MIN_ROOM_HEIGHT + random.nextInt(MAX_ROOM_HEIGHT - MIN_ROOM_HEIGHT + 1);
-            int x = 1 + random.nextInt(width - roomWidth - 1);
-            int y = 1 + random.nextInt(height - roomHeight - 1);
+        for (int attempt = 0; attempt <lt; ROOM_PLACEMENT_ATTEMPTS; attempt++) {
+            int w = MIN_ROOM_WIDTH + random.nextInt(MAX_ROOM_WIDTH - MIN_ROOM_WIDTH + 1);
+            int h = MIN_ROOM_HEIGHT + random.nextInt(MAX_ROOM_HEIGHT - MIN_ROOM_HEIGHT + 1);
+            int x = random.nextInt(width - w);
+            int y = random.nextInt(height - h);
 
-            Room newRoom = new Room(x, y, roomWidth, roomHeight);
-            boolean fits = true;
+            Room newRoom = new Room(x, y, w, h);
+
+            boolean canPlace = true;
             for (Room existing : rooms) {
                 if (newRoom.overlaps(existing)) {
-                    fits = false;
+                    canPlace = false;
                     break;
                 }
             }
 
-            if (fits) {
-                rooms.add(newRoom);
+            if (canPlace) {
                 carveRoom(newRoom);
+                rooms.add(newRoom);
+
+                if (rooms.size() >gt;= NUM_ROOMS) {
+                    break;
+                }
             }
         }
     }
 
     /**
-     * Carve a room into the grid.
+     * Carve a room into the grid (fill with floor tiles).
      */
     private void carveRoom(Room room) {
         for (int y = room.y; y <lt; room.y + room.height; y++) {
             for (int x = room.x; x <lt; room.x + room.width; x++) {
-                if (x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height) {
+                if (isInBounds(x, y)) {
                     grid[y][x] = TILE_FLOOR;
                 }
             }
@@ -155,74 +163,88 @@ public class Dungeon implements Serializable {
     }
 
     /**
-     * Connect rooms using horizontal-then-vertical corridors.
+     * Connect rooms with corridors.
      */
     private void connectRooms() {
         for (int i = 0; i <lt; rooms.size() - 1; i++) {
-            Room a = rooms.get(i);
-            Room b = rooms.get(i + 1);
-            carveCorridor(a.getCenterX(), a.getCenterY(), b.getCenterX(), b.getCenterY());
-        }
-    }
+            Room from = rooms.get(i);
+            Room to = rooms.get(i + 1);
 
-    /**
-     * Carve corridor between two points (horizontal then vertical).
-     */
-    private void carveCorridor(int x1, int y1, int x2, int y2) {
-        // Horizontal segment
-        int minX = Math.min(x1, x2);
-        int maxX = Math.max(x1, x2);
-        for (int x = minX; x <lt;= maxX; x++) {
-            if (y1 >gt;= 0 &amp;&amp; y1 <lt; height &amp;&amp; x >gt;= 0 &amp;&amp; x <lt; width) {
-                grid[y1][x] = TILE_FLOOR;
-            }
-        }
-        // Vertical segment
-        int minY = Math.min(y1, y2);
-        int maxY = Math.max(y1, y2);
-        for (int y = minY; y <lt;= maxY; y++) {
-            if (y >gt;= 0 &amp;&amp; y <lt; height &amp;&amp; x2 >gt;= 0 &amp;&amp; x2 <lt; width) {
-                grid[y][x2] = TILE_FLOOR;
-            }
-        }
-    }
+            int fromX = from.getCenterX();
+            int fromY = from.getCenterY();
+            int toX = to.getCenterX();
+            int toY = to.getCenterY();
 
-    /**
-     * Scatter gold randomly on floor tiles.
-     */
-    private void decorateGold() {
-        for (int y = 0; y <lt; height; y++) {
-            for (int x = 0; x <lt; width; x++) {
-                if (grid[y][x] == TILE_FLOOR &amp;&amp; random.nextDouble() <lt; 0.05) {
-                    grid[y][x] = TILE_GOLD;
+            // Carve horizontal corridor
+            int minX = Math.min(fromX, toX);
+            int maxX = Math.max(fromX, toX);
+            for (int x = minX; x <lt;= maxX; x++) {
+                if (isInBounds(x, fromY)) {
+                    grid[fromY][x] = TILE_FLOOR;
+                }
+            }
+
+            // Carve vertical corridor
+            int minY = Math.min(fromY, toY);
+            int maxY = Math.max(fromY, toY);
+            for (int y = minY; y <lt;= maxY; y++) {
+                if (isInBounds(toX, y)) {
+                    grid[y][toX] = TILE_FLOOR;
                 }
             }
         }
     }
 
     /**
-     * Verify all rooms are connected (basic reachability check).
+     * Decorate dungeon with gold on floor tiles.
      */
-    private void validateConnectivity() {
-        if (rooms.isEmpty()) return;
-        // Simple flood-fill from first room to check connectivity
-        boolean[][] visited = new boolean[height][width];
-        floodFill(rooms.get(0).getCenterX(), rooms.get(0).getCenterY(), visited);
-        for (Room room : rooms) {
-            if (!visited[room.getCenterY()][room.getCenterX()]) {
-                // Fallback: ensure at least some connection
-                connectRooms();
-                return;
+    private void decorateGold() {
+        int goldCount = width * height / 50;
+        for (int i = 0; i <lt; goldCount; i++) {
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            if (isInBounds(x, y) &amp;&amp; grid[y][x] == TILE_FLOOR) {
+                grid[y][x] = TILE_GOLD;
             }
         }
     }
 
     /**
-     * Flood-fill for connectivity validation.
+     * Validate that the dungeon is fully connected (all floor tiles accessible).
+     */
+    private void validateConnectivity() {
+        if (rooms.isEmpty()) {
+            return;
+        }
+
+        Room firstRoom = rooms.get(0);
+        boolean[][] visited = new boolean[height][width];
+        floodFill(firstRoom.getCenterX(), firstRoom.getCenterY(), visited);
+
+        // Check if all floor tiles are reachable
+        for (int y = 0; y <lt; height; y++) {
+            for (int x = 0; x <lt; width; x++) {
+                if (grid[y][x] != TILE_WALL &amp;&amp; !visited[y][x]) {
+                    // Unreachable floor found; re-run generation
+                    generateMap();
+                    return;
+                }
+            }
+        }
+    }
+
+    /**
+     * Flood-fill to check connectivity.
      */
     private void floodFill(int x, int y, boolean[][] visited) {
-        if (y <lt; 0 || y >gt;= height || x <lt; 0 || x >gt;= width || visited[y][x]) return;
-        if (grid[y][x] == TILE_WALL) return;
+        if (y <lt; 0 || y >gt;= height || x <lt; 0 || x >gt;= width || visited[y][x]) {
+            return;
+        }
+
+        if (grid[y][x] == TILE_WALL) {
+            return;
+        }
+
         visited[y][x] = true;
         floodFill(x + 1, y, visited);
         floodFill(x - 1, y, visited);
@@ -236,7 +258,9 @@ public class Dungeon implements Serializable {
      * Check if a tile is walkable (not a wall).
      */
     public boolean isWalkable(int x, int y) {
-        if (!isInBounds(x, y)) return false;
+        if (!isInBounds(x, y)) {
+            return false;
+        }
         return grid[y][x] != TILE_WALL;
     }
 
@@ -251,7 +275,9 @@ public class Dungeon implements Serializable {
      * Get tile at position.
      */
     public char getTile(int x, int y) {
-        if (!isInBounds(x, y)) return TILE_WALL;
+        if (!isInBounds(x, y)) {
+            return TILE_WALL;
+        }
         return grid[y][x];
     }
 
@@ -265,27 +291,48 @@ public class Dungeon implements Serializable {
     }
 
     /**
-     * Find a valid spawn position (floor tile in first room).
+     * Find a valid spawn position (walkable floor tile).
      */
     public int[] findSpawnPosition() {
         if (rooms.isEmpty()) {
-            return new int[]{width / 2, height / 2};
+            return null;
         }
+
         Room firstRoom = rooms.get(0);
-        for (int y = firstRoom.y; y <lt; firstRoom.y + firstRoom.height; y++) {
-            for (int x = firstRoom.x; x <lt; firstRoom.x + firstRoom.width; x++) {
-                if (isWalkable(x, y)) {
-                    return new int[]{x, y};
+        int x = firstRoom.x + 1;
+        int y = firstRoom.y + 1;
+
+        if (isWalkable(x, y)) {
+            return new int[]{x, y};
+        }
+
+        // Linear search for walkable tile
+        for (int row = 0; row <lt; height; row++) {
+            for (int col = 0; col <lt; width; col++) {
+                if (isWalkable(col, row)) {
+                    return new int[]{col, row};
                 }
             }
         }
-        return new int[]{firstRoom.getCenterX(), firstRoom.getCenterY()};
+
+        return null;
     }
 
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
-    public char[][] getGrid() { return grid; }
-    public List<lt;Room>gt; getRooms() { return rooms; }
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public char[][] getGrid() {
+        return grid;
+    }
+
+    public List<lt;Room>gt; getRooms() {
+        return rooms;
+    }
 }
         <a href="index.html" class="back-link">Back to Index</a>
     </div>

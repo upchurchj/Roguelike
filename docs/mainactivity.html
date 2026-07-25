@@ -63,8 +63,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
 
-        // Create fresh game with standard dimensions
-        game = new Game(DUNGEON_WIDTH, DUNGEON_HEIGHT, INITIAL_ENEMIES);
+        // Create fresh game (no arguments)
+        game = new Game();
         if (game == null) {
             Log.e(TAG, "quot;Failed to create Game instance"quot;);
             finish();
@@ -224,7 +224,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
             // Update game state if battle was lost
             if (!battleWon &amp;&amp; game != null) {
-                game.setGameState(Game.GameState.LOST);
                 Log.d(TAG, "quot;Battle lost; game state set to LOST"quot;);
             }
 
@@ -232,6 +231,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             if (gameView != null) {
                 gameView.invalidate();
             }
+
         } catch (Exception e) {
             Log.e(TAG, "quot;Error processing battle result"quot;, e);
         }
@@ -271,9 +271,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     @Override
     public void onGameOver(Game.GameState state) {
         Log.d(TAG, "quot;Game over: "quot; + state);
-        if (game != null) {
-            game.setGameState(Game.GameState.LOST);
-        }
     }
 
     /**
@@ -288,6 +285,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             // Get char grid from dungeon and convert to int[][]
             char[][] charGrid = gameDungeon.getGrid();
             int[][] dungeonMap = null;
+
             if (charGrid != null) {
                 dungeonMap = new int[charGrid.length][];
                 for (int y = 0; y <lt; charGrid.length; y++) {
@@ -298,13 +296,13 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 }
             }
 
-            // Create SaveGameData and save
             SaveGameManager.SaveGameData data = new SaveGameManager.SaveGameData();
+            data.playerX = player.getX();
+            data.playerY = player.getY();
             data.player = player;
-            data.playerX = (player != null) ? player.getX() : -1;
-            data.playerY = (player != null) ? player.getY() : -1;
-            data.enemies = (enemies != null) ? enemies : new java.util.ArrayList<lt;>gt;();
+            data.enemies = enemies;
             data.dungeonMap = dungeonMap;
+
             saveGameManager.saveGame(data);
             Log.d(TAG, "quot;Game saved"quot;);
         }

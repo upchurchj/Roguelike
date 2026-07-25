@@ -21,35 +21,34 @@
         <h1>GameView</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/GameView.java</div>
 package com.knightlight.game;
-import android.util.Log;
 
+import android.util.Log;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import java.util.logging.Logger;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import java.util.List;
 
 public class GameView extends View {
+    private static final float ENEMY_RADIUS = 0.4f;
     private Game game;
     private Paint tileWallPaint, tileFloorPaint, tileGoldPaint, playerPaint, enemyPaint, textPaint, buttonPaint, buttonPressPaint;
     private float tileSize;
     private GameListener listener;
     private Rect btnUp, btnDown, btnLeft, btnRight, btnQuit;
     private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, emojiPaint;
-    
-    // Synchronized access to button press state
+
     private final Object buttonLock = new Object();
     private boolean btnUpPressed = false, btnDownPressed = false, btnLeftPressed = false, btnRightPressed = false;
 
     public interface GameListener {
         void onGameOver(Game.GameState state);
         void onQuitRequested();
-    void onEncounter(Enemy enemy);
+        void onEncounter(Enemy enemy);
     }
 
     public GameView(Context context) {
@@ -64,59 +63,58 @@ public class GameView extends View {
         initPaints();
         initButtons();
     }
+
     private void initPaints() {
         tileWallPaint = new Paint();
         tileWallPaint.setColor(Color.parseColor("quot;#1a1a1a"quot;));
         tileWallPaint.setStyle(Paint.Style.FILL);
-        
+
         tileFloorPaint = new Paint();
         tileFloorPaint.setColor(Color.parseColor("quot;#333333"quot;));
         tileFloorPaint.setStyle(Paint.Style.FILL);
-        
+
         tileGoldPaint = new Paint();
         tileGoldPaint.setColor(Color.parseColor("quot;#FFD700"quot;));
         tileGoldPaint.setStyle(Paint.Style.FILL);
-        
+
         playerPaint = new Paint();
         playerPaint.setColor(Color.parseColor("quot;#00FF00"quot;));
         playerPaint.setStyle(Paint.Style.FILL);
-        
+
         enemyPaint = new Paint();
         enemyPaint.setColor(Color.parseColor("quot;#FF0000"quot;));
         enemyPaint.setStyle(Paint.Style.FILL);
-        
+
         textPaint = new Paint();
         textPaint.setTextSize(40);
         textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(40);
-        textPaint.setColor(Color.WHITE);
+
         emojiPaint = new Paint();
-                emojiPaint.setTextSize(tileSize * 0.8f);
-        
+        emojiPaint.setTextSize(tileSize * 0.8f);
+        emojiPaint.setTextAlign(Paint.Align.CENTER);
+
         buttonPaint = new Paint();
-                emojiPaint.setTextAlign(Paint.Align.CENTER);
         buttonPaint.setColor(Color.parseColor("quot;#00FF00"quot;));
         buttonPaint.setStyle(Paint.Style.FILL);
-        
+
         buttonPressPaint = new Paint();
         buttonPressPaint.setColor(Color.parseColor("quot;#00AA00"quot;));
         buttonPressPaint.setStyle(Paint.Style.FILL);
-        
+
         overlayPaint = new Paint();
         overlayPaint.setColor(Color.argb(200, 0, 0, 0));
-        
+
         gameOverTextPaint = new Paint();
         gameOverTextPaint.setColor(Color.WHITE);
         gameOverTextPaint.setTextSize(64);
         gameOverTextPaint.setTextAlign(Paint.Align.CENTER);
-        
+
         buttonLabelPaint = new Paint();
         buttonLabelPaint.setColor(Color.BLACK);
         buttonLabelPaint.setTextSize(20);
         buttonLabelPaint.setTextAlign(Paint.Align.CENTER);
     }
 
-    // Pre-allocate button Rects to avoid per-frame allocation
     private void initButtons() {
         btnUp = new Rect();
         btnDown = new Rect();
@@ -136,12 +134,11 @@ public class GameView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        
         if (game == null) {
             Log.w("quot;GameView"quot;, "quot;Game is null in onDraw"quot;);
             return;
         }
-        
+
         int width = getWidth(), height = getHeight();
         int gameAreaHeight = (int) (height * 0.75);
         int buttonAreaHeight = height - gameAreaHeight;
@@ -168,23 +165,18 @@ public class GameView extends View {
     private void drawDungeon(Canvas canvas, Dungeon dungeon) {
         for (int y = 0; y <lt; dungeon.getHeight(); y++) {
             for (int x = 0; x <lt; dungeon.getWidth(); x++) {
-                float left = x * tileSize, top = y * tileSize, right = left + tileSize, bottom = top + tileSize;
-                
-                // Cache getTile result to avoid redundant calls
+                float xPos = x * tileSize;
+                float yPos = y * tileSize;
+
                 char tile = dungeon.getTile(x, y);
-                Paint tilePaint;
                 if (tile == Dungeon.TILE_WALL) {
-                    tilePaint = tileWallPaint;
+                    canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileWallPaint);
+                } else if (tile == Dungeon.TILE_FLOOR) {
+                    canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
                 } else if (tile == Dungeon.TILE_GOLD) {
-                    tilePaint = tileGoldPaint;
-                } else {
-                        Rect bounds = new Rect();
-                        emojiPaint.getTextBounds("quot;☠️"quot;, 0, 1, bounds);
-                        float emojiY = y + (tileSize - (bounds.height())) / 2;
-                        canvas.drawText("quot;☠️"quot;, x, emojiY, emojiPaint);
-                    tilePaint = tileFloorPaint;
+                    canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
+                    canvas.drawCircle(xPos + tileSize / 2, yPos + tileSize / 2, tileSize * 0.3f, tileGoldPaint);
                 }
-                canvas.drawRect(left, top, right, bottom, tilePaint);
             }
         }
     }
@@ -195,15 +187,12 @@ public class GameView extends View {
             Log.w("quot;GameView"quot;, "quot;Player is null in drawPlayer"quot;);
             return;
         }
-        
+
         float x = player.getX() * tileSize + tileSize / 2;
         float y = player.getY() * tileSize + tileSize / 2;
-        canvas.drawCircle(x, y, tileSize * 0.35f, playerPaint);
+        canvas.drawCircle(x, y, tileSize * 0.4f, playerPaint);
     }
 
-    private static final float ENEMY_RADIUS = 0.35f;
-    private static final float EMOJI_OFFSET = 0.2f;
-    private static final float EMOJI_TEXT_SIZE_SCALE = 0.4f;
     private void drawEnemies(Canvas canvas) {
         List<lt;Enemy>gt; enemies = game.getEnemies();
         if (enemies == null) {
@@ -218,7 +207,6 @@ public class GameView extends View {
             float y = enemy.getY() * tileSize + tileSize / 2;
 
             if (enemy.isBoss()) {
-                // Boss rendering: Dragon emoji at 4x tile size
                 if (!enemy.isDead()) {
                     float dragonSize = tileSize * 4;
                     Paint dragonPaint = new Paint(emojiPaint);
@@ -228,7 +216,6 @@ public class GameView extends View {
                     float dragonY = y + (dragonSize - bounds.height()) / 2;
                     canvas.drawText("quot;🐉"quot;, x, dragonY, dragonPaint);
                 } else {
-                    // Dead boss: large skull
                     float dragonSize = tileSize * 4;
                     Paint skullPaint = new Paint(emojiPaint);
                     skullPaint.setTextSize(dragonSize);
@@ -238,14 +225,12 @@ public class GameView extends View {
                     canvas.drawText("quot;☠️"quot;, x, skullY, skullPaint);
                 }
             } else {
-                // Regular enemy rendering
                 if (!enemy.isDead()) {
                     canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
                 } else {
-                    // Dead regular enemy: normal skull
                     Rect bounds = new Rect();
                     emojiPaint.getTextBounds("quot;☠️"quot;, 0, 1, bounds);
-                    float emojiY = y + (tileSize - (bounds.height())) / 2;
+                    float emojiY = y + (tileSize - bounds.height()) / 2;
                     canvas.drawText("quot;☠️"quot;, x, emojiY, emojiPaint);
                 }
             }
@@ -258,14 +243,11 @@ public class GameView extends View {
             Log.w("quot;GameView"quot;, "quot;Player is null in drawStatus"quot;);
             return;
         }
-        
+
         String status = String.format("quot;LVL: %d (XP: %d) | HP: %d/%d | Gold: %d | Turn: %d"quot;,
-                player.getLevel(),
-                player.getExperience(),
-                player.getCurrentHealth(),
-                player.getMaxHealth(),
-                player.getGoldCollected(),
-                game.getTurnCount());
+                player.getLevel(), player.getExperience(),
+                player.getCurrentHealth(), player.getMaxHealth(),
+                player.getGoldCollected(), game.getTurnCount());
         canvas.drawText(status, 10, gameAreaHeight - 10, textPaint);
     }
 
@@ -274,14 +256,12 @@ public class GameView extends View {
         int buttonHeight = buttonAreaHeight / 2;
         int startY = gameAreaHeight;
 
-        // Update pre-allocated Rect objects instead of creating new ones
         btnUp.set(0, startY, buttonWidth, startY + buttonHeight);
         btnDown.set(buttonWidth, startY, 2 * buttonWidth, startY + buttonHeight);
         btnLeft.set(2 * buttonWidth, startY, 3 * buttonWidth, startY + buttonHeight);
         btnRight.set(3 * buttonWidth, startY, 4 * buttonWidth, startY + buttonHeight);
         btnQuit.set(4 * buttonWidth, startY, 5 * buttonWidth, startY + buttonHeight);
 
-        // Read button state under lock for thread safety
         synchronized (buttonLock) {
             drawButton(canvas, btnUp, "quot;UP"quot;, btnUpPressed);
             drawButton(canvas, btnDown, "quot;DOWN"quot;, btnDownPressed);
@@ -307,7 +287,7 @@ public class GameView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getAction();
         float x = event.getX(), y = event.getY();
-        
+
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 handleButtonPress(x, y);
@@ -316,7 +296,6 @@ public class GameView extends View {
                 handleButtonRelease();
                 break;
         }
-        
         invalidate();
         return true;
     }
@@ -367,6 +346,7 @@ public class GameView extends View {
             listener.onGameOver(state);
         }
     }
+
     private void handleButtonRelease() {
         synchronized (buttonLock) {
             btnUpPressed = false;

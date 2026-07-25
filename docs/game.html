@@ -25,254 +25,143 @@ package com.knightlight.game;
 import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public class Game {
-    private static final String TAG = "quot;Game"quot;;
-    private static final int ENEMY_HEALTH = 10;
+    public enum GameState {
+        PLAYING, WON, LOST
+    }
+
+    private static final int ENEMY_HEALTH = 20;
     private static final int ENEMY_ATTACK_POWER = 5;
-    private static final int ENEMY_ARMOR = 0;
-    private static final int ENEMY_DODGE = 5;
-    private static final int ENEMY_CRIT = 10;
-    private static final int GOLD_PICKUP_AMOUNT = 10;
-    private static final int SPAWN_ATTEMPTS = 100;
-    private static final String BOSS_NAME = "quot;Shadow Lord"quot;;
-    private static final int BOSS_HEALTH = 50;
-    private static final int BOSS_DAMAGE = 8;
+    private static final int ENEMY_ARMOR = 2;
+    private static final int ENEMY_DODGE = 10;
+    private static final int ENEMY_CRIT = 5;
+    private static final int BOSS_HEALTH = 100;
+    private static final int BOSS_DAMAGE = 15;
     private static final int BOSS_ARMOR = 5;
     private static final int BOSS_UNLOCK_GOLD = 100;
+    private static final String BOSS_NAME = "quot;Dragon"quot;;
 
-    public enum GameState { PLAYING, WON, LOST }
-
-    private final Object stateLock = new Object();
-    private final Object enemyLock = new Object();
-    private final Object encounterLock = new Object();
-
-    private Dungeon dungeon;
     private Player player;
+    private Dungeon dungeon;
     private List<lt;Enemy>gt; enemies;
     private GameState state;
     private int turnCount;
-    private int initialEnemyCount;
-    private Random rng;
-    private Enemy encounteredEnemy = null;
-    private boolean bossUnlocked = false;
-    private Enemy boss = null;
+    private Enemy encounteredEnemy;
 
-    public Game(int dungeonWidth, int dungeonHeight, int numEnemies) {
-        if (dungeonWidth <lt;= 0 || dungeonHeight <lt;= 0) {
-            dungeonWidth = 50;
-            dungeonHeight = 50;
-        }
-        this.dungeon = new Dungeon(dungeonWidth, dungeonHeight);
-        int[] spawnPos = dungeon.findSpawnPosition();
-        this.player = new Player(spawnPos[0], spawnPos[1]);
+    public Game() {
+        this.dungeon = new Dungeon(50, 50);
+        this.player = new Player(10, 10);
+        this.enemies = new ArrayList<lt;>gt;();
         this.state = GameState.PLAYING;
         this.turnCount = 0;
-        this.initialEnemyCount = numEnemies;
-        this.rng = new Random(System.nanoTime());
+        this.encounteredEnemy = null;
 
-        for (int i = 0; i <lt; numEnemies; i++) {
-            spawnEnemy();
-        }
+        generateEnemies();
     }
 
-    private void spawnEnemy() {
-        for (int attempt = 0; attempt <lt; SPAWN_ATTEMPTS; attempt++) {
-            int x = rng.nextInt(dungeon.getWidth());
-            int y = rng.nextInt(dungeon.getHeight());
-            if (dungeon.isWalkable(x, y)) {
-                Enemy enemy = new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon, "quot;Enemy"quot;, ENEMY_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
+    private void generateEnemies() {
+        int enemiesSpawned = 0;
+        int maxAttempts = 100;
+        int attempts = 0;
+
+        while (enemiesSpawned <lt; 5 &amp;&amp; attempts <lt; maxAttempts) {
+            int x = (int)(Math.random() * dungeon.getWidth());
+            int y = (int)(Math.random() * dungeon.getHeight());
+
+            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                Enemy enemy = new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon, "quot;Goblin"quot;, ENEMY_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
                 enemies.add(enemy);
-                return;
+                enemiesSpawned++;
+            }
+            attempts++;
+        }
+
+        if (player.getGoldCollected() >gt;= BOSS_UNLOCK_GOLD) {
+            int bossAttempts = 0;
+            while (bossAttempts <lt; 50) {
+                int x = (int)(Math.random() * dungeon.getWidth());
+                int y = (int)(Math.random() * dungeon.getHeight());
+
+                if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                    Enemy boss = new Enemy(x, y, BOSS_HEALTH, BOSS_DAMAGE, dungeon, BOSS_NAME, BOSS_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
+                    boss.setBoss(true);
+                    enemies.add(boss);
+                    break;
+                }
+                bossAttempts++;
             }
         }
     }
 
-    private void spawnBoss() {
-        if (boss != null) return;
-        int[] spawnPos = dungeon.findSpawnPosition();
-        boss = new Enemy(spawnPos[0], spawnPos[1], BOSS_HEALTH, BOSS_DAMAGE, dungeon, BOSS_NAME, BOSS_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
-        boss.setBoss(true);
-        Log.d(TAG, "quot;Boss spawned at ("quot; + spawnPos[0] + "quot;, "quot; + spawnPos[1] + "quot;)"quot;);
-    }
-
-    public boolean movePlayer(int dx, int dy) {
-        if (Math.abs(dx) >gt; 1 || Math.abs(dy) >gt; 1 || (dx == 0 &amp;&amp; dy == 0)) {
-            return false;
-        }
-        if (player == null) {
-            return false;
-        }
+    public boolean playerMove(int dx, int dy) {
         int newX = player.getX() + dx;
         int newY = player.getY() + dy;
-        if (dungeon.isWalkable(newX, newY)) {
-            player.setX(newX);
-            player.setY(newY);
-            processTurn();
-            synchronized (encounterLock) {
-                return encounteredEnemy != null;
+
+        if (!dungeon.isWalkable(newX, newY)) {
+            return false;
+        }
+
+        player.move(dx, dy);
+        turnCount++;
+
+        char tile = dungeon.getTile(newX, newY);
+        if (tile == Dungeon.TILE_GOLD) {
+            player.addGold(10);
+            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+        }
+
+        for (Enemy enemy : enemies) {
+            if (!enemy.isDead() &amp;&amp; enemy.getX() == newX &amp;&amp; enemy.getY() == newY) {
+                encounteredEnemy = enemy;
+                return true;
             }
         }
 
-        int[][] directions = {{0,1}, {1,0}, {0,-1}, {-1,0}};
-        for (int[] dir : directions) {
-            int altX = player.getX() + dir[0];
-            int altY = player.getY() + dir[1];
-            if (dungeon.isWalkable(altX, altY)) {
-                player.setX(altX);
-                player.setY(altY);
-                processTurn();
-                synchronized (encounterLock) {
-                    return encounteredEnemy != null;
-                }
-            }
-        }
-        Log.e(TAG, "quot;Player trapped at ("quot; + player.getX() + "quot;, "quot; + player.getY() + "quot;)"quot;);
         return false;
     }
 
-    private void processTurn() {
-        if (player == null) {
-            return;
-        }
-        turnCount++;
-        synchronized (enemyLock) {
-            for (Enemy enemy : enemies) {
-                if (enemy != null &amp;&amp; enemy.isAlive()) {
-                    enemy.moveToward(player);
-                }
-            }
-        }
-        synchronized (enemyLock) {
-            for (Enemy enemy : enemies) {
-                if (enemy != null &amp;&amp; enemy.isAlive() &amp;&amp; enemy.getX() == player.getX() &amp;&amp; enemy.getY() == player.getY()) {
-                    synchronized (encounterLock) {
-                        encounteredEnemy = enemy;
-                    }
-                    return;
-                }
-            }
-        }
-        if (boss != null &amp;&amp; boss.isAlive() &amp;&amp; boss.getX() == player.getX() &amp;&amp; boss.getY() == player.getY()) {
-            synchronized (encounterLock) {
-                encounteredEnemy = boss;
-            }
-            return;
-        }
-        if (dungeon != null) {
-            int playerX = player.getX();
-            int playerY = player.getY();
-            if (dungeon.isInBounds(playerX, playerY) &amp;&amp; dungeon.getTile(playerX, playerY) == Dungeon.TILE_GOLD) {
-                player.addGold(GOLD_PICKUP_AMOUNT);
-                dungeon.setTile(playerX, playerY, Dungeon.TILE_FLOOR);
-            }
-        }
-        synchronized (stateLock) {
+    public void resolveEncounter(Enemy enemy, boolean playerWins) {
+        if (playerWins) {
+            player.addGold(enemy.getGoldReward());
+            player.addExperience(enemy.getExperienceReward());
+            enemy.takeDamage(9999);
+        } else {
+            player.takeDamage(enemy.getAttack());
             if (!player.isAlive()) {
                 state = GameState.LOST;
-            } else if (player.getGoldCollected() >gt;= BOSS_UNLOCK_GOLD &amp;&amp; !bossUnlocked) {
-                bossUnlocked = true;
-                spawnBoss();
             }
         }
-    }
 
-    public void setGameState(GameState newState) {
-        synchronized (stateLock) {
-            this.state = newState;
+        if (enemy.isBoss() &amp;&amp; !enemy.isAlive()) {
+            state = GameState.WON;
         }
-    }
-
-    public GameState getState() {
-        synchronized (stateLock) {
-            return state;
-        }
-    }
-
-    public GameState getGameState() {
-        return getState();
-    }
-
-    public Dungeon getDungeon() {
-        return dungeon;
     }
 
     public Player getPlayer() {
         return player;
     }
 
+    public Dungeon getDungeon() {
+        return dungeon;
+    }
+
     public List<lt;Enemy>gt; getEnemies() {
-        synchronized (enemyLock) {
-            return new ArrayList<lt;>gt;(enemies);
-        }
+        return enemies;
     }
 
-    public Enemy getEncounteredEnemy() {
-        synchronized (encounterLock) {
-            return encounteredEnemy;
-        }
-    }
-
-    public Enemy getAndClearEncounteredEnemy() {
-        synchronized (encounterLock) {
-            Enemy temp = encounteredEnemy;
-            encounteredEnemy = null;
-            return temp;
-        }
-    }
-
-    /**
-     * Move player by (dx, dy). Returns true if encounter occurred.
-     */
-    public boolean playerMove(int dx, int dy) {
-        if ((Math.abs(dx) >gt; 1) || (Math.abs(dy) >gt; 1) || (dx == 0 &amp;&amp; dy == 0)) {
-            return false;
-        }
-        if (player == null) {
-            return false;
-        }
-
-        int newX = player.getX() + dx;
-        int newY = player.getY() + dy;
-        if (dungeon.isWalkable(newX, newY)) {
-            player.setX(newX);
-            player.setY(newY);
-            processTurn();
-            synchronized (encounterLock) {
-                return encounteredEnemy != null;
-            }
-        }
-
-        // Pathfinding fallback: try adjacent directions
-        int[][] directions = {{0,1}, {1,0}, {0,-1}, {-1,0}};
-        for (int[] dir : directions) {
-            int altX = player.getX() + dir[0];
-            int altY = player.getY() + dir[1];
-            if (dungeon.isWalkable(altX, altY)) {
-                player.setX(altX);
-                player.setY(altY);
-                processTurn();
-                synchronized (encounterLock) {
-                    return encounteredEnemy != null;
-                }
-            }
-        }
-        return false;
-    }
-
-    public void setEncounteredEnemy(Enemy enemy) {
-        synchronized (encounterLock) {
-            this.encounteredEnemy = enemy;
-        }
-    }
-
-    public Enemy getBoss() {
-        return boss;
+    public GameState getState() {
+        return state;
     }
 
     public int getTurnCount() {
         return turnCount;
+    }
+
+    public Enemy getAndClearEncounteredEnemy() {
+        Enemy temp = encounteredEnemy;
+        encounteredEnemy = null;
+        return temp;
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>
