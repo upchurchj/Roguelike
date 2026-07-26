@@ -20,239 +20,118 @@
     <div class="container">
         <h1>Player</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Player.java</div>
-package com.knightlight.game;
+        <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
-/**
- * Represents the player character in the roguelike game.
- * Manages position, health, experience, gold, inventory, and combat stats.
- */
 public class Player extends Character implements Serializable {
     private static final long serialVersionUID = 1L;
-
-    private int x;
-    private int y;
-    private int currentHealth;
-    private int maxHealth;
+    
+    private int level;
     private int experience;
     private int goldCollected;
-    private int level;
-    private Inventory inventory;
-    private int attack;
-    private int defense;
     private String name;
-    private int potions;
-
-    /**
-     * Minimal constructor used by Game.
-     */
+    
+    // Constructor with x, y parameters
     public Player(int x, int y) {
-        this(x, y, 100, 100, new Inventory());
-    }
-
-    /**
-     * Full constructor.
-     */
-    public Player(int x, int y, int currentHealth, int maxHealth, Inventory inventory) {
-        super(x, y, currentHealth, maxHealth);
+        super(x, y, 100, 10);
+        this.name = "quot;Hero"quot;;
+        this.level = 1;
         this.experience = 0;
         this.goldCollected = 0;
+    }
+    
+    // Constructor for deserialization
+    public Player() {
+        super(0, 0, 100, 10);
+        this.name = "quot;Hero"quot;;
         this.level = 1;
-        this.inventory = inventory;
-        this.attack = 5;
-        this.defense = 1;
-        this.name = "quot;Player"quot;;
-        this.potions = 0;
+        this.experience = 0;
+        this.goldCollected = 0;
     }
-
-    public synchronized void setX(int x) {
-        this.x = x;
+    
+    // Constructor with name parameter (for compatibility)
+    public Player(String name) {
+        super(0, 0, 100, 10);
+        this.name = name;
+        this.level = 1;
+        this.experience = 0;
+        this.goldCollected = 0;
     }
-
-    public synchronized int getY() {
-        return y;
-    }
-
-    public synchronized void setY(int y) {
-        this.y = y;
-    }
-
-    /**
-     * Move player by relative offset (dx, dy).
-     */
-    public synchronized void move(int dx, int dy) {
+    
+    // Movement method
+    public void move(int dx, int dy) {
         this.x += dx;
         this.y += dy;
     }
-
-    /**
-     * Get current health.
-     */
-    public synchronized int getCurrentHealth() {
-        return currentHealth;
+    
+    // Gold methods
+    public void addGold(int amount) {
+        this.goldCollected += amount;
     }
-
-    /**
-     * Set current health with bounds clamping [0, maxHealth].
-     */
-    public synchronized void setCurrentHealth(int newHealth) {
-        this.currentHealth = Math.max(0, Math.min(newHealth, this.maxHealth));
-    }
-
-    /**
-     * Backward-compatibility alias for getCurrentHealth().
-     */
-    public synchronized int getHealth() {
-        return currentHealth;
-    }
-
-    /**
-     * Backward-compatibility alias for setCurrentHealth().
-     */
-    public synchronized void setHealth(int newHealth) {
-        this.currentHealth = Math.max(0, Math.min(newHealth, this.maxHealth));
-    }
-
-    public synchronized int getMaxHealth() {
-        return maxHealth;
-    }
-
-    public synchronized int getExperience() {
-        return experience;
-    }
-
-    /**
-     * Set experience with non-negative validation.
-     */
-    public synchronized void setExperience(int exp) {
-        this.experience = Math.max(0, exp);
-    }
-
-    /**
-     * Add experience (non-negative, clamped to MAX/2).
-     */
-    public synchronized void addExperience(int exp) {
-        if (exp >gt; 0) {
-            this.experience = Math.min(this.experience + exp, Integer.MAX_VALUE / 2);
-        }
-    }
-
-    public synchronized int getGoldCollected() {
+    
+    public int getGoldCollected() {
         return goldCollected;
     }
-
-    /**
-     * Set gold collected with non-negative validation.
-     */
-    public synchronized void setGoldCollected(int gold) {
-        this.goldCollected = Math.max(0, gold);
+    
+    public void setGoldCollected(int gold) {
+        this.goldCollected = gold;
     }
-
-    /**
-     * Add gold (non-negative, clamped to MAX/2).
-     */
-    public synchronized void addGold(int gold) {
-        if (gold >gt; 0) {
-            this.goldCollected = Math.min(this.goldCollected + gold, Integer.MAX_VALUE / 2);
-        }
+    
+    // Health methods
+    public int getCurrentHealth() {
+        return currentHealth;
     }
-
-    public synchronized int getLevel() {
+    
+    public void setCurrentHealth(int health) {
+        this.currentHealth = Math.max(0, Math.min(health, maxHealth));
+    }
+    
+    // Experience and leveling
+    public void addExperience(int amount) {
+        this.experience += amount;
+        checkLevelUp();
+    }
+    
+    public int getExperience() {
+        return experience;
+    }
+    
+    public void setExperience(int exp) {
+        this.experience = exp;
+        checkLevelUp();
+    }
+    
+    public int getLevel() {
         return level;
     }
-
-    public synchronized void setLevel(int level) {
-        this.level = Math.max(1, level);
+    
+    private void checkLevelUp() {
+        int xpNeeded = level * 100;
+        if (experience >gt;= xpNeeded) {
+            level++;
+            maxHealth += 10;
+            currentHealth = maxHealth;
+            attack += 2;
+            armor += 1;
+        }
     }
-
-    /**
-     * Get player'#39;s attack power.
-     */
-    public synchronized int getAttack() {
-        return attack;
-    }
-
-    /**
-     * Set attack power with bounds clamping [1, 150].
-     */
-    public synchronized void setAttack(int newAttack) {
-        this.attack = Math.max(1, Math.min(newAttack, 150));
-    }
-
-    /**
-     * Get player'#39;s defense value.
-     */
-    public synchronized int getDefense() {
-        return defense;
-    }
-
-    /**
-     * Set defense with bounds clamping [0, 100].
-     */
-    public synchronized void setDefense(int newDefense) {
-        this.defense = Math.max(0, Math.min(newDefense, 100));
-    }
-
-    /**
-     * Get player'#39;s name.
-     */
-    public synchronized String getName() {
-        return name;
-    }
-
-    /**
-     * Set player'#39;s name.
-     */
-    public synchronized void setName(String newName) {
-        this.name = newName != null ? newName : "quot;Adventurer"quot;;
-    }
-
-    public Inventory getInventory() {
-        return inventory;
-    }
-
-    /**
-     * Use a potion to restore health.
-     */
-    public synchronized boolean usePotion() {
-        if (potions >gt; 0) {
-            potions--;
-            this.currentHealth = Math.min(this.currentHealth + 30, this.maxHealth);
+    
+    // Potion usage - returns boolean
+    public boolean usePotion() {
+        int healAmount = 50;
+        if (currentHealth <lt; maxHealth) {
+            heal(healAmount);
             return true;
         }
         return false;
     }
-
-    /**
-     * Add potions to inventory.
-     */
-    public synchronized void addPotions(int count) {
-        this.potions += Math.max(0, count);
+    
+    // Name getter
+    public String getName() {
+        return name;
     }
-
-    /**
-     * Get potion count.
-     */
-    public synchronized int getPotions() {
-        return potions;
-    }
-
-    public synchronized void takeDamage(int damage) {
-        if (damage >gt; 0) {
-            this.currentHealth = Math.max(0, this.currentHealth - damage);
-        }
-    }
-
-    public synchronized boolean isAlive() {
-        return currentHealth >gt; 0;
-    }
-
-    @Override
-    public String toString() {
-        return "quot;Player{"quot; + "quot;pos=("quot; + x + "quot;,"quot; + y + "quot;)"quot; + "quot;, hp="quot; + currentHealth + "quot;/"quot; + maxHealth + "quot;, exp="quot; + experience + "quot;, gold="quot; + goldCollected + "quot;, level="quot; + level + '#39;}'#39;;
-    }
-}
+}</code></pre>
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

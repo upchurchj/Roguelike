@@ -20,7 +20,7 @@
     <div class="container">
         <h1>MainActivity</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/MainActivity.java</div>
-package com.knightlight.game;
+        <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         // Find a valid spawn position
         int[] spawnPos = gameDungeon.findSpawnPosition();
-        if (spawnPos != null &amp;&amp; spawnPos.length >gt;= 2) {
+        if (spawnPos != null JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; spawnPos.length >gt;= 2) {
             player.setX(spawnPos[0]);
             player.setY(spawnPos[1]);
             Log.d(TAG, "quot;Player spawned at ("quot; + spawnPos[0] + "quot;, "quot; + spawnPos[1] + "quot;)"quot;);
@@ -124,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
 
         // Restore player position
-        if (saveData.playerX >gt;= 0 &amp;&amp; saveData.playerY >gt;= 0) {
+        if (saveData.playerX >gt;= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; saveData.playerY >gt;= 0) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
                 gamePlayer.setX(saveData.playerX);
@@ -207,11 +207,11 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
             // Mark defeated enemy as dead
             String defeatedEnemyId = data.getStringExtra("quot;enemyId"quot;);
-            if (defeatedEnemyId != null &amp;&amp; game != null) {
+            if (defeatedEnemyId != null JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; game != null) {
                 List<lt;Enemy>gt; currentEnemies = game.getEnemies();
                 if (currentEnemies != null) {
                     for (Enemy e : currentEnemies) {
-                        if (e != null &amp;&amp; e.getId().equals(defeatedEnemyId)) {
+                        if (e != null JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; e.getId().equals(defeatedEnemyId)) {
                             if (e.isDefeated()) {
                                 currentEnemies.remove(e);
                                 Log.d(TAG, "quot;Enemy "quot; + defeatedEnemyId + "quot; removed from active enemies"quot;);
@@ -223,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             }
 
             // Update game state if battle was lost
-            if (!battleWon &amp;&amp; game != null) {
+            if (!battleWon JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; game != null) {
                 Log.d(TAG, "quot;Battle lost; game state set to LOST"quot;);
             }
 
@@ -239,7 +239,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
     @Override
     public void onEncounter(Enemy enemy) {
-        if (enemy != null &amp;&amp; game != null) {
+        if (enemy != null JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; game != null) {
             Intent battleIntent = new Intent(MainActivity.this, BattleActivity.class);
             battleIntent.putExtra("quot;player"quot;, game.getPlayer());
             battleIntent.putExtra("quot;enemy_id"quot;, enemy.getId());
@@ -277,7 +277,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
      * Saves the current game state and closes the activity.
      */
     private void saveAndQuit() {
-        if (game != null &amp;&amp; saveGameManager != null) {
+        if (game != null JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; saveGameManager != null) {
             Player player = game.getPlayer();
             List<lt;Enemy>gt; enemies = game.getEnemies();
             Dungeon gameDungeon = game.getDungeon();
@@ -309,7 +309,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         finish();
     }
-}
+}</code></pre>
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

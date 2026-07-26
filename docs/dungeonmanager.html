@@ -20,7 +20,7 @@
     <div class="container">
         <h1>DungeonManager</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/DungeonManager.java</div>
-package com.knightlight.game;
+        <pre><code>package com.knightlight.game;
 
 import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -157,7 +157,7 @@ public class DungeonManager {
     public boolean setCurrentFloor(int floorNumber) {
         lock.writeLock().lock();
         try {
-            if (floorNumber >gt;= 1 &amp;&amp; floorNumber <lt;= maxFloor) {
+            if (floorNumber >gt;= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; floorNumber <lt;= maxFloor) {
                 currentFloor = floorNumber;
                 return true;
             }
@@ -266,7 +266,7 @@ public class DungeonManager {
     public int getFloorsVisited() {
         return floorsVisited;
     }
-}
+}</code></pre>
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

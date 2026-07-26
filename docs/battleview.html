@@ -20,7 +20,7 @@
     <div class="container">
         <h1>BattleView</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/BattleView.java</div>
-package com.knightlight.game;
+        <pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import android.util.AttributeSet;
@@ -149,14 +149,14 @@ public class BattleView extends View {
     private void drawMessage(Canvas canvas, int y) {
         if (battle == null) return;
         String message = battle.getLastMessage();
-        if (message != null &amp;&amp; !message.isEmpty()) {
+        if (message != null JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; !message.isEmpty()) {
             Paint messagePaint = new Paint(textPaint);
             messagePaint.setTextSize(32);
             messagePaint.setColor(Color.YELLOW);
             canvas.drawText(message, 10, y, messagePaint);
         }
     }
-}
+}</code></pre>
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

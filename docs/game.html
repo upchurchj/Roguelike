@@ -20,7 +20,7 @@
     <div class="container">
         <h1>Game</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Game.java</div>
-package com.knightlight.game;
+        <pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.util.ArrayList;
@@ -51,7 +51,8 @@ public class Game {
 
     public Game() {
         this.dungeon = new Dungeon(50, 50);
-        this.player = new Player(10, 10);
+        int[] spawnPos = dungeon.findSpawnPosition();
+        this.player = new Player(spawnPos[0], spawnPos[1]);
         this.enemies = new ArrayList<lt;>gt;();
         this.state = GameState.PLAYING;
         this.turnCount = 0;
@@ -65,11 +66,11 @@ public class Game {
         int maxAttempts = 100;
         int attempts = 0;
 
-        while (enemiesSpawned <lt; 5 &amp;&amp; attempts <lt; maxAttempts) {
+        while (enemiesSpawned <lt; 5 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; attempts <lt; maxAttempts) {
             int x = (int)(Math.random() * dungeon.getWidth());
             int y = (int)(Math.random() * dungeon.getHeight());
 
-            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+            if (dungeon.isWalkable(x, y) JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; !(x == player.getX() JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y == player.getY())) {
                 Enemy enemy = new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon, "quot;Goblin"quot;, ENEMY_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
                 enemies.add(enemy);
                 enemiesSpawned++;
@@ -83,7 +84,7 @@ public class Game {
                 int x = (int)(Math.random() * dungeon.getWidth());
                 int y = (int)(Math.random() * dungeon.getHeight());
 
-                if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                if (dungeon.isWalkable(x, y) JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; !(x == player.getX() JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y == player.getY())) {
                     Enemy boss = new Enemy(x, y, BOSS_HEALTH, BOSS_DAMAGE, dungeon, BOSS_NAME, BOSS_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
                     boss.setBoss(true);
                     enemies.add(boss);
@@ -95,6 +96,10 @@ public class Game {
     }
 
     public boolean playerMove(int dx, int dy) {
+        if (player == null || dungeon == null) {
+            return false;
+        }
+
         int newX = player.getX() + dx;
         int newY = player.getY() + dy;
 
@@ -112,7 +117,8 @@ public class Game {
         }
 
         for (Enemy enemy : enemies) {
-            if (!enemy.isDead() &amp;&amp; enemy.getX() == newX &amp;&amp; enemy.getY() == newY) {
+            if (enemy != null JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; !enemy.isDead() JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp;
+                enemy.getX() == newX JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; enemy.getY() == newY) {
                 encounteredEnemy = enemy;
                 return true;
             }
@@ -133,7 +139,7 @@ public class Game {
             }
         }
 
-        if (enemy.isBoss() &amp;&amp; !enemy.isAlive()) {
+        if (enemy.isBoss() JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; !enemy.isAlive()) {
             state = GameState.WON;
         }
     }
@@ -163,7 +169,7 @@ public class Game {
         encounteredEnemy = null;
         return temp;
     }
-}
+}</code></pre>
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>
