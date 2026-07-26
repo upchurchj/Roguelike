@@ -10,8 +10,8 @@
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
         h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
         .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
-        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
-        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; white-space: pre; word-wrap: normal; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
     </style>
@@ -20,7 +20,7 @@
     <div class="container">
         <h1>DungeonLevel</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/DungeonLevel.java</div>
-        <pre><code>package com.knightlight.game;
+package com.knightlight.game;
 
 import com.knightlight.game.Equipment.Rarity;
 
@@ -113,7 +113,7 @@ public class DungeonLevel {
 
     /**
      * Determines if a player is under-leveled for this floor.
-     * Recommendation: player level >= floor minimum level.
+     * Recommendation: player level >gt;= floor minimum level.
      */
     public boolean isPlayerUnderleveled(int playerLevel) {
         return playerLevel <lt; minimumLevel;
@@ -136,7 +136,7 @@ public class DungeonLevel {
         private int baseLootXP = 100;
 
         public Builder(int floorNumber) {
-            if (floorNumber <lt; 1 || floorNumber > 99) {
+            if (floorNumber <lt; 1 || floorNumber >gt; 99) {
                 throw new IllegalArgumentException("Floor number must be 1-99.");
             }
             this.floorNumber = floorNumber;
@@ -147,7 +147,7 @@ public class DungeonLevel {
         }
 
         public Builder baseEnemyCount(int count) {
-            if (count <lt; 1 || count > 20) {
+            if (count <lt; 1 || count >gt; 20) {
                 throw new IllegalArgumentException("Base enemy count must be 1-20.");
             }
             this.baseEnemyCount = count;
@@ -155,7 +155,7 @@ public class DungeonLevel {
         }
 
         public Builder enemyDifficultyScaling(float scaling) {
-            if (scaling <lt; 0.5f || scaling > 3.0f) {
+            if (scaling <lt; 0.5f || scaling >gt; 3.0f) {
                 throw new IllegalArgumentException("Difficulty scaling must be 0.5-3.0.");
             }
             this.enemyDifficultyScaling = scaling;
@@ -163,7 +163,7 @@ public class DungeonLevel {
         }
 
         public Builder lootRarityThreshold(float threshold) {
-            if (threshold <lt; 0.0f || threshold > 1.0f) {
+            if (threshold <lt; 0.0f || threshold >gt; 1.0f) {
                 throw new IllegalArgumentException("Rarity threshold must be 0.0-1.0.");
             }
             this.lootRarityThreshold = threshold;
@@ -179,7 +179,7 @@ public class DungeonLevel {
         }
 
         public Builder minimumLevel(int level) {
-            if (level <lt; 1 || level > 99) {
+            if (level <lt; 1 || level >gt; 99) {
                 throw new IllegalArgumentException("Minimum level must be 1-99.");
             }
             this.minimumLevel = level;
@@ -198,7 +198,7 @@ public class DungeonLevel {
             floorNumber, floorTheme, minimumLevel, baseEnemyCount, lootRarityThreshold
         );
     }
-}</code></pre>
+}
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

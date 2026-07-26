@@ -10,8 +10,8 @@
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
         h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
         .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
-        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
-        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; white-space: pre; word-wrap: normal; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
     </style>
@@ -20,7 +20,7 @@
     <div class="container">
         <h1>Dungeon</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Dungeon.java</div>
-        <pre><code>package com.knightlight.game;
+package com.knightlight.game;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,13 +33,13 @@ public class Dungeon {
     private char[][] tiles;
     private int width;
     private int height;
-    private List<lt;Room> rooms;
+    private List<lt;Room>gt; rooms;
 
     public Dungeon(int width, int height) {
         this.width = width;
         this.height = height;
         this.tiles = new char[height][width];
-        this.rooms = new ArrayList<lt;>();
+        this.rooms = new ArrayList<lt;>gt;();
 
         initializeDungeon();
         generateDungeon();
@@ -84,7 +84,7 @@ public class Dungeon {
     private void carveRoom(Room room) {
         for (int y = room.y; y <lt; room.y + room.height; y++) {
             for (int x = room.x; x <lt; room.x + room.width; x++) {
-                if (x >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; x <lt; width JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y <lt; height) {
+                if (x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height) {
                     tiles[y][x] = TILE_FLOOR;
                 }
             }
@@ -118,13 +118,13 @@ public class Dungeon {
         int maxY = Math.max(y1, y2);
 
         for (int x = minX; x <lt;= maxX; x++) {
-            if (x >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; x <lt; width JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y1 >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y1 <lt; height) {
+            if (x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y1 >gt;= 0 &amp;&amp; y1 <lt; height) {
                 tiles[y1][x] = TILE_FLOOR;
             }
         }
 
         for (int y = minY; y <lt;= maxY; y++) {
-            if (x2 >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; x2 <lt; width JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y <lt; height) {
+            if (x2 >gt;= 0 &amp;&amp; x2 <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height) {
                 tiles[y][x2] = TILE_FLOOR;
             }
         }
@@ -143,7 +143,7 @@ public class Dungeon {
     }
 
     public boolean isWalkable(int x, int y) {
-        if (x <lt; 0 || x >= width || y <lt; 0 || y >= height) {
+        if (x <lt; 0 || x >gt;= width || y <lt; 0 || y >gt;= height) {
             return false;
         }
         char tile = tiles[y][x];
@@ -151,14 +151,14 @@ public class Dungeon {
     }
 
     public char getTile(int x, int y) {
-        if (x <lt; 0 || x >= width || y <lt; 0 || y >= height) {
+        if (x <lt; 0 || x >gt;= width || y <lt; 0 || y >gt;= height) {
             return TILE_WALL;
         }
         return tiles[y][x];
     }
 
     public void setTile(int x, int y, char tile) {
-        if (x >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; x <lt; width JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y <lt; height) {
+        if (x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height) {
             tiles[y][x] = tile;
         }
     }
@@ -198,7 +198,7 @@ public class Dungeon {
     private void carveSpawnArea(Room room) {
         for (int y = room.y; y <lt; room.y + room.height; y++) {
             for (int x = room.x; x <lt; room.x + room.width; x++) {
-                if (x >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; x <lt; width JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y <lt; height) {
+                if (x >gt;= 0 &amp;&amp; x <lt; width &amp;&amp; y >gt;= 0 &amp;&amp; y <lt; height) {
                     tiles[y][x] = TILE_FLOOR;
                 }
             }
@@ -233,7 +233,7 @@ public class Dungeon {
                      y + height + padding <lt; other.y || other.y + other.height + padding <lt; y);
         }
     }
-}</code></pre>
+}
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

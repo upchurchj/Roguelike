@@ -10,8 +10,8 @@
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
         h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
         .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
-        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
-        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; white-space: pre; word-wrap: normal; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
     </style>
@@ -20,7 +20,7 @@
     <div class="container">
         <h1>Inventory</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/Inventory.java</div>
-        <pre><code>package com.knightlight.game;
+package com.knightlight.game;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -29,10 +29,10 @@ import java.util.List;
 public class Inventory implements Serializable {
     private static final long serialVersionUID = 1L;
     
-    private List<lt;Equipment> equipment;
+    private List<lt;Equipment>gt; equipment;
     
     public Inventory() {
-        this.equipment = new ArrayList<lt;>();
+        this.equipment = new ArrayList<lt;>gt;();
     }
     
     public void addEquipment(Equipment item) {
@@ -41,10 +41,10 @@ public class Inventory implements Serializable {
         }
     }
     
-    public List<lt;Equipment> getEquipment() {
+    public List<lt;Equipment>gt; getEquipment() {
         return equipment;
     }
-}</code></pre>
+}
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

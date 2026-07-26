@@ -10,8 +10,8 @@
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
         h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
         .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
-        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
-        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; white-space: pre; word-wrap: normal; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
     </style>
@@ -20,7 +20,7 @@
     <div class="container">
         <h1>InventorySystem</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/InventorySystem.java</div>
-        <pre><code>package com.knightlight.game;
+package com.knightlight.game;
 import android.util.Log;
 
 import java.util.logging.Logger;
@@ -42,9 +42,9 @@ public class InventorySystem implements Serializable {
     private static final int MAX_RINGS = 5;
     private static final int MAX_POTIONS = 99;
 
-    private final List<lt;Equipment> weapons = new ArrayList<lt;>();
-    private final List<lt;Equipment> armor = new ArrayList<lt;>();
-    private final List<lt;Equipment> rings = new ArrayList<lt;>();
+    private final List<lt;Equipment>gt; weapons = new ArrayList<lt;>gt;();
+    private final List<lt;Equipment>gt; armor = new ArrayList<lt;>gt;();
+    private final List<lt;Equipment>gt; rings = new ArrayList<lt;>gt;();
 
     private Equipment equippedWeapon = null;
     private Equipment equippedArmor = null;
@@ -61,10 +61,10 @@ public class InventorySystem implements Serializable {
             return false;
         }
 
-        List<lt;Equipment> targetList = getListForType(equipment.getType());
+        List<lt;Equipment>gt; targetList = getListForType(equipment.getType());
         int maxCapacity = getMaxCapacity(equipment.getType());
 
-        if (targetList.size() >= maxCapacity) {
+        if (targetList.size() >gt;= maxCapacity) {
             Log.w(TAG, "Inventory full for " + equipment.getType());
             return false;
         }
@@ -79,7 +79,7 @@ public class InventorySystem implements Serializable {
      */
     public synchronized boolean removeEquipment(Equipment equipment) {
         Equipment.Type type = equipment.getType();
-        List<lt;Equipment> targetList = getListForType(type);
+        List<lt;Equipment>gt; targetList = getListForType(type);
 
         if (targetList.remove(equipment)) {
             // If equipped item was removed, unequip it
@@ -168,7 +168,7 @@ public class InventorySystem implements Serializable {
      * Use one health potion. Returns true if successful, false if none available.
      */
     public synchronized boolean usePotion() {
-        if (healthPotions > 0) {
+        if (healthPotions >gt; 0) {
             healthPotions--;
             Log.d(TAG, "Used health potion. Remaining: " + healthPotions);
             return true;
@@ -200,9 +200,9 @@ public class InventorySystem implements Serializable {
     public synchronized Equipment getEquippedRing() { return equippedRing; }
 
     // Getters for inventory lists (defensive copies)
-    public synchronized List<lt;Equipment> getWeapons() { return new ArrayList<lt;>(weapons); }
-    public synchronized List<lt;Equipment> getArmor() { return new ArrayList<lt;>(armor); }
-    public synchronized List<lt;Equipment> getRings() { return new ArrayList<lt;>(rings); }
+    public synchronized List<lt;Equipment>gt; getWeapons() { return new ArrayList<lt;>gt;(weapons); }
+    public synchronized List<lt;Equipment>gt; getArmor() { return new ArrayList<lt;>gt;(armor); }
+    public synchronized List<lt;Equipment>gt; getRings() { return new ArrayList<lt;>gt;(rings); }
 
     /**
      * Calculate total stat bonuses from equipped items.
@@ -232,7 +232,7 @@ public class InventorySystem implements Serializable {
     }
 
     // Private helpers
-    private List<lt;Equipment> getListForType(Equipment.Type type) {
+    private List<lt;Equipment>gt; getListForType(Equipment.Type type) {
         switch (type) {
             case WEAPON: return weapons;
             case ARMOR: return armor;
@@ -258,13 +258,13 @@ public class InventorySystem implements Serializable {
                 rings.size(), MAX_RINGS,
                 healthPotions, MAX_POTIONS);
     }
-    public synchronized List<lt;Equipment> getAllEquipment() {
-        List<lt;Equipment> all = new ArrayList<lt;>(weapons);
+    public synchronized List<lt;Equipment>gt; getAllEquipment() {
+        List<lt;Equipment>gt; all = new ArrayList<lt;>gt;(weapons);
         all.addAll(armor);
         all.addAll(rings);
         return all;
     }
-}</code></pre>
+}
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

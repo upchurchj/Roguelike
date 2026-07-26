@@ -10,8 +10,8 @@
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
         h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
         .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
-        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
-        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; white-space: pre; word-wrap: normal; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
     </style>
@@ -20,7 +20,7 @@
     <div class="container">
         <h1>LootTable</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/LootTable.java</div>
-        <pre><code>package com.knightlight.game;
+package com.knightlight.game;
 
 import com.knightlight.game.Equipment;
 
@@ -34,8 +34,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * based on floor difficulty and rarity thresholds.
  */
 public class LootTable {
-    private final Map<lt;Equipment.Rarity, List<lt;Equipment>> poolsByRarity;
-    private final Map<lt;Equipment.Rarity, Double> rarityWeights;
+    private final Map<lt;Equipment.Rarity, List<lt;Equipment>gt;>gt; poolsByRarity;
+    private final Map<lt;Equipment.Rarity, Double>gt; rarityWeights;
     private final Random random;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -65,8 +65,8 @@ public class LootTable {
      * Private constructor enforces Builder pattern.
      */
     private LootTable(Builder builder) {
-        this.poolsByRarity = new EnumMap<lt;>(builder.poolsByRarity);
-        this.rarityWeights = new EnumMap<lt;>(builder.rarityWeights);
+        this.poolsByRarity = new EnumMap<lt;>gt;(builder.poolsByRarity);
+        this.rarityWeights = new EnumMap<lt;>gt;(builder.rarityWeights);
         this.random = new Random();
     }
 
@@ -80,7 +80,7 @@ public class LootTable {
         lock.readLock().lock();
         try {
             // Roll for loot drop
-            if (random.nextDouble() > rarityThreshold) {
+            if (random.nextDouble() >gt; rarityThreshold) {
                 return null; // No loot
             }
 
@@ -90,7 +90,7 @@ public class LootTable {
                 return null;
             }
 
-            List<lt;Equipment> pool = poolsByRarity.get(selectedRarity);
+            List<lt;Equipment>gt; pool = poolsByRarity.get(selectedRarity);
             if (pool == null || pool.isEmpty()) {
                 return null;
             }
@@ -123,8 +123,8 @@ public class LootTable {
      * @param count number of roll attempts
      * @return list of generated Equipment (may be empty)
      */
-    public List<lt;Equipment> generateLootBatch(int floorNumber, double rarityThreshold, int count) {
-        List<lt;Equipment> loot = new ArrayList<lt;>();
+    public List<lt;Equipment>gt; generateLootBatch(int floorNumber, double rarityThreshold, int count) {
+        List<lt;Equipment>gt; loot = new ArrayList<lt;>gt;();
         for (int i = 0; i <lt; count; i++) {
             Equipment item = generateLoot(floorNumber, rarityThreshold);
             if (item != null) {
@@ -150,7 +150,7 @@ public class LootTable {
         double roll = random.nextDouble() * totalWeight;
         double cumulative = 0;
 
-        for (Map.Entry<lt;Equipment.Rarity, Double> entry : rarityWeights.entrySet()) {
+        for (Map.Entry<lt;Equipment.Rarity, Double>gt; entry : rarityWeights.entrySet()) {
             cumulative += entry.getValue();
             if (roll <lt;= cumulative) {
                 return entry.getKey();
@@ -167,7 +167,7 @@ public class LootTable {
     public void addItemToPool(Equipment item) {
         lock.writeLock().lock();
         try {
-            poolsByRarity.computeIfAbsent(item.getRarity(), k -> new ArrayList<lt;>())
+            poolsByRarity.computeIfAbsent(item.getRarity(), k ->gt; new ArrayList<lt;>gt;())
                     .add(item);
         } finally {
             lock.writeLock().unlock();
@@ -180,7 +180,7 @@ public class LootTable {
     public int getPoolSize(Equipment.Rarity rarity) {
         lock.readLock().lock();
         try {
-            List<lt;Equipment> pool = poolsByRarity.get(rarity);
+            List<lt;Equipment>gt; pool = poolsByRarity.get(rarity);
             return pool != null ? pool.size() : 0;
         } finally {
             lock.readLock().unlock();
@@ -203,8 +203,8 @@ public class LootTable {
      * Builder for LootTable.
      */
     public static class Builder {
-        private final Map<lt;Equipment.Rarity, List<lt;Equipment>> poolsByRarity = new EnumMap<lt;>(Equipment.Rarity.class);
-        private final Map<lt;Equipment.Rarity, Double> rarityWeights = new EnumMap<lt;>(Equipment.Rarity.class);
+        private final Map<lt;Equipment.Rarity, List<lt;Equipment>gt;>gt; poolsByRarity = new EnumMap<lt;>gt;(Equipment.Rarity.class);
+        private final Map<lt;Equipment.Rarity, Double>gt; rarityWeights = new EnumMap<lt;>gt;(Equipment.Rarity.class);
 
         public Builder() {
             // Initialize default weights
@@ -216,19 +216,19 @@ public class LootTable {
 
             // Initialize empty pools
             for (Equipment.Rarity rarity : Equipment.Rarity.values()) {
-                poolsByRarity.put(rarity, new ArrayList<lt;>());
+                poolsByRarity.put(rarity, new ArrayList<lt;>gt;());
             }
         }
 
         public Builder addItem(Equipment item) {
             if (item != null) {
-                poolsByRarity.computeIfAbsent(item.getRarity(), k -> new ArrayList<lt;>())
+                poolsByRarity.computeIfAbsent(item.getRarity(), k ->gt; new ArrayList<lt;>gt;())
                         .add(item);
             }
             return this;
         }
 
-        public Builder addItems(List<lt;Equipment> items) {
+        public Builder addItems(List<lt;Equipment>gt; items) {
             if (items != null) {
                 for (Equipment item : items) {
                     addItem(item);
@@ -271,7 +271,7 @@ public class LootTable {
             lock.readLock().unlock();
         }
     }
-}</code></pre>
+}
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>

@@ -10,8 +10,8 @@
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); padding: 30px; }
         h1 { color: #2a5298; margin-bottom: 10px; font-size: 2em; }
         .source-path { color: #666; font-size: 0.9em; margin-bottom: 20px; font-style: italic; }
-        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; }
-        code { font-family: "Courier New", monospace; font-size: 0.95em; }
+        pre { background: #f4f4f4; border: 1px solid #ddd; border-radius: 5px; padding: 15px; overflow-x: auto; margin-top: 20px; white-space: pre; word-wrap: normal; }
+        code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
     </style>
@@ -20,7 +20,7 @@
     <div class="container">
         <h1>InputValidator</h1>
         <div class="source-path">Source: src/main/java/com/knightlight/game/InputValidator.java</div>
-        <pre><code>package com.knightlight.game;
+package com.knightlight.game;
 
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -45,7 +45,7 @@ public class InputValidator {
      * @return true if valid (1 <lt;= floorNumber <lt;= maxFloor), false otherwise
      */
     public static boolean isValidFloorNumber(int floorNumber, int maxFloor) {
-        return floorNumber >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; floorNumber <lt;= maxFloor;
+        return floorNumber >gt;= 1 &amp;&amp; floorNumber <lt;= maxFloor;
     }
 
     /**
@@ -63,7 +63,7 @@ public class InputValidator {
      * @return true if valid (1-20), false otherwise
      */
     public static boolean isValidBaseEnemyCount(int baseEnemyCount) {
-        return baseEnemyCount >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; baseEnemyCount <lt;= 20;
+        return baseEnemyCount >gt;= 1 &amp;&amp; baseEnemyCount <lt;= 20;
     }
 
     /**
@@ -72,7 +72,7 @@ public class InputValidator {
      * @return true if valid (0.5-3.0), false otherwise
      */
     public static boolean isValidDifficultyScaling(double difficultyScaling) {
-        return difficultyScaling >= 0.5 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; difficultyScaling <lt;= 3.0;
+        return difficultyScaling >gt;= 0.5 &amp;&amp; difficultyScaling <lt;= 3.0;
     }
 
     /**
@@ -81,7 +81,7 @@ public class InputValidator {
      * @return true if valid (0.0-1.0), false otherwise
      */
     public static boolean isValidRarityThreshold(double rarityThreshold) {
-        return rarityThreshold >= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; rarityThreshold <lt;= 1.0;
+        return rarityThreshold >gt;= 0.0 &amp;&amp; rarityThreshold <lt;= 1.0;
     }
 
     /**
@@ -90,37 +90,37 @@ public class InputValidator {
      * @return true if valid (1-32 characters, alphanumeric + space/underscore), false otherwise
      */
     public static boolean isValidName(String name) {
-        if (name == null || name.isEmpty() || name.length() > 32) {
+        if (name == null || name.isEmpty() || name.length() >gt; 32) {
             return false;
         }
-        return name.matches("[a-zA-Z0-9_\s]+");
+        return name.matches("[a-zA-Z0-9_\\s]+");
     }
 
     /**
      * Validate a character's health value.
      * @param health the health to validate
-     * @return true if valid (>= 0), false otherwise
+     * @return true if valid (>gt;= 0), false otherwise
      */
     public static boolean isValidHealth(int health) {
-        return health >= 0;
+        return health >gt;= 0;
     }
 
     /**
      * Validate a character's attack stat.
      * @param attack the attack value to validate
-     * @return true if valid (>= 1), false otherwise
+     * @return true if valid (>gt;= 1), false otherwise
      */
     public static boolean isValidAttack(int attack) {
-        return attack >= 1;
+        return attack >gt;= 1;
     }
 
     /**
      * Validate a character's defense stat.
      * @param defense the defense value to validate
-     * @return true if valid (>= 0), false otherwise
+     * @return true if valid (>gt;= 0), false otherwise
      */
     public static boolean isValidDefense(int defense) {
-        return defense >= 0;
+        return defense >gt;= 0;
     }
 
     /**
@@ -129,16 +129,16 @@ public class InputValidator {
      * @return true if valid (1-100), false otherwise
      */
     public static boolean isValidPlayerLevel(int level) {
-        return level >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; level <lt;= 100;
+        return level >gt;= 1 &amp;&amp; level <lt;= 100;
     }
 
     /**
      * Validate experience points.
      * @param experience the XP to validate
-     * @return true if valid (>= 0), false otherwise
+     * @return true if valid (>gt;= 0), false otherwise
      */
     public static boolean isValidExperience(int experience) {
-        return experience >= 0;
+        return experience >gt;= 0;
     }
 
     /**
@@ -147,7 +147,7 @@ public class InputValidator {
      * @return true if valid (1-100), false otherwise
      */
     public static boolean isValidInventoryCapacity(int capacity) {
-        return capacity >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; capacity <lt;= 100;
+        return capacity >gt;= 1 &amp;&amp; capacity <lt;= 100;
     }
 
     /**
@@ -157,7 +157,7 @@ public class InputValidator {
      * @return true if valid (0 <lt;= size <lt;= capacity), false otherwise
      */
     public static boolean isValidInventorySize(int size, int capacity) {
-        return size >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; size <lt;= capacity;
+        return size >gt;= 0 &amp;&amp; size <lt;= capacity;
     }
 
     /**
@@ -166,7 +166,7 @@ public class InputValidator {
      * @return true if valid (-50 to +100), false otherwise
      */
     public static boolean isValidEquipmentBonus(int bonus) {
-        return bonus >= -50 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; bonus <lt;= 100;
+        return bonus >gt;= -50 &amp;&amp; bonus <lt;= 100;
     }
 
     /**
@@ -175,16 +175,16 @@ public class InputValidator {
      * @return true if valid (0.0-1.0), false otherwise
      */
     public static boolean isValidHitChance(double hitChance) {
-        return hitChance >= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; hitChance <lt;= 1.0;
+        return hitChance >gt;= 0.0 &amp;&amp; hitChance <lt;= 1.0;
     }
 
     /**
      * Validate damage amount.
      * @param damage the damage to validate
-     * @return true if valid (>= 1), false otherwise
+     * @return true if valid (>gt;= 1), false otherwise
      */
     public static boolean isValidDamage(int damage) {
-        return damage >= 1;
+        return damage >gt;= 1;
     }
 
     /**
@@ -193,16 +193,16 @@ public class InputValidator {
      * @return true if valid (1-100), false otherwise
      */
     public static boolean isValidEnemyLevel(int enemyLevel) {
-        return enemyLevel >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; enemyLevel <lt;= 100;
+        return enemyLevel >gt;= 1 &amp;&amp; enemyLevel <lt;= 100;
     }
 
     /**
      * Validate experience reward amount.
      * @param reward the reward to validate
-     * @return true if valid (>= 10), false otherwise
+     * @return true if valid (>gt;= 10), false otherwise
      */
     public static boolean isValidExperienceReward(int reward) {
-        return reward >= 10;
+        return reward >gt;= 10;
     }
 
     /**
@@ -211,7 +211,7 @@ public class InputValidator {
      * @return true if valid (0-100), false otherwise
      */
     public static boolean isValidPercentage(double percentage) {
-        return percentage >= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; percentage <lt;= 100.0;
+        return percentage >gt;= 0.0 &amp;&amp; percentage <lt;= 100.0;
     }
 
     /**
@@ -220,7 +220,7 @@ public class InputValidator {
      * @return true if valid (0.1-10.0), false otherwise
      */
     public static boolean isValidScalar(double scalar) {
-        return scalar >= 0.1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; scalar <lt;= 10.0;
+        return scalar >gt;= 0.1 &amp;&amp; scalar <lt;= 10.0;
     }
 
     /**
@@ -238,7 +238,7 @@ public class InputValidator {
      * @return true if not null and not empty, false otherwise
      */
     public static boolean isNotEmpty(String str) {
-        return str != null JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; !str.isEmpty();
+        return str != null &amp;&amp; !str.isEmpty();
     }
 
     /**
@@ -267,7 +267,7 @@ public class InputValidator {
     public String toString() {
         return "InputValidator{utility class}";
     }
-}</code></pre>
+}
         <a href="index.html" class="back-link">Back to Index</a>
     </div>
 </body>
