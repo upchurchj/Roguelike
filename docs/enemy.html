@@ -22,8 +22,10 @@
         <div class="source-path">Source: src/main/java/com/knightlight/game/Enemy.java</div>
 package com.knightlight.game;
 
-public class Enemy extends Character {
-    private Dungeon dungeon;
+import java.io.Serializable;
+
+public class Enemy extends Character implements Serializable {
+    private transient Dungeon dungeon;
     private String name;
     private String id;
     private int goldReward;

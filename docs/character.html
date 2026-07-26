@@ -22,11 +22,13 @@
         <div class="source-path">Source: src/main/java/com/knightlight/game/Character.java</div>
 package com.knightlight.game;
 
+import java.io.Serializable;
+
 /**
  * Base class for all characters in the game (player and enemies).
  * Manages position, health, and combat stats.
  */
-public class Character {
+public class Character implements Serializable {
     protected int x;
     protected int y;
     protected int maxHealth;
