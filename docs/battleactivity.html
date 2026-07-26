@@ -36,11 +36,11 @@ import androidx.appcompat.app.AppCompatActivity;
  * Handles turn-based combat, UI updates, and result reporting back to MainActivity.
  */
 public class BattleActivity extends AppCompatActivity {
-    private static final String EXTRA_PLAYER = "quot;player"quot;;
-    private static final String EXTRA_ENEMY = "quot;enemy"quot;;
+    private static final String EXTRA_PLAYER = "player";
+    private static final String EXTRA_ENEMY = "enemy";
     private static final long TURN_DELAY_MS = 1000;
     private static final long RESULT_DELAY_MS = 2000;
-    private static final String TAG = "quot;BattleActivity"quot;;
+    private static final String TAG = "BattleActivity";
 
     private Battle battle;
     private BattleView battleView;
@@ -57,7 +57,7 @@ public class BattleActivity extends AppCompatActivity {
 
         battleView = findViewById(R.id.battle_view);
         if (battleView == null) {
-            Log.e(TAG, "quot;BattleView not found in layout"quot;);
+            Log.e(TAG, "BattleView not found in layout");
             finish();
             return;
         }
@@ -81,13 +81,13 @@ public class BattleActivity extends AppCompatActivity {
         btnFlee = findViewById(R.id.btnFlee);
 
         if (btnAttack != null) {
-            btnAttack.setOnClickListener(v ->gt; playerAction(Battle.Action.ATTACK));
+            btnAttack.setOnClickListener(v -> playerAction(Battle.Action.ATTACK));
         }
         if (btnDefend != null) {
-            btnDefend.setOnClickListener(v ->gt; playerAction(Battle.Action.DEFEND));
+            btnDefend.setOnClickListener(v -> playerAction(Battle.Action.DEFEND));
         }
         if (btnFlee != null) {
-            btnFlee.setOnClickListener(v ->gt; playerAction(Battle.Action.RUN));
+            btnFlee.setOnClickListener(v -> playerAction(Battle.Action.RUN));
         }
     }
 
@@ -103,10 +103,10 @@ public class BattleActivity extends AppCompatActivity {
      */
     public void playerAction(Battle.Action action) {
         if (battle == null || isDestroyed) {
-            Log.w(TAG, "quot;playerAction: battle is null or activity destroyed"quot;);
+            Log.w(TAG, "playerAction: battle is null or activity destroyed");
             return;
         }
-        Log.d(TAG, "quot;Player action: "quot; + action);
+        Log.d(TAG, "Player action: " + action);
         battle.playerAction(action);
         battleView.invalidate();
         // Schedule enemy turn after player animation
@@ -120,12 +120,12 @@ public class BattleActivity extends AppCompatActivity {
         if (battle == null || isDestroyed) {
             return;
         }
-        Log.d(TAG, "quot;Processing enemy turn"quot;);
+        Log.d(TAG, "Processing enemy turn");
         battle.enemyTurn();
         battleView.invalidate();
-        Log.d(TAG, "quot;After enemy turn - Battle state: "quot; + battle.getState());
+        Log.d(TAG, "After enemy turn - Battle state: " + battle.getState());
         if (isBattleOver()) {
-            Log.d(TAG, "quot;Battle over after enemy action"quot;);
+            Log.d(TAG, "Battle over after enemy action");
             handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
         }
     }
@@ -144,12 +144,12 @@ public class BattleActivity extends AppCompatActivity {
      * Only passes enemy ID (int) and updated player (Serializable), never the Enemy object itself.
      */
     private void showBattleResult() {
-        Log.d(TAG, "quot;Showing battle result"quot;);
+        Log.d(TAG, "Showing battle result");
         if (isDestroyed) return;
 
         // Validate state
         if (battle == null || player == null || enemy == null) {
-            Log.e(TAG, "quot;showBattleResult: null state detected"quot;);
+            Log.e(TAG, "showBattleResult: null state detected");
             setResult(RESULT_CANCELED);
             finish();
             return;
@@ -163,19 +163,19 @@ public class BattleActivity extends AppCompatActivity {
             int xpReward = enemy.getExperienceReward();
             player.addGold(goldReward);
             player.addExperience(xpReward);
-            Log.d(TAG, "quot;Victory: +"quot; + goldReward + "quot; gold, +"quot; + xpReward + "quot; XP"quot;);
+            Log.d(TAG, "Victory: +" + goldReward + " gold, +" + xpReward + " XP");
         } else {
-            Log.d(TAG, "quot;Defeat: Battle lost"quot;);
+            Log.d(TAG, "Defeat: Battle lost");
         }
 
         // Build result intent with ONLY safe types
         Intent resultIntent = new Intent();
         // Pass only enemy ID (int) - never the Enemy object itself
-        resultIntent.putExtra("quot;enemyId"quot;, enemy.getId());
+        resultIntent.putExtra("enemyId", enemy.getId());
         // Pass updated player (Serializable)
-        resultIntent.putExtra("quot;updatedPlayer"quot;, player);
+        resultIntent.putExtra("updatedPlayer", player);
         // Pass battle result
-        resultIntent.putExtra("quot;battleWon"quot;, battleWon);
+        resultIntent.putExtra("battleWon", battleWon);
         setResult(RESULT_OK, resultIntent);
         finish();
     }

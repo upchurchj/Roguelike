@@ -27,7 +27,7 @@ import java.io.Serializable;
 
 public class ExperienceSystem implements Serializable {
     private static final long serialVersionUID = 1L;
-    private static final String TAG = "quot;ExperienceSystem"quot;;
+    private static final String TAG = "ExperienceSystem";
     private int currentLevel;
     private long currentExperience;
     private long experienceForNextLevel;
@@ -46,7 +46,7 @@ public class ExperienceSystem implements Serializable {
         this.currentLevel = 1;
         this.currentExperience = 0;
         this.experienceForNextLevel = calculateExperienceThreshold(1);
-        Log.d(TAG, "quot;ExperienceSystem initialized"quot;);
+        Log.d(TAG, "ExperienceSystem initialized");
     }
 
     /**
@@ -56,7 +56,7 @@ public class ExperienceSystem implements Serializable {
      */
     private static long calculateExperienceThreshold(int level) {
         if (level <lt; 1) {
-            Log.w(TAG, "quot;Invalid level requested: "quot; + level);
+            Log.w(TAG, "Invalid level requested: " + level);
             return 0L;
         }
         // Exponential scaling: 100 * 1.5^(level-1)
@@ -71,7 +71,7 @@ public class ExperienceSystem implements Serializable {
      */
     public synchronized int addExperience(int amount) {
         if (amount <lt; 0) {
-            Log.w(TAG, "quot;Negative experience amount ignored: "quot; + amount);
+            Log.w(TAG, "Negative experience amount ignored: " + amount);
             return 0;
         }
 
@@ -79,15 +79,15 @@ public class ExperienceSystem implements Serializable {
         int levelsGained = 0;
 
         // Level-up loop: keep leveling while experience exceeds threshold
-        while (currentExperience >gt;= experienceForNextLevel) {
+        while (currentExperience >= experienceForNextLevel) {
             currentExperience -= experienceForNextLevel;
             currentLevel++;
             experienceForNextLevel = calculateExperienceThreshold(currentLevel);
             levelsGained++;
-            Log.d(TAG, "quot;Level up! New level: "quot; + currentLevel);
+            Log.d(TAG, "Level up! New level: " + currentLevel);
         }
 
-        Log.d(TAG, "quot;Added "quot; + amount + "quot; experience. Total: "quot; + currentExperience + "quot;/"quot; + experienceForNextLevel);
+        Log.d(TAG, "Added " + amount + " experience. Total: " + currentExperience + "/" + experienceForNextLevel);
         return levelsGained;
     }
 
@@ -113,14 +113,14 @@ public class ExperienceSystem implements Serializable {
         synchronized (levelLock) {
             this.currentLevel = level;
             this.experienceForNextLevel = calculateExperienceThreshold(level);
-            Log.d(TAG, "quot;Level set to: "quot; + level);
+            Log.d(TAG, "Level set to: " + level);
         }
     }
 
     public void setCurrentExperience(long experience) {
         synchronized (levelLock) {
             this.currentExperience = experience;
-            Log.d(TAG, "quot;Experience set to: "quot; + experience);
+            Log.d(TAG, "Experience set to: " + experience);
         }
     }
 

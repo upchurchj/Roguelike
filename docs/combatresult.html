@@ -46,7 +46,7 @@ public class CombatResult {
 
     // Factory methods for common outcomes
     public static CombatResult ongoing() {
-        return new CombatResult(Outcome.ONGOING, "quot;Combat ongoing"quot;, 0, 0);
+        return new CombatResult(Outcome.ONGOING, "Combat ongoing", 0, 0);
     }
 
     public static CombatResult victory(String message, int xp, int gold) {
@@ -84,7 +84,7 @@ public class CombatResult {
 
     @Override
     public String toString() {
-        return outcome + (message != null ? "quot;: "quot; + message : "quot;"quot;);
+        return outcome + (message != null ? ": " + message : "");
     }
 }</code></pre>
         <a href="index.html" class="back-link">Back to Index</a>

@@ -35,16 +35,16 @@ import java.util.List;
  */
 public class InventorySystem implements Serializable {
     private static final long serialVersionUID = 1L;
-    private static final String TAG = "quot;InventorySystem"quot;;
+    private static final String TAG = "InventorySystem";
 
     private static final int MAX_WEAPONS = 10;
     private static final int MAX_ARMOR = 10;
     private static final int MAX_RINGS = 5;
     private static final int MAX_POTIONS = 99;
 
-    private final List<lt;Equipment>gt; weapons = new ArrayList<lt;>gt;();
-    private final List<lt;Equipment>gt; armor = new ArrayList<lt;>gt;();
-    private final List<lt;Equipment>gt; rings = new ArrayList<lt;>gt;();
+    private final List<lt;Equipment> weapons = new ArrayList<lt;>();
+    private final List<lt;Equipment> armor = new ArrayList<lt;>();
+    private final List<lt;Equipment> rings = new ArrayList<lt;>();
 
     private Equipment equippedWeapon = null;
     private Equipment equippedArmor = null;
@@ -57,20 +57,20 @@ public class InventorySystem implements Serializable {
      */
     public synchronized boolean addEquipment(Equipment equipment) {
         if (equipment == null) {
-            Log.w(TAG, "quot;Attempted to add null equipment"quot;);
+            Log.w(TAG, "Attempted to add null equipment");
             return false;
         }
 
-        List<lt;Equipment>gt; targetList = getListForType(equipment.getType());
+        List<lt;Equipment> targetList = getListForType(equipment.getType());
         int maxCapacity = getMaxCapacity(equipment.getType());
 
-        if (targetList.size() >gt;= maxCapacity) {
-            Log.w(TAG, "quot;Inventory full for "quot; + equipment.getType());
+        if (targetList.size() >= maxCapacity) {
+            Log.w(TAG, "Inventory full for " + equipment.getType());
             return false;
         }
 
         targetList.add(equipment);
-        Log.d(TAG, "quot;Added: "quot; + equipment.getName());
+        Log.d(TAG, "Added: " + equipment.getName());
         return true;
     }
 
@@ -79,7 +79,7 @@ public class InventorySystem implements Serializable {
      */
     public synchronized boolean removeEquipment(Equipment equipment) {
         Equipment.Type type = equipment.getType();
-        List<lt;Equipment>gt; targetList = getListForType(type);
+        List<lt;Equipment> targetList = getListForType(type);
 
         if (targetList.remove(equipment)) {
             // If equipped item was removed, unequip it
@@ -90,7 +90,7 @@ public class InventorySystem implements Serializable {
             } else if (equipment.equals(equippedRing)) {
                 equippedRing = null;
             }
-            Log.d(TAG, "quot;Removed: "quot; + equipment.getName());
+            Log.d(TAG, "Removed: " + equipment.getName());
             return true;
         }
         return false;
@@ -101,40 +101,40 @@ public class InventorySystem implements Serializable {
      */
     public synchronized boolean equip(Equipment equipment) {
         if (equipment == null) {
-            Log.w(TAG, "quot;Cannot equip null equipment"quot;);
+            Log.w(TAG, "Cannot equip null equipment");
             return false;
         }
 
         switch (equipment.getType()) {
             case WEAPON:
                 if (!weapons.contains(equipment)) {
-                    Log.w(TAG, "quot;Weapon not in inventory"quot;);
+                    Log.w(TAG, "Weapon not in inventory");
                     return false;
                 }
                 equippedWeapon = equipment;
-                Log.d(TAG, "quot;Equipped weapon: "quot; + equipment.getName());
+                Log.d(TAG, "Equipped weapon: " + equipment.getName());
                 return true;
 
             case ARMOR:
                 if (!armor.contains(equipment)) {
-                    Log.w(TAG, "quot;Armor not in inventory"quot;);
+                    Log.w(TAG, "Armor not in inventory");
                     return false;
                 }
                 equippedArmor = equipment;
-                Log.d(TAG, "quot;Equipped armor: "quot; + equipment.getName());
+                Log.d(TAG, "Equipped armor: " + equipment.getName());
                 return true;
 
             case RING:
                 if (!rings.contains(equipment)) {
-                    Log.w(TAG, "quot;Ring not in inventory"quot;);
+                    Log.w(TAG, "Ring not in inventory");
                     return false;
                 }
                 equippedRing = equipment;
-                Log.d(TAG, "quot;Equipped ring: "quot; + equipment.getName());
+                Log.d(TAG, "Equipped ring: " + equipment.getName());
                 return true;
 
             default:
-                Log.w(TAG, "quot;Unknown equipment type"quot;);
+                Log.w(TAG, "Unknown equipment type");
                 return false;
         }
     }
@@ -154,7 +154,7 @@ public class InventorySystem implements Serializable {
                 equippedRing = null;
                 break;
         }
-        Log.d(TAG, "quot;Unequipped: "quot; + type);
+        Log.d(TAG, "Unequipped: " + type);
     }
 
     /**
@@ -168,12 +168,12 @@ public class InventorySystem implements Serializable {
      * Use one health potion. Returns true if successful, false if none available.
      */
     public synchronized boolean usePotion() {
-        if (healthPotions >gt; 0) {
+        if (healthPotions > 0) {
             healthPotions--;
-            Log.d(TAG, "quot;Used health potion. Remaining: "quot; + healthPotions);
+            Log.d(TAG, "Used health potion. Remaining: " + healthPotions);
             return true;
         }
-        Log.w(TAG, "quot;No health potions available"quot;);
+        Log.w(TAG, "No health potions available");
         return false;
     }
 
@@ -182,15 +182,15 @@ public class InventorySystem implements Serializable {
      */
     public synchronized boolean addHealthPotions(int count) {
         if (count <lt; 0) {
-            Log.w(TAG, "quot;Cannot add negative potions"quot;);
+            Log.w(TAG, "Cannot add negative potions");
             return false;
         }
         if (healthPotions + count <lt;= MAX_POTIONS) {
             healthPotions += count;
-            Log.d(TAG, "quot;Added "quot; + count + "quot; health potions. Total: "quot; + healthPotions);
+            Log.d(TAG, "Added " + count + " health potions. Total: " + healthPotions);
             return true;
         }
-        Log.w(TAG, "quot;Health potion capacity exceeded. Max: "quot; + MAX_POTIONS);
+        Log.w(TAG, "Health potion capacity exceeded. Max: " + MAX_POTIONS);
         return false;
     }
 
@@ -200,9 +200,9 @@ public class InventorySystem implements Serializable {
     public synchronized Equipment getEquippedRing() { return equippedRing; }
 
     // Getters for inventory lists (defensive copies)
-    public synchronized List<lt;Equipment>gt; getWeapons() { return new ArrayList<lt;>gt;(weapons); }
-    public synchronized List<lt;Equipment>gt; getArmor() { return new ArrayList<lt;>gt;(armor); }
-    public synchronized List<lt;Equipment>gt; getRings() { return new ArrayList<lt;>gt;(rings); }
+    public synchronized List<lt;Equipment> getWeapons() { return new ArrayList<lt;>(weapons); }
+    public synchronized List<lt;Equipment> getArmor() { return new ArrayList<lt;>(armor); }
+    public synchronized List<lt;Equipment> getRings() { return new ArrayList<lt;>(rings); }
 
     /**
      * Calculate total stat bonuses from equipped items.
@@ -232,12 +232,12 @@ public class InventorySystem implements Serializable {
     }
 
     // Private helpers
-    private List<lt;Equipment>gt; getListForType(Equipment.Type type) {
+    private List<lt;Equipment> getListForType(Equipment.Type type) {
         switch (type) {
             case WEAPON: return weapons;
             case ARMOR: return armor;
             case RING: return rings;
-            default: throw new IllegalArgumentException("quot;Unknown type: "quot; + type);
+            default: throw new IllegalArgumentException("Unknown type: " + type);
         }
     }
 
@@ -252,14 +252,14 @@ public class InventorySystem implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("quot;Inventory [W:%d/%d | A:%d/%d | R:%d/%d | P:%d/%d]"quot;,
+        return String.format("Inventory [W:%d/%d | A:%d/%d | R:%d/%d | P:%d/%d]",
                 weapons.size(), MAX_WEAPONS,
                 armor.size(), MAX_ARMOR,
                 rings.size(), MAX_RINGS,
                 healthPotions, MAX_POTIONS);
     }
-    public synchronized List<lt;Equipment>gt; getAllEquipment() {
-        List<lt;Equipment>gt; all = new ArrayList<lt;>gt;(weapons);
+    public synchronized List<lt;Equipment> getAllEquipment() {
+        List<lt;Equipment> all = new ArrayList<lt;>(weapons);
         all.addAll(armor);
         all.addAll(rings);
         return all;

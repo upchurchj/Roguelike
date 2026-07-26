@@ -35,7 +35,7 @@ public class InputValidator {
 
     // Private constructor prevents instantiation
     private InputValidator() {
-        throw new AssertionError("quot;InputValidator is a utility class"quot;);
+        throw new AssertionError("InputValidator is a utility class");
     }
 
     /**
@@ -45,7 +45,7 @@ public class InputValidator {
      * @return true if valid (1 <lt;= floorNumber <lt;= maxFloor), false otherwise
      */
     public static boolean isValidFloorNumber(int floorNumber, int maxFloor) {
-        return floorNumber >gt;= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; floorNumber <lt;= maxFloor;
+        return floorNumber >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; floorNumber <lt;= maxFloor;
     }
 
     /**
@@ -63,7 +63,7 @@ public class InputValidator {
      * @return true if valid (1-20), false otherwise
      */
     public static boolean isValidBaseEnemyCount(int baseEnemyCount) {
-        return baseEnemyCount >gt;= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; baseEnemyCount <lt;= 20;
+        return baseEnemyCount >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; baseEnemyCount <lt;= 20;
     }
 
     /**
@@ -72,7 +72,7 @@ public class InputValidator {
      * @return true if valid (0.5-3.0), false otherwise
      */
     public static boolean isValidDifficultyScaling(double difficultyScaling) {
-        return difficultyScaling >gt;= 0.5 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; difficultyScaling <lt;= 3.0;
+        return difficultyScaling >= 0.5 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; difficultyScaling <lt;= 3.0;
     }
 
     /**
@@ -81,7 +81,7 @@ public class InputValidator {
      * @return true if valid (0.0-1.0), false otherwise
      */
     public static boolean isValidRarityThreshold(double rarityThreshold) {
-        return rarityThreshold >gt;= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; rarityThreshold <lt;= 1.0;
+        return rarityThreshold >= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; rarityThreshold <lt;= 1.0;
     }
 
     /**
@@ -90,37 +90,37 @@ public class InputValidator {
      * @return true if valid (1-32 characters, alphanumeric + space/underscore), false otherwise
      */
     public static boolean isValidName(String name) {
-        if (name == null || name.isEmpty() || name.length() >gt; 32) {
+        if (name == null || name.isEmpty() || name.length() > 32) {
             return false;
         }
-        return name.matches("quot;[a-zA-Z0-9_\s]+"quot;);
+        return name.matches("[a-zA-Z0-9_\s]+");
     }
 
     /**
-     * Validate a character'#39;s health value.
+     * Validate a character's health value.
      * @param health the health to validate
-     * @return true if valid (>gt;= 0), false otherwise
+     * @return true if valid (>= 0), false otherwise
      */
     public static boolean isValidHealth(int health) {
-        return health >gt;= 0;
+        return health >= 0;
     }
 
     /**
-     * Validate a character'#39;s attack stat.
+     * Validate a character's attack stat.
      * @param attack the attack value to validate
-     * @return true if valid (>gt;= 1), false otherwise
+     * @return true if valid (>= 1), false otherwise
      */
     public static boolean isValidAttack(int attack) {
-        return attack >gt;= 1;
+        return attack >= 1;
     }
 
     /**
-     * Validate a character'#39;s defense stat.
+     * Validate a character's defense stat.
      * @param defense the defense value to validate
-     * @return true if valid (>gt;= 0), false otherwise
+     * @return true if valid (>= 0), false otherwise
      */
     public static boolean isValidDefense(int defense) {
-        return defense >gt;= 0;
+        return defense >= 0;
     }
 
     /**
@@ -129,16 +129,16 @@ public class InputValidator {
      * @return true if valid (1-100), false otherwise
      */
     public static boolean isValidPlayerLevel(int level) {
-        return level >gt;= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; level <lt;= 100;
+        return level >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; level <lt;= 100;
     }
 
     /**
      * Validate experience points.
      * @param experience the XP to validate
-     * @return true if valid (>gt;= 0), false otherwise
+     * @return true if valid (>= 0), false otherwise
      */
     public static boolean isValidExperience(int experience) {
-        return experience >gt;= 0;
+        return experience >= 0;
     }
 
     /**
@@ -147,7 +147,7 @@ public class InputValidator {
      * @return true if valid (1-100), false otherwise
      */
     public static boolean isValidInventoryCapacity(int capacity) {
-        return capacity >gt;= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; capacity <lt;= 100;
+        return capacity >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; capacity <lt;= 100;
     }
 
     /**
@@ -157,7 +157,7 @@ public class InputValidator {
      * @return true if valid (0 <lt;= size <lt;= capacity), false otherwise
      */
     public static boolean isValidInventorySize(int size, int capacity) {
-        return size >gt;= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; size <lt;= capacity;
+        return size >= 0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; size <lt;= capacity;
     }
 
     /**
@@ -166,7 +166,7 @@ public class InputValidator {
      * @return true if valid (-50 to +100), false otherwise
      */
     public static boolean isValidEquipmentBonus(int bonus) {
-        return bonus >gt;= -50 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; bonus <lt;= 100;
+        return bonus >= -50 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; bonus <lt;= 100;
     }
 
     /**
@@ -175,16 +175,16 @@ public class InputValidator {
      * @return true if valid (0.0-1.0), false otherwise
      */
     public static boolean isValidHitChance(double hitChance) {
-        return hitChance >gt;= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; hitChance <lt;= 1.0;
+        return hitChance >= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; hitChance <lt;= 1.0;
     }
 
     /**
      * Validate damage amount.
      * @param damage the damage to validate
-     * @return true if valid (>gt;= 1), false otherwise
+     * @return true if valid (>= 1), false otherwise
      */
     public static boolean isValidDamage(int damage) {
-        return damage >gt;= 1;
+        return damage >= 1;
     }
 
     /**
@@ -193,16 +193,16 @@ public class InputValidator {
      * @return true if valid (1-100), false otherwise
      */
     public static boolean isValidEnemyLevel(int enemyLevel) {
-        return enemyLevel >gt;= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; enemyLevel <lt;= 100;
+        return enemyLevel >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; enemyLevel <lt;= 100;
     }
 
     /**
      * Validate experience reward amount.
      * @param reward the reward to validate
-     * @return true if valid (>gt;= 10), false otherwise
+     * @return true if valid (>= 10), false otherwise
      */
     public static boolean isValidExperienceReward(int reward) {
-        return reward >gt;= 10;
+        return reward >= 10;
     }
 
     /**
@@ -211,7 +211,7 @@ public class InputValidator {
      * @return true if valid (0-100), false otherwise
      */
     public static boolean isValidPercentage(double percentage) {
-        return percentage >gt;= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; percentage <lt;= 100.0;
+        return percentage >= 0.0 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; percentage <lt;= 100.0;
     }
 
     /**
@@ -220,7 +220,7 @@ public class InputValidator {
      * @return true if valid (0.1-10.0), false otherwise
      */
     public static boolean isValidScalar(double scalar) {
-        return scalar >gt;= 0.1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; scalar <lt;= 10.0;
+        return scalar >= 0.1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; scalar <lt;= 10.0;
     }
 
     /**
@@ -265,7 +265,7 @@ public class InputValidator {
 
     @Override
     public String toString() {
-        return "quot;InputValidator{utility class}"quot;;
+        return "InputValidator{utility class}";
     }
 }</code></pre>
         <a href="index.html" class="back-link">Back to Index</a>

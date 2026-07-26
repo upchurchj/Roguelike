@@ -35,7 +35,7 @@ public class Player extends Character implements Serializable {
     // Constructor with x, y parameters
     public Player(int x, int y) {
         super(x, y, 100, 10);
-        this.name = "quot;Hero"quot;;
+        this.name = "Hero";
         this.level = 1;
         this.experience = 0;
         this.goldCollected = 0;
@@ -44,7 +44,7 @@ public class Player extends Character implements Serializable {
     // Constructor for deserialization
     public Player() {
         super(0, 0, 100, 10);
-        this.name = "quot;Hero"quot;;
+        this.name = "Hero";
         this.level = 1;
         this.experience = 0;
         this.goldCollected = 0;
@@ -108,7 +108,7 @@ public class Player extends Character implements Serializable {
     
     private void checkLevelUp() {
         int xpNeeded = level * 100;
-        if (experience >gt;= xpNeeded) {
+        if (experience >= xpNeeded) {
             level++;
             maxHealth += 10;
             currentHealth = maxHealth;

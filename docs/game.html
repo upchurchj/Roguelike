@@ -40,11 +40,11 @@ public class Game {
     private static final int BOSS_DAMAGE = 15;
     private static final int BOSS_ARMOR = 5;
     private static final int BOSS_UNLOCK_GOLD = 100;
-    private static final String BOSS_NAME = "quot;Dragon"quot;;
+    private static final String BOSS_NAME = "Dragon";
 
     private Player player;
     private Dungeon dungeon;
-    private List<lt;Enemy>gt; enemies;
+    private List<lt;Enemy> enemies;
     private GameState state;
     private int turnCount;
     private Enemy encounteredEnemy;
@@ -53,7 +53,7 @@ public class Game {
         this.dungeon = new Dungeon(50, 50);
         int[] spawnPos = dungeon.findSpawnPosition();
         this.player = new Player(spawnPos[0], spawnPos[1]);
-        this.enemies = new ArrayList<lt;>gt;();
+        this.enemies = new ArrayList<lt;>();
         this.state = GameState.PLAYING;
         this.turnCount = 0;
         this.encounteredEnemy = null;
@@ -71,14 +71,14 @@ public class Game {
             int y = (int)(Math.random() * dungeon.getHeight());
 
             if (dungeon.isWalkable(x, y) JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; !(x == player.getX() JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; y == player.getY())) {
-                Enemy enemy = new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon, "quot;Goblin"quot;, ENEMY_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
+                Enemy enemy = new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon, "Goblin", ENEMY_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
                 enemies.add(enemy);
                 enemiesSpawned++;
             }
             attempts++;
         }
 
-        if (player.getGoldCollected() >gt;= BOSS_UNLOCK_GOLD) {
+        if (player.getGoldCollected() >= BOSS_UNLOCK_GOLD) {
             int bossAttempts = 0;
             while (bossAttempts <lt; 50) {
                 int x = (int)(Math.random() * dungeon.getWidth());
@@ -152,7 +152,7 @@ public class Game {
         return dungeon;
     }
 
-    public List<lt;Enemy>gt; getEnemies() {
+    public List<lt;Enemy> getEnemies() {
         return enemies;
     }
 

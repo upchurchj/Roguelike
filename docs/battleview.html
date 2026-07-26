@@ -36,7 +36,7 @@ public class BattleView extends View {
 
     public BattleView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        Log.d("quot;RoguelikeApp"quot;, "quot;BattleView constructor called"quot;);
+        Log.d("RoguelikeApp", "BattleView constructor called");
         initPaints();
     }
 
@@ -53,11 +53,11 @@ public class BattleView extends View {
 
     private void initPaints() {
         healthBarBackPaint = new Paint();
-        healthBarBackPaint.setColor(Color.parseColor("quot;#333333"quot;));
+        healthBarBackPaint.setColor(Color.parseColor("#333333"));
         healthBarBackPaint.setStyle(Paint.Style.FILL);
 
         healthBarFillPaint = new Paint();
-        healthBarFillPaint.setColor(Color.parseColor("quot;#00FF00"quot;));
+        healthBarFillPaint.setColor(Color.parseColor("#00FF00"));
         healthBarFillPaint.setStyle(Paint.Style.FILL);
 
         textPaint = new Paint();
@@ -70,7 +70,7 @@ public class BattleView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if (battle == null) {
-            Log.w("quot;BattleView"quot;, "quot;Battle is null in onDraw"quot;);
+            Log.w("BattleView", "Battle is null in onDraw");
             return;
         }
         int height = getHeight();
@@ -83,7 +83,7 @@ public class BattleView extends View {
         Player player = battle.getPlayer();
         Enemy enemy = battle.getEnemy();
         if (player == null || enemy == null) {
-            Log.w("quot;BattleView"quot;, "quot;Player or Enemy is null in drawHealthBars"quot;);
+            Log.w("BattleView", "Player or Enemy is null in drawHealthBars");
             return;
         }
 
@@ -100,14 +100,14 @@ public class BattleView extends View {
         canvas.drawRect(barX, playerBarY, barX + barWidth, playerBarY + barHeight, healthBarBackPaint);
         float playerHealthRatio = (float) playerCurrentHealth / playerMaxHealth;
         canvas.drawRect(barX, playerBarY, barX + (int) (barWidth * playerHealthRatio), playerBarY + barHeight, healthBarFillPaint);
-        canvas.drawText("quot;Player: "quot; + playerCurrentHealth + "quot;/"quot; + playerMaxHealth, barX + 5, playerBarY + 22, textPaint);
+        canvas.drawText("Player: " + playerCurrentHealth + "/" + playerMaxHealth, barX + 5, playerBarY + 22, textPaint);
 
         // Enemy health bar (show skull if dead)
         int enemyHealth = enemy.getHealth();
         int enemyBarX = barX + barWidth + 20;
         int enemyBarY = 10;
 
-        if (enemyHealth >gt; 0) {
+        if (enemyHealth > 0) {
             int enemyMaxHealth = enemy.getMaxHealth();
             int enemyCurrentHealth = Math.min(enemyHealth, enemyMaxHealth);
             enemyCurrentHealth = Math.max(0, enemyCurrentHealth);
@@ -115,18 +115,18 @@ public class BattleView extends View {
             canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + barWidth, enemyBarY + barHeight, healthBarBackPaint);
             float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
             canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio), enemyBarY + barHeight, healthBarFillPaint);
-            canvas.drawText("quot;Enemy: "quot; + enemyCurrentHealth + "quot;/"quot; + enemy.getMaxHealth(), enemyBarX + 5, enemyBarY + 22, textPaint);
+            canvas.drawText("Enemy: " + enemyCurrentHealth + "/" + enemy.getMaxHealth(), enemyBarX + 5, enemyBarY + 22, textPaint);
         } else {
             drawSkull(canvas, enemyBarX + barWidth / 2 - 15, enemyBarY, 30);
             Paint skullText = new Paint(textPaint);
-            skullText.setColor(Color.parseColor("quot;#FFD700"quot;));
-            canvas.drawText(enemy.getName() + "quot; DEFEATED"quot;, enemyBarX + 5, enemyBarY + 22, skullText);
+            skullText.setColor(Color.parseColor("#FFD700"));
+            canvas.drawText(enemy.getName() + " DEFEATED", enemyBarX + 5, enemyBarY + 22, skullText);
         }
     }
 
     private void drawSkull(Canvas canvas, int x, int y, int size) {
         Paint skullPaint = new Paint();
-        skullPaint.setColor(Color.parseColor("quot;#FFD700"quot;));
+        skullPaint.setColor(Color.parseColor("#FFD700"));
         skullPaint.setStyle(Paint.Style.FILL);
 
         // Skull shape: main cranium

@@ -36,10 +36,10 @@ public class Equipment implements Serializable {
     }
 
     public enum Rarity {
-        COMMON("quot;#CCCCCC"quot;),           // Light gray
-        UNCOMMON("quot;#4CAF50"quot;),         // Green
-        RARE("quot;#2196F3"quot;),             // Blue
-        LEGENDARY("quot;#FFD700"quot;);        // Gold
+        COMMON("#CCCCCC"),           // Light gray
+        UNCOMMON("#4CAF50"),         // Green
+        RARE("#2196F3"),             // Blue
+        LEGENDARY("#FFD700");        // Gold
 
         private final String hexColor;
 
@@ -87,7 +87,7 @@ public class Equipment implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("quot;[%s] %s (%s) | ATK+%d DEF+%d HP+%d"quot;,
+        return String.format("[%s] %s (%s) | ATK+%d DEF+%d HP+%d",
                 rarity, name, type, attackBonus, defenseBonus, hpBonus);
     }
 
@@ -102,7 +102,7 @@ public class Equipment implements Serializable {
         private int attackBonus = 0;
         private int defenseBonus = 0;
         private int hpBonus = 0;
-        private String description = "quot;"quot;;
+        private String description = "";
 
         public Builder(String name, Type type) {
             this.name = name;
@@ -136,10 +136,10 @@ public class Equipment implements Serializable {
 
         public Equipment build() {
             if (name == null || name.isEmpty()) {
-                throw new IllegalArgumentException("quot;Equipment name cannot be null or empty"quot;);
+                throw new IllegalArgumentException("Equipment name cannot be null or empty");
             }
             if (type == null) {
-                throw new IllegalArgumentException("quot;Equipment type cannot be null"quot;);
+                throw new IllegalArgumentException("Equipment type cannot be null");
             }
             return new Equipment(this);
         }

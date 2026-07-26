@@ -32,7 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * and coordinates floor transitions with scaling logic.
  */
 public class DungeonManager {
-    private final Map<lt;Integer, DungeonLevel>gt; levels;
+    private final Map<lt;Integer, DungeonLevel> levels;
     private final int maxFloor;
     private int currentFloor;
     private int floorsVisited = 0;
@@ -42,7 +42,7 @@ public class DungeonManager {
      * Private constructor enforces Builder pattern.
      */
     private DungeonManager(Builder builder) {
-        this.levels = new TreeMap<lt;>gt;(builder.levels);
+        this.levels = new TreeMap<lt;>(builder.levels);
         this.maxFloor = builder.maxFloor;
         this.currentFloor = builder.startFloor;
     }
@@ -120,7 +120,7 @@ public class DungeonManager {
     public boolean retreatFloor() {
         lock.writeLock().lock();
         try {
-            if (currentFloor >gt; 1) {
+            if (currentFloor > 1) {
                 currentFloor--;
                 return true;
             }
@@ -157,7 +157,7 @@ public class DungeonManager {
     public boolean setCurrentFloor(int floorNumber) {
         lock.writeLock().lock();
         try {
-            if (floorNumber >gt;= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; floorNumber <lt;= maxFloor) {
+            if (floorNumber >= 1 JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; floorNumber <lt;= maxFloor) {
                 currentFloor = floorNumber;
                 return true;
             }
@@ -189,10 +189,10 @@ public class DungeonManager {
     /**
      * Get all generated levels (snapshot for iteration).
      */
-    public Map<lt;Integer, DungeonLevel>gt; getAllLevels() {
+    public Map<lt;Integer, DungeonLevel> getAllLevels() {
         lock.readLock().lock();
         try {
-            return new TreeMap<lt;>gt;(levels);
+            return new TreeMap<lt;>(levels);
         } finally {
             lock.readLock().unlock();
         }
@@ -214,7 +214,7 @@ public class DungeonManager {
      * Builder for DungeonManager.
      */
     public static class Builder {
-        private final Map<lt;Integer, DungeonLevel>gt; levels = new TreeMap<lt;>gt;();
+        private final Map<lt;Integer, DungeonLevel> levels = new TreeMap<lt;>();
         private int maxFloor = 99;
         private int startFloor = 1;
 
@@ -237,7 +237,7 @@ public class DungeonManager {
             return this;
         }
 
-        public Builder addLevels(Map<lt;Integer, DungeonLevel>gt; levelsMap) {
+        public Builder addLevels(Map<lt;Integer, DungeonLevel> levelsMap) {
             if (levelsMap != null) {
                 levels.putAll(levelsMap);
             }
@@ -257,7 +257,7 @@ public class DungeonManager {
     public String toString() {
         lock.readLock().lock();
         try {
-            return String.format("quot;DungeonManager{currentFloor=%d, maxFloor=%d, levelsLoaded=%d}"quot;,
+            return String.format("DungeonManager{currentFloor=%d, maxFloor=%d, levelsLoaded=%d}",
                     currentFloor, maxFloor, levels.size());
         } finally {
             lock.readLock().unlock();

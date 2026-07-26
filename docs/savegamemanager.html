@@ -27,8 +27,8 @@ import java.io.*;
 import java.util.*;
 
 public class SaveGameManager {
-    private static final String TAG = "quot;SaveGameManager"quot;;
-    private static final String SAVE_DIR = "quot;saves"quot;;
+    private static final String TAG = "SaveGameManager";
+    private static final String SAVE_DIR = "saves";
     private String basePath;
 
     public SaveGameManager(String basePath) {
@@ -36,20 +36,20 @@ public class SaveGameManager {
         File saveDir = new File(basePath, SAVE_DIR);
         if (!saveDir.exists()) {
             saveDir.mkdirs();
-            Log.d(TAG, "quot;Created save directory: "quot; + saveDir.getAbsolutePath());
+            Log.d(TAG, "Created save directory: " + saveDir.getAbsolutePath());
         }
     }
 
     private String validateFilename(String filename) {
         if (filename == null || filename.isEmpty()) {
-            throw new IllegalArgumentException("quot;Filename cannot be null or empty"quot;);
+            throw new IllegalArgumentException("Filename cannot be null or empty");
         }
-        String sanitized = filename.replaceAll("quot;[^a-zA-Z0-9._-]"quot;, "quot;"quot;);
+        String sanitized = filename.replaceAll("[^a-zA-Z0-9._-]", "");
         if (sanitized.isEmpty()) {
-            throw new IllegalArgumentException("quot;Filename contains no valid characters"quot;);
+            throw new IllegalArgumentException("Filename contains no valid characters");
         }
-        if (sanitized.contains("quot;.."quot;)) {
-            throw new IllegalArgumentException("quot;Filename cannot contain path traversal sequences"quot;);
+        if (sanitized.contains("..")) {
+            throw new IllegalArgumentException("Filename cannot contain path traversal sequences");
         }
         return sanitized;
     }
@@ -61,11 +61,11 @@ public class SaveGameManager {
 
     public void saveGame(SaveGameData data, String filename) {
         if (data == null || data.player == null) {
-            Log.w(TAG, "quot;Cannot save: SaveGameData or player is null"quot;);
+            Log.w(TAG, "Cannot save: SaveGameData or player is null");
             return;
         }
         if (data.player.getHealth() <lt;= 0) {
-            Log.w(TAG, "quot;Cannot save: player is dead"quot;);
+            Log.w(TAG, "Cannot save: player is dead");
             return;
         }
 
@@ -76,16 +76,16 @@ public class SaveGameManager {
             oos.writeObject(data);
             oos.close();
             fos.close();
-            Log.d(TAG, "quot;Game saved to: "quot; + savePath);
+            Log.d(TAG, "Game saved to: " + savePath);
         } catch (IOException e) {
-            Log.e(TAG, "quot;Error saving game"quot;, e);
+            Log.e(TAG, "Error saving game", e);
         } catch (IllegalArgumentException e) {
-            Log.e(TAG, "quot;Invalid filename: "quot; + filename, e);
+            Log.e(TAG, "Invalid filename: " + filename, e);
         }
     }
 
     public void saveGame(SaveGameData data) {
-        saveGame(data, "quot;savegame_"quot; + System.currentTimeMillis() + "quot;.sav"quot;);
+        saveGame(data, "savegame_" + System.currentTimeMillis() + ".sav");
     }
 
     public SaveGameData loadGame(String filename) {
@@ -96,13 +96,13 @@ public class SaveGameManager {
             SaveGameData data = (SaveGameData) ois.readObject();
             ois.close();
             fis.close();
-            Log.d(TAG, "quot;Game loaded from: "quot; + savePath);
+            Log.d(TAG, "Game loaded from: " + savePath);
             return data;
         } catch (IOException | ClassNotFoundException e) {
-            Log.e(TAG, "quot;Error loading game"quot;, e);
+            Log.e(TAG, "Error loading game", e);
             return null;
         } catch (IllegalArgumentException e) {
-            Log.e(TAG, "quot;Invalid filename: "quot; + filename, e);
+            Log.e(TAG, "Invalid filename: " + filename, e);
             return null;
         }
     }
@@ -117,22 +117,22 @@ public class SaveGameManager {
             if (saves == null || saves.length == 0) {
                 return null;
             }
-            Arrays.sort(saves, (a, b) ->gt; Long.compare(b.lastModified(), a.lastModified()));
+            Arrays.sort(saves, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
             FileInputStream fis = new FileInputStream(saves[0]);
             ObjectInputStream ois = new ObjectInputStream(fis);
             SaveGameData data = (SaveGameData) ois.readObject();
             ois.close();
             fis.close();
-            Log.d(TAG, "quot;Latest game loaded from: "quot; + saves[0].getName());
+            Log.d(TAG, "Latest game loaded from: " + saves[0].getName());
             return data;
         } catch (IOException | ClassNotFoundException e) {
-            Log.e(TAG, "quot;Error loading latest game"quot;, e);
+            Log.e(TAG, "Error loading latest game", e);
             return null;
         }
     }
 
-    public List<lt;String>gt; listSaveFiles() {
-        List<lt;String>gt; saveFiles = new ArrayList<lt;>gt;();
+    public List<lt;String> listSaveFiles() {
+        List<lt;String> saveFiles = new ArrayList<lt;>();
         try {
             File saveDir = new File(basePath, SAVE_DIR);
             if (!saveDir.exists()) {
@@ -148,7 +148,7 @@ public class SaveGameManager {
                 Collections.sort(saveFiles);
             }
         } catch (Exception e) {
-            Log.e(TAG, "quot;Error listing save files"quot;, e);
+            Log.e(TAG, "Error listing save files", e);
         }
         return saveFiles;
     }
@@ -158,11 +158,11 @@ public class SaveGameManager {
             String savePath = getSavePath(filename);
             File file = new File(savePath);
             if (file.exists() JAVA_CODE_PLACEHOLDERamp;JAVA_CODE_PLACEHOLDERamp; file.delete()) {
-                Log.d(TAG, "quot;Save file deleted: "quot; + filename);
+                Log.d(TAG, "Save file deleted: " + filename);
                 return true;
             }
         } catch (IllegalArgumentException e) {
-            Log.e(TAG, "quot;Error deleting save file "quot; + filename, e);
+            Log.e(TAG, "Error deleting save file " + filename, e);
         }
         return false;
     }
@@ -171,12 +171,12 @@ public class SaveGameManager {
         private static final long serialVersionUID = 1L;
 
         public Player player;
-        public List<lt;Enemy>gt; enemies;
+        public List<lt;Enemy> enemies;
         public int[][] dungeonMap;
         public int playerX;
         public int playerY;
 
-        public SaveGameData(Player player, List<lt;Enemy>gt; enemies, int[][] dungeonMap, int playerX, int playerY) {
+        public SaveGameData(Player player, List<lt;Enemy> enemies, int[][] dungeonMap, int playerX, int playerY) {
             this.player = player;
             this.enemies = enemies;
             this.dungeonMap = dungeonMap;
