@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KnightLight Roguelike - Android Game | John Upchurch</title>
+    <meta name="description" content="A procedural dungeon crawler built for Android in pure Java. Developed on-device using Termux and Gradle.">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: system-ui, -apple-system, sans-serif; 
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a3e 100%); 
+            color: #eaeaea; 
+            min-height: 100vh; 
+            line-height: 1.6;
+        }
+        .hero { 
+            padding: 80px 20px 60px; 
+            text-align: center; 
+            background: radial-gradient(circle at 50% 30%, rgba(109,74,255,0.15) 0%, transparent 60%);
+        }
+        h1 { 
+            font-size: clamp(2.5em, 6vw, 4em); 
+            margin-bottom: 15px; 
+            background: linear-gradient(135deg, #8b6dff 0%, #6d4aff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .tagline { 
+            font-size: 1.3em; 
+            color: #aaa; 
+            max-width: 600px; 
+            margin: 0 auto 40px;
+        }
+        .cta-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; }
+        .btn { 
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 14px 28px; 
+            border-radius: 10px; 
+            text-decoration: none; 
+            font-weight: 600; 
+            transition: all 0.3s ease;
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #6d4aff 0%, #8b6dff 100%); 
+            color: white;
+            box-shadow: 0 4px 20px rgba(109,74,255,0.3);
+        }
+        .btn-secondary { 
+            background: transparent; 
+            border: 2px solid #6d4aff; 
+            color: #6d4aff;
+        }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(109,74,255,0.4); }
+        .section { padding: 60px 20px; max-width: 1100px; margin: 0 auto; }
+        .section-title { 
+            text-align: center; 
+            font-size: 2em; 
+            margin-bottom: 50px; 
+            color: #8b6dff;
+        }
+        .features-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 25px;
+        }
+        .feature-card { 
+            background: rgba(255,255,255,0.03); 
+            padding: 30px; 
+            border-radius: 15px; 
+            border: 1px solid rgba(109,74,255,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .feature-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 10px 30px rgba(109,74,255,0.2);
+        }
+        .feature-card h3 { color: #c9aaff; margin-bottom: 12px; font-size: 1.2em; }
+        .feature-card p { color: #999; font-size: 0.95em; }
+        .tech-stack { background: rgba(0,0,0,0.2); padding: 50px 20px; text-align: center; }
+        .tech-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 25px; }
+        .tech-tag { 
+            background: linear-gradient(135deg, #6d4aff 0%, #5a3aff 100%); 
+            padding: 10px 20px; 
+            border-radius: 25px; 
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .about-dev { text-align: center; margin-top: 60px; }
+        .about-dev p { color: #888; max-width: 700px; margin: 0 auto; }
+        footer { 
+            text-align: center; 
+            padding: 40px; 
+            color: #555; 
+            font-size: 0.9em;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        footer a { color: #6d4aff; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>⚔️ KnightLight Roguelike</h1>
+        <p class="tagline">A procedurally-generated dungeon crawler for Android — built entirely in Java, on-device, using Termux.</p>
+        <div class="cta-buttons">
+            <a href="ALL_SOURCE.html" class="btn btn-primary">📖 View Source Code</a>
+            <a href="https://github.com/upchurchj/Roguelike" class="btn btn-secondary">🔗 GitHub Repo</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Game Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <h3>🏰 Procedural Generation</h3>
+                <p>Each playthrough generates a unique dungeon layout with randomized rooms, corridors, enemy placements, and loot distribution.</p>
+            </div>
+            <div class="feature-card">
+                <h3>⚔️ Turn-Based Combat</h3>
+                <p>Tactical combat system with action points, strategic positioning, equipment bonuses, and enemy AI behaviors.</p>
+            </div>
+            <div class="feature-card">
+                <h3>📦 Equipment System</h3>
+                <p>Loot collection with rarity tiers (Common, Rare, Epic, Legendary), stat modifiers, and inventory management.</p>
+            </div>
+            <div class="feature-card">
+                <h3>💾 Save & Load</h3>
+                <p>Persistent save system allowing players to resume their adventure across multiple sessions.</p>
+            </div>
+            <div class="feature-card">
+                <h3>📈 Progression</h3>
+                <p>Experience system with leveling, skill advancement, and increasingly challenging dungeon depths.</p>
+            </div>
+            <div class="feature-card">
+                <h3>📱 Mobile-First Design</h3>
+                <p>Optimized for Android touch interface with responsive layouts supporting phones and tablets.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section tech-stack">
+        <h2 class="section-title">Development Tech Stack</h2>
+        <p style="color: #888;">Built on Android device using open-source tooling</p>
+        <div class="tech-tags">
+            <span class="tech-tag">Java</span>
+            <span class="tech-tag">Android SDK</span>
+            <span class="tech-tag">Gradle 8.6</span>
+            <span class="tech-tag">Termux</span>
+            <span class="tech-tag">Git</span>
+            <span class="tech-tag">F-Droid</span>
+        </div>
+    </div>
+
+    <div class="section about-dev">
+        <h2 class="section-title">About This Project</h2>
+        <p>Developed by <strong>John Upchurch</strong> as a demonstration of Android development capabilities using minimal infrastructure. This project showcases proficiency with procedural algorithms, game architecture patterns, and mobile development constraints.</p>
+    </div>
+
+    <footer>
+        <p>By John Upchurch | 
+           <a href="ALL_SOURCE.html">Documentation</a> | 
+           <a href="https://github.com/upchurchj/Roguelike">Source Code</a> | 
+           <a href="mailto:your-email@example.com">Contact</a>
+        </p>
+    </footer>
+</body>
+</html>
