@@ -24,21 +24,24 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">22 files | 3618 lines | 2026-07-28 10:54</div>
+<div class="stats">23 files | 3725 lines | 2026-07-28 18:57</div>
 </header>
-<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> </nav>
+<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> </nav>
 <div id="files">
 
 <div class="file" id="battle">
-    <div class="file-header"><h2>Battle.java</h2><span class="file-meta">180 lines | 6765 bytes</span></div>
+    <div class="file-header"><h2>Battle.java</h2><span class="file-meta">204 lines | 6426 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
-import java.util.logging.Logger;
 import java.io.Serializable;
 
+/**
+ * Battle state manager with thread-safe state access.
+ * Uses actual Player/Enemy APIs from Character inheritance chain.
+ */
 public class Battle implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
     private static final String TAG = "Battle";
 
     public enum State {
@@ -51,15 +54,11 @@ public class Battle implements Serializable {
 
     private Player player;
     private Enemy enemy;
-    private CombatSystem combatSystem;
+    private transient CombatSystem combatSystem;
     private State state;
     private String lastMessage;
     private final transient Object stateLock = new Object();
 
-    /**
-     * Initialize a battle between player and enemy.
-     * CRITICAL: Both player and enemy MUST be non-null.
-     */
     public Battle(Player player, Enemy enemy) {
         if (player == null) {
             throw new IllegalArgumentException("Player cannot be null");
@@ -72,16 +71,37 @@ public class Battle implements Serializable {
         this.combatSystem = new CombatSystem(player, enemy);
         this.state = State.PLAYER_TURN;
         this.lastMessage = "Battle started! " + enemy.getName() + " appears!";
-        Logger.getLogger(getClass().getName()).info(TAG + ": Battle initialized: Player (Lvl " + player.getLevel() + ") vs " + enemy.getName() + " (Health: " + enemy.getHealth() + ")");
+        Log.d(TAG, "Battle init: Player Lvl " + player.getLevel()
+            + " vs " + enemy.getName() + " HP:" + getCurrentHealth(enemy));
     }
 
-    public Player getPlayer() {
-        return player;
+    /**
+     * Reconstructs transient CombatSystem after deserialization.
+     */
+    public Object readResolve() {
+        if (player != null &amp;&amp; enemy != null) {
+            this.combatSystem = new CombatSystem(player, enemy);
+        } else {
+            Log.w(TAG, "readResolve: null player/enemy, marking battle ended");
+            this.state = State.VICTORY;
+        }
+        return this;
     }
 
-    public Enemy getEnemy() {
-        return enemy;
+    private int getCurrentHealth(Enemy enemy) {
+        // Enemy inherits currentHealth from Character directly
+        java.lang.reflect.Field field;
+        try {
+            field = enemy.getClass().getSuperclass().getDeclaredField("currentHealth");
+            field.setAccessible(true);
+            return (int) field.get(enemy);
+        } catch (Exception e) {
+            return -1; // Should not happen
+        }
     }
+
+    public Player getPlayer() { return player; }
+    public Enemy getEnemy() { return enemy; }
 
     public State getState() {
         synchronized (stateLock) {
@@ -90,125 +110,129 @@ public class Battle implements Serializable {
     }
 
     public String getLastMessage() {
-        return lastMessage;
+        synchronized (stateLock) {
+            return lastMessage;
+        }
     }
 
-    public CombatSystem getCombatSystem() {
-        return combatSystem;
-    }
+    public CombatSystem getCombatSystem() { return combatSystem; }
 
     /**
-     * Process a player action. Must be called when state is PLAYER_TURN.
-     * Transitions to ENEMY_TURN or terminal state (VICTORY/DEFEAT/FLED).
+     * Entry point for BattleActivity - delegates to action methods.
      */
     public void playerAction(Action action) {
-        if (action == null) {
-            Log.w(TAG, "playerAction called with null action");
+        switch (action) {
+            case ATTACK:
+                playerAttack();
+                break;
+            case USE_POTION:
+                playerUsePotion();
+                break;
+            case RUN:
+                playerRun();
+                break;
+            case DEFEND:
+                playerDefend();
+                break;
+        }
+    }
+
+    public void playerAttack() {
+        if (getState() != State.PLAYER_TURN) {
+            Log.w(TAG, "playerAttack called outside PLAYER_TURN");
             return;
         }
-        synchronized (stateLock) {
-            if (state != State.PLAYER_TURN) {
-                Log.w(TAG, "playerAction called when state is " + state);
-                return;
-            }
-            switch (action) {
-                case ATTACK:
-                    combatSystem.playerAttack();
-                    lastMessage = combatSystem.getLastLogEntry();
-                    Log.d(TAG, "Player attack: " + lastMessage);
-                    break;
-                case USE_POTION:
-                    if (player.usePotion()) {
-                        lastMessage = "You healed yourself!";
-                        Log.d(TAG, "Player used potion. Health: " + player.getCurrentHealth());
-                    } else {
-                        lastMessage = "No potions left!";
-                        Log.w(TAG, "Player attempted potion use but none available");
-                        return; // Action failed, stay in PLAYER_TURN
-                    }
-                    break;
-                case RUN:
-                    if (combatSystem.attemptFlee()) {
-                        state = State.FLED;
-                        lastMessage = "You fled successfully!";
-                        Log.i(TAG, "FLED: Player escaped from " + enemy.getName());
-                        return; // Exit — battle is over (fled)
-                    } else {
-                        lastMessage = "Failed to flee!";
-                        Log.d(TAG, "Player failed flee attempt");
-                        // Fall through to enemyTurn() — enemy counterattacks
-                    }
-                    break;
-                case DEFEND:
-                    lastMessage = "You brace for impact!";
-                    Log.d(TAG, "Player defended");
-                    break;
-                default:
-                    Log.w(TAG, "Unknown action: " + action);
-                    return;
-            }
+        combatSystem.playerAttack();
 
-            // Check victory condition AFTER player action
-            if (!enemy.isAlive()) {
-                state = State.VICTORY;
-                lastMessage = "You defeated " + enemy.getName() + "!";
-                Logger.getLogger(getClass().getName()).info(TAG + ": VICTORY: Player defeated " + enemy.getName() + " | Player Health: " + player.getCurrentHealth());
-                // endCombat() already processes rewards internally — DO NOT DUPLICATE
-                CombatResult result = combatSystem.endCombat();
-                if (result == null) {
-                    Log.e(TAG, "CRITICAL: endCombat() returned null — rewards may not have been processed!");
-                } else if (!result.isSuccessful()) {
-                    Log.e(TAG, "endCombat() failed: " + result.getMessage());
-                } else {
-                    Logger.getLogger(getClass().getName()).info(TAG + ": Rewards processed: XP=" + result.getExperienceAwarded() + " Gold=" + result.getGoldAwarded());
-                }
-                return; // Battle over — VICTORY
-            }
-
-            // Transition to enemy turn
-            state = State.ENEMY_TURN;
-            enemyTurn();
+        if (enemy.isDefeated() || isEnemyHealthZero()) {
+            setState(State.VICTORY, "Victory! " + enemy.getName() + " defeated!");
+        } else {
+            setState(State.ENEMY_TURN, enemy.getName() + " prepares to strike...");
         }
     }
 
-    /**
-     * Execute enemy's turn. Must be called when state is ENEMY_TURN.
-     * Transitions to PLAYER_TURN or DEFEAT.
-     */
+    public void playerDefend() {
+        if (getState() != State.PLAYER_TURN) {
+            Log.w(TAG, "playerDefend called outside PLAYER_TURN");
+            return;
+        }
+        // Note: No defending flag implemented yet - placeholder for future
+        setState(State.ENEMY_TURN, "Player braces for impact!");
+    }
+
+    public void playerRun() {
+        if (getState() != State.PLAYER_TURN) {
+            Log.w(TAG, "playerRun called outside PLAYER_TURN");
+            return;
+        }
+        boolean fled = SecureRandomUtil.nextDouble() &lt; 0.40;
+        if (fled) {
+            setState(State.FLED, "Successfully escaped!");
+        } else {
+            setState(State.ENEMY_TURN, "Failed to escape! " + enemy.getName() + " attacks!");
+        }
+    }
+
+    public void playerUsePotion() {
+        if (getState() != State.PLAYER_TURN) {
+            Log.w(TAG, "playerUsePotion called outside PLAYER_TURN");
+            return;
+        }
+        // usePotion() returns true if heal happened, false if already full health
+        boolean used = player.usePotion();
+        if (used) {
+            setState(State.ENEMY_TURN, "Player healed! " + enemy.getName() + " approaches...");
+        } else {
+            synchronized (stateLock) {
+                lastMessage = "Already at full health!";
+            }
+        }
+    }
+
     public void enemyTurn() {
-        synchronized (stateLock) {
-            if (state != State.ENEMY_TURN) {
-                Log.w(TAG, "enemyTurn called when state is " + state);
-                return;
-            }
-            combatSystem.enemyAttack();
-            lastMessage = combatSystem.getLastLogEntry();
-            Log.d(TAG, "Enemy turn: " + lastMessage);
+        if (getState() != State.ENEMY_TURN) {
+            Log.w(TAG, "enemyTurn called outside ENEMY_TURN");
+            return;
+        }
+        if (isEnemyHealthZero() || enemy.isDefeated()) {
+            setState(State.VICTORY, enemy.getName() + " has fallen!");
+            return;
+        }
 
-            // Check defeat condition AFTER enemy attack
-            if (!player.isAlive()) {
-                state = State.DEFEAT;
-                lastMessage = enemy.getName() + " defeated you!";
-                Logger.getLogger(getClass().getName()).info(TAG + ": DEFEAT: Player defeated by " + enemy.getName() + " | Enemy Health: " + enemy.getHealth());
-                CombatResult result = combatSystem.endCombat();
-                if (result == null) {
-                    Log.e(TAG, "CRITICAL: endCombat() returned null on defeat");
-                } else {
-                    Log.i(TAG, "Defeat processed: " + result.getMessage());
-                }
-                return; // Battle over — DEFEAT
-            }
+        combatSystem.enemyAttack();
 
-            // Return to player turn
-            state = State.PLAYER_TURN;
+        if (player.getCurrentHealth() &lt;= 0) {
+            setState(State.DEFEAT, "You have been defeated...");
+        } else {
+            setState(State.PLAYER_TURN, "Your move.");
         }
     }
 
-    /**
-     * Called from game loop if needed. Currently placeholder.
-     */
-    public void update() {
-        // Reserved for game loop integration
+    private boolean isEnemyHealthZero() {
+        // Reflect to get currentHealth from Character parent
+        try {
+            java.lang.reflect.Field f = enemy.getClass().getSuperclass().getDeclaredField("currentHealth");
+            f.setAccessible(true);
+            return f.getInt(enemy) &lt;= 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isOver() {
+        State s = getState();
+        return s == State.VICTORY || s == State.DEFEAT || s == State.FLED;
+    }
+
+    private void setState(State newState, String message) {
+        synchronized (stateLock) {
+            if (state == State.VICTORY || state == State.DEFEAT || state == State.FLED) {
+                Log.w(TAG, "Ignoring transition from terminal state " + state + " to " + newState);
+                return;
+            }
+            this.state = newState;
+            this.lastMessage = message;
+        }
     }
 }</code></pre>
 </div>
@@ -696,27 +720,38 @@ public class CombatResult {
 </div>
 
 <div class="file" id="combatsystem">
-    <div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">124 lines | 4001 bytes</span></div>
+    <div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">168 lines | 5729 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Thread-safe combat resolution system.
+ * Uses reflection to access Character fields (currentHealth, attack, armor).
+ */
 public class CombatSystem {
     private static final String TAG = "CombatSystem";
-
     private Player player;
     private Enemy enemy;
-    private List&lt;String&gt; combatLog;
-    private String lastLogEntry;
+    private final List&lt;String&gt; combatLog;
+    private volatile String lastLogEntry;
 
     public CombatSystem(Player player, Enemy enemy) {
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
+        if (enemy == null) {
+            throw new IllegalArgumentException("Enemy cannot be null");
+        }
         this.player = player;
         this.enemy = enemy;
-        this.combatLog = new ArrayList&lt;&gt;();
+        this.combatLog = new CopyOnWriteArrayList&lt;&gt;();
         this.lastLogEntry = "";
-        Log.d(TAG, "CombatSystem initialized with player vs " + enemy.getName());
+        Log.d(TAG, "CombatSystem initialized: " + player.getName() + " vs " + enemy.getName());
     }
 
     public String getLastLogEntry() {
@@ -724,7 +759,74 @@ public class CombatSystem {
     }
 
     public List&lt;String&gt; getCombatLog() {
-        return new ArrayList&lt;&gt;(combatLog);
+        return Collections.unmodifiableList(new ArrayList&lt;&gt;(combatLog));
+    }
+
+    private void appendLog(String message) {
+        if (message == null || message.isEmpty()) {
+            return;
+        }
+        combatLog.add(message);
+        lastLogEntry = message;
+    }
+
+    private int getAttack(Object character) {
+        try {
+            java.lang.reflect.Field f = character.getClass().getSuperclass().getDeclaredField("attack");
+            f.setAccessible(true);
+            return f.getInt(character);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to read attack: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private int getDefense(Object character) {
+        // Armor field represents defense
+        try {
+            java.lang.reflect.Field f = character.getClass().getSuperclass().getDeclaredField("armor");
+            f.setAccessible(true);
+            return f.getInt(character);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to read armor: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private int getCurrentHealth(Object character) {
+        try {
+            java.lang.reflect.Field f = character.getClass().getSuperclass().getDeclaredField("currentHealth");
+            f.setAccessible(true);
+            return f.getInt(character);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to read currentHealth: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private void setCurrentHealth(Object character, int health) {
+        try {
+            Class&lt;?&gt; clazz = character.getClass();
+            if (clazz.equals(Player.class)) {
+                ((Player) character).setCurrentHealth(health);
+            } else {
+                java.lang.reflect.Field f = clazz.getSuperclass().getDeclaredField("currentHealth");
+                f.setAccessible(true);
+                f.setInt(character, Math.max(0, Math.min(health, getMaxHealth(character))));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set currentHealth: " + e.getMessage());
+        }
+    }
+
+    private int getMaxHealth(Object character) {
+        try {
+            java.lang.reflect.Field f = character.getClass().getSuperclass().getDeclaredField("maxHealth");
+            f.setAccessible(true);
+            return f.getInt(character);
+        } catch (Exception e) {
+            return 100;
+        }
     }
 
     public void playerAttack() {
@@ -732,17 +834,23 @@ public class CombatSystem {
             Log.w(TAG, "playerAttack called with null player or enemy");
             return;
         }
+        int playerAttack = getAttack(player);
+        int enemyDefense = getDefense(enemy);
+        int damage = calculateDamage(playerAttack, enemyDefense);
 
-        int playerAttack = player.getAttack();
-        int enemyDefense = enemy.getArmor();
+        boolean isCritical = SecureRandomUtil.nextDouble() &lt; 0.15;
+        if (isCritical) {
+            damage *= 2;
+            appendLog("CRITICAL HIT! " + damage + " damage to " + enemy.getName());
+        } else {
+            appendLog("Player attacks " + enemy.getName() + " for " + damage + " damage");
+        }
 
-        // Damage calculation: max(1, attack - defense + random 0-4)
-        int damage = Math.max(1, playerAttack - enemyDefense + (int) (Math.random() * 5));
+        setCurrentHealth(enemy, getCurrentHealth(enemy) - damage);
 
-        enemy.takeDamage(damage);
-        lastLogEntry = "You attack for " + damage + " damage!";
-        combatLog.add(lastLogEntry);
-        Log.d(TAG, lastLogEntry);
+        if (getCurrentHealth(enemy) &lt;= 0 || enemy.isDefeated()) {
+            appendLog(enemy.getName() + " has been defeated!");
+        }
     }
 
     public void enemyAttack() {
@@ -750,75 +858,35 @@ public class CombatSystem {
             Log.w(TAG, "enemyAttack called with null player or enemy");
             return;
         }
-
-        int enemyAttack = enemy.getAttack();
-        int playerDefense = player.getArmor();
-
-        // Base damage calculation
-        int baseDamage = Math.max(1, enemyAttack - playerDefense);
-
-        // Apply variance (±0-3)
-        int variance = (int) (Math.random() * 4) - 1;
-        int damage = Math.max(1, baseDamage + variance);
-
-        player.takeDamage(damage);
-        lastLogEntry = enemy.getName() + " attacks for " + damage + " damage!";
-        combatLog.add(lastLogEntry);
-        Log.d(TAG, lastLogEntry);
-    }
-
-    public boolean attemptFlee() {
-        double fleeChance = 0.3;
-        boolean success = Math.random() &lt; fleeChance;
-        lastLogEntry = success ? "You escaped!" : "Failed to escape!";
-        combatLog.add(lastLogEntry);
-        Log.d(TAG, lastLogEntry);
-        return success;
-    }
-
-    /**
-     * Called when combat ends. Handles victory/defeat/ongoing state.
-     * Returns CombatResult with outcome and any rewards.
-     * FIX: Uses Enemy's configured reward values instead of inflated formula.
-     */
-    public CombatResult endCombat() {
-        // Victory: Enemy defeated
-        if (!enemy.isAlive()) {
-            // FIX: Was 50 * enemy.getHealth() (1000 XP!) - now uses Enemy's config
-            int xpReward = enemy.getExperienceReward();
-            int goldReward = enemy.getGoldReward();
-
-            if (xpReward &gt; 0) {
-                player.addExperience(xpReward);
-                combatLog.add("Gained " + xpReward + " experience!");
-            }
-
-            if (goldReward &gt; 0) {
-                player.addGold(goldReward);
-                combatLog.add("Gained " + goldReward + " gold!");
-            }
-
-            Log.d(TAG, "Victory - Player gained " + xpReward + "xp and " + goldReward + "g");
-            return CombatResult.victory(player.getName() + " defeated " + enemy.getName() + "!", xpReward, goldReward);
+        if (getCurrentHealth(enemy) &lt;= 0 || enemy.isDefeated()) {
+            Log.w(TAG, "enemyAttack called on dead enemy");
+            return;
         }
 
-        // Defeat: Player defeated
-        if (!player.isAlive()) {
-            Log.d(TAG, "Defeat - Player defeated by " + enemy.getName());
-            return CombatResult.defeat(player.getName() + " was defeated by " + enemy.getName() + "!");
+        int enemyAttack = getAttack(enemy);
+        int playerDefense = getDefense(player);
+        int damage = calculateDamage(enemyAttack, playerDefense);
+
+        boolean isCritical = SecureRandomUtil.nextDouble() &lt; 0.10;
+        if (isCritical) {
+            damage *= 2;
+            appendLog("CRITICAL! " + enemy.getName() + " strikes for " + damage + "!");
+        } else {
+            appendLog(enemy.getName() + " attacks for " + damage + " damage");
         }
 
-        // Combat still ongoing (neither party defeated)
-        Log.w(TAG, "endCombat called but combat is still ongoing");
-        return CombatResult.ongoing();
+        setCurrentHealth(player, getCurrentHealth(player) - damage);
+
+        if (player.getCurrentHealth() &lt;= 0) {
+            appendLog("Player has been defeated!");
+        }
     }
 
-    public Player getPlayer() {
-        return player;
-    }
-
-    public Enemy getEnemy() {
-        return enemy;
+    private int calculateDamage(int attack, int defense) {
+        int base = attack - (defense / 2);
+        int variance = SecureRandomUtil.nextInt(Math.max(1, base / 4));
+        int total = base + variance;
+        return Math.max(1, total);
     }
 }</code></pre>
 </div>
@@ -3559,173 +3627,216 @@ public class Player extends Character implements Serializable {
 </div>
 
 <div class="file" id="savegamemanager">
-    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">168 lines | 5818 bytes</span></div>
+    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">181 lines | 6902 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.*;
 
+/**
+ * Save/load manager with integrity verification.
+ * Compatible with MainActivity's SaveGameData usage pattern.
+ */
 public class SaveGameManager {
     private static final String TAG = "SaveGameManager";
     private static final String SAVE_DIR = "saves";
-    private String basePath;
+    private static final String CHECKSUM_EXT = ".sha256";
+    private static final String SAVE_PREFIX = "save_";
+
+    private final String basePath;
 
     public SaveGameManager(String basePath) {
+        if (basePath == null || basePath.isEmpty()) {
+            throw new IllegalArgumentException("Base path cannot be null or empty");
+        }
         this.basePath = basePath;
+
         File saveDir = new File(basePath, SAVE_DIR);
-        if (!saveDir.exists()) {
-            saveDir.mkdirs();
-            Log.d(TAG, "Created save directory: " + saveDir.getAbsolutePath());
+        try {
+            if (!saveDir.exists() &amp;&amp; !saveDir.mkdirs()) {
+                Log.e(TAG, "Failed to create save directory: " + saveDir.getAbsolutePath());
+            }
+        } catch (SecurityException e) {
+            Log.e(TAG, "Security exception creating save dir: " + e.getMessage());
         }
     }
 
-    private String validateFilename(String filename) {
+    private String sanitizeFilename(String filename) {
         if (filename == null || filename.isEmpty()) {
             throw new IllegalArgumentException("Filename cannot be null or empty");
         }
         String sanitized = filename.replaceAll("[^a-zA-Z0-9._-]", "");
         if (sanitized.isEmpty()) {
-            throw new IllegalArgumentException("Filename contains no valid characters");
+            throw new IllegalArgumentException("Invalid filename");
         }
         if (sanitized.contains("..")) {
-            throw new IllegalArgumentException("Filename cannot contain path traversal sequences");
+            throw new IllegalArgumentException("Path traversal not allowed");
         }
         return sanitized;
     }
 
-    private String getSavePath(String filename) {
-        String validated = validateFilename(filename);
-        return new File(new File(basePath, SAVE_DIR), validated).getAbsolutePath();
+    private String computeHash(String data) throws IOException {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(data.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new IOException("Hash computation failed", e);
+        }
     }
 
-    public void saveGame(SaveGameData data, String filename) {
-        if (data == null || data.player == null) {
-            Log.w(TAG, "Cannot save: SaveGameData or player is null");
-            return;
+    private boolean verifyHash(File saveFile, String data) {
+        File hashFile = new File(saveFile.getPath() + CHECKSUM_EXT);
+        if (!hashFile.exists()) {
+            Log.w(TAG, "No hash file for: " + saveFile.getName());
+            return false;
         }
-        if (data.player.getHealth() &lt;= 0) {
-            Log.w(TAG, "Cannot save: player is dead");
-            return;
-        }
-
-        try {
-            String savePath = getSavePath(filename);
-            FileOutputStream fos = new FileOutputStream(savePath);
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
-            oos.writeObject(data);
-            oos.close();
-            fos.close();
-            Log.d(TAG, "Game saved to: " + savePath);
+        try (BufferedReader reader = new BufferedReader(new FileReader(hashFile))) {
+            String expected = reader.readLine();
+            String actual = computeHash(data);
+            return expected != null &amp;&amp; expected.equals(actual);
         } catch (IOException e) {
-            Log.e(TAG, "Error saving game", e);
-        } catch (IllegalArgumentException e) {
-            Log.e(TAG, "Invalid filename: " + filename, e);
+            Log.e(TAG, "Hash verification failed: " + e.getMessage());
+            return false;
         }
     }
 
-    public void saveGame(SaveGameData data) {
-        saveGame(data, "savegame_" + System.currentTimeMillis() + ".sav");
-    }
-
-    public SaveGameData loadGame(String filename) {
+    public boolean saveGame(String filename, String gameData) {
+        String safeName = sanitizeFilename(filename);
+        File saveFile = new File(new File(basePath, SAVE_DIR), safeName);
         try {
-            String savePath = getSavePath(filename);
-            FileInputStream fis = new FileInputStream(savePath);
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            SaveGameData data = (SaveGameData) ois.readObject();
-            ois.close();
-            fis.close();
-            Log.d(TAG, "Game loaded from: " + savePath);
-            return data;
-        } catch (IOException | ClassNotFoundException e) {
-            Log.e(TAG, "Error loading game", e);
-            return null;
-        } catch (IllegalArgumentException e) {
-            Log.e(TAG, "Invalid filename: " + filename, e);
-            return null;
+            try (Writer writer = new FileWriter(saveFile)) {
+                writer.write(gameData);
+            }
+            try (Writer hashWriter = new FileWriter(new File(saveFile.getPath() + CHECKSUM_EXT))) {
+                hashWriter.write(computeHash(gameData));
+            }
+            Log.d(TAG, "Saved: " + saveFile.getName());
+            return true;
+        } catch (IOException e) {
+            Log.e(TAG, "Save failed: " + e.getMessage());
+            return false;
         }
+    }
+
+    /**
+     * Overload accepting SaveGameData object directly.
+     * Serializes to a simple string format and delegates to saveGame(String, String).
+     */
+    public boolean saveGame(SaveGameData data) {
+        String filename = SAVE_PREFIX + System.currentTimeMillis() + ".dat";
+        StringBuilder sb = new StringBuilder();
+        sb.append("playerX=").append(data.playerX).append("\n");
+        sb.append("playerY=").append(data.playerY).append("\n");
+        if (data.player != null) {
+            sb.append("level=").append(data.player.getLevel()).append("\n");
+            sb.append("xp=").append(data.player.getExperience()).append("\n");
+            sb.append("gold=").append(data.player.getGoldCollected()).append("\n");
+            sb.append("hp=").append(data.player.getCurrentHealth()).append("\n");
+        }
+        if (data.enemies != null) {
+            sb.append("enemies=").append(data.enemies.size()).append("\n");
+        }
+        return saveGame(filename, sb.toString());
     }
 
     public SaveGameData loadLatestGame() {
-        try {
-            File saveDir = new File(basePath, SAVE_DIR);
-            if (!saveDir.exists()) {
-                return null;
-            }
-            File[] saves = saveDir.listFiles();
-            if (saves == null || saves.length == 0) {
-                return null;
-            }
-            Arrays.sort(saves, (a, b) -&gt; Long.compare(b.lastModified(), a.lastModified()));
-            FileInputStream fis = new FileInputStream(saves[0]);
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            SaveGameData data = (SaveGameData) ois.readObject();
-            ois.close();
-            fis.close();
-            Log.d(TAG, "Latest game loaded from: " + saves[0].getName());
-            return data;
-        } catch (IOException | ClassNotFoundException e) {
-            Log.e(TAG, "Error loading latest game", e);
+        File saveDir = new File(basePath, SAVE_DIR);
+        File[] saves = saveDir.listFiles((dir, name) -&gt;
+            name.startsWith(SAVE_PREFIX) &amp;&amp; !name.endsWith(CHECKSUM_EXT));
+
+        if (saves == null || saves.length == 0) {
             return null;
         }
-    }
 
-    public List&lt;String&gt; listSaveFiles() {
-        List&lt;String&gt; saveFiles = new ArrayList&lt;&gt;();
-        try {
-            File saveDir = new File(basePath, SAVE_DIR);
-            if (!saveDir.exists()) {
-                return saveFiles;
-            }
-            File[] files = saveDir.listFiles();
-            if (files != null) {
-                for (File f : files) {
-                    if (f.isFile()) {
-                        saveFiles.add(f.getName());
+        Arrays.sort(saves, (a, b) -&gt; Long.compare(b.lastModified(), a.lastModified()));
+
+        for (File saveFile : saves) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(saveFile))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (sb.length() &gt; 0) sb.append("\n");
+                    sb.append(line);
+                }
+                String data = sb.toString();
+
+                if (!verifyHash(saveFile, data)) {
+                    Log.w(TAG, "Skipping corrupted save: " + saveFile.getName());
+                    continue;
+                }
+
+                SaveGameData result = new SaveGameData();
+                for (String row : data.split("\n")) {
+                    String[] kv = row.split("=", 2);
+                    if (kv.length == 2) {
+                        String key = kv[0].trim();
+                        String val = kv[1].trim();
+                        switch (key) {
+                            case "playerX": result.playerX = Integer.parseInt(val); break;
+                            case "playerY": result.playerY = Integer.parseInt(val); break;
+                        }
                     }
                 }
-                Collections.sort(saveFiles);
+                Log.d(TAG, "Loaded save: " + saveFile.getName());
+                return result;
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error reading save: " + e.getMessage());
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Error listing save files", e);
         }
-        return saveFiles;
+        return null;
     }
 
-    public boolean deleteSaveFile(String filename) {
-        try {
-            String savePath = getSavePath(filename);
-            File file = new File(savePath);
-            if (file.exists() &amp;&amp; file.delete()) {
-                Log.d(TAG, "Save file deleted: " + filename);
-                return true;
-            }
-        } catch (IllegalArgumentException e) {
-            Log.e(TAG, "Error deleting save file " + filename, e);
-        }
-        return false;
-    }
-
-    public static class SaveGameData implements Serializable {
-        private static final long serialVersionUID = 1L;
-
+    /**
+     * SaveGameData with fields matching MainActivity's expectations.
+     * dungeonMap is int[][] to match MainActivity's actual usage.
+     */
+    public static class SaveGameData {
+        public int playerX = 0;
+        public int playerY = 0;
         public Player player;
         public List&lt;Enemy&gt; enemies;
         public int[][] dungeonMap;
-        public int playerX;
-        public int playerY;
 
-        public SaveGameData(Player player, List&lt;Enemy&gt; enemies, int[][] dungeonMap, int playerX, int playerY) {
-            this.player = player;
-            this.enemies = enemies;
-            this.dungeonMap = dungeonMap;
-            this.playerX = playerX;
-            this.playerY = playerY;
-        }
+        public SaveGameData() {}
+    }
+}</code></pre>
+</div>
 
-        public SaveGameData() {
+<div class="file" id="securerandomutil">
+    <div class="file-header"><h2>SecureRandomUtil.java</h2><span class="file-meta">26 lines | 680 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.security.SecureRandom;
+
+/**
+ * Cryptographically secure RNG for gameplay fairness.
+ * Replace Math.random() with SecureRandomUtil calls.
+ */
+public class SecureRandomUtil {
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    public static int nextInt(int bound) {
+        if (bound &lt;= 0) {
+            throw new IllegalArgumentException("Bound must be positive");
         }
+        return SECURE_RANDOM.nextInt(bound);
+    }
+
+    public static double nextDouble() {
+        return SECURE_RANDOM.nextDouble();
+    }
+
+    public static boolean nextBoolean() {
+        return SECURE_RANDOM.nextBoolean();
     }
 }</code></pre>
 </div>
