@@ -14,6 +14,8 @@
         code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
+        .combined-link { display: inline-block; margin-top: 20px; margin-left: 10px; padding: 10px 15px; background: #6d4aff; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .combined-link:hover { background: #5a3aea; }
     </style>
 </head>
 <body>
@@ -57,7 +59,6 @@ public class Game {
         this.state = GameState.PLAYING;
         this.turnCount = 0;
         this.encounteredEnemy = null;
-
         generateEnemies();
     }
 
@@ -78,7 +79,8 @@ public class Game {
             attempts++;
         }
 
-        if (player.getGoldCollected() >gt;= BOSS_UNLOCK_GOLD) {
+        // FIX: Added turnCount gate so boss can't be unlocked by gold farming alone
+        if (turnCount >gt;= 30 &amp;&amp; player.getGoldCollected() >gt;= BOSS_UNLOCK_GOLD) {
             int bossAttempts = 0;
             while (bossAttempts <lt; 50) {
                 int x = (int)(Math.random() * dungeon.getWidth());
@@ -92,6 +94,38 @@ public class Game {
                 }
                 bossAttempts++;
             }
+        }
+    }
+
+    // Call this after boss unlock conditions might have changed
+    public void checkBossSpawn() {
+        if (turnCount >gt;= 30 &amp;&amp; player.getGoldCollected() >gt;= BOSS_UNLOCK_GOLD) {
+            boolean hasBoss = false;
+            for (Enemy e : enemies) {
+                if (e != null &amp;&amp; e.isBoss() &amp;&amp; !e.isDead()) {
+                    hasBoss = true;
+                    break;
+                }
+            }
+            if (!hasBoss) {
+                generateBoss();
+            }
+        }
+    }
+
+    private void generateBoss() {
+        int bossAttempts = 0;
+        while (bossAttempts <lt; 50) {
+            int x = (int)(Math.random() * dungeon.getWidth());
+            int y = (int)(Math.random() * dungeon.getHeight());
+
+            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                Enemy boss = new Enemy(x, y, BOSS_HEALTH, BOSS_DAMAGE, dungeon, BOSS_NAME, BOSS_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
+                boss.setBoss(true);
+                enemies.add(boss);
+                break;
+            }
+            bossAttempts++;
         }
     }
 
@@ -114,6 +148,7 @@ public class Game {
         if (tile == Dungeon.TILE_GOLD) {
             player.addGold(10);
             dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+            checkBossSpawn();
         }
 
         for (Enemy enemy : enemies) {
@@ -129,8 +164,7 @@ public class Game {
 
     public void resolveEncounter(Enemy enemy, boolean playerWins) {
         if (playerWins) {
-            player.addGold(enemy.getGoldReward());
-            player.addExperience(enemy.getExperienceReward());
+            // FIX: Rewards now handled by CombatSystem.endCombat() - don't duplicate
             enemy.takeDamage(9999);
         } else {
             player.takeDamage(enemy.getAttack());
@@ -171,6 +205,7 @@ public class Game {
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>
+        <a href="ALL_SOURCE.html" class="combined-link">View All Source</a>
     </div>
 </body>
 </html>

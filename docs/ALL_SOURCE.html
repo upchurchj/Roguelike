@@ -1,0 +1,3744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KnightLight - All Source</title>
+<style>
+body { font-family: monospace; background: #1a1a2e; color: #eaeaea; margin: 0; }
+header { background: #6d4aff; padding: 20px; position: sticky; top: 0; z-index: 100; }
+header h1 { color: white; margin: 0; }
+.stats { color: #ccc; font-size: 0.85em; margin-top: 5px; }
+nav { background: #2a2a4a; padding: 12px; position: sticky; top: 65px; z-index: 99; overflow-x: auto; white-space: nowrap; }
+nav a { color: #aaaaff; text-decoration: none; margin-right: 15px; padding: 4px 8px; border-radius: 4px; }
+nav a:hover { background: #4a4a8a; }
+.file { border: 1px solid #4a4a8a; margin: 20px; background: #1e1e3e; border-radius: 8px; overflow: hidden; }
+.file-header { background: #2a2a5a; padding: 12px 18px; border-bottom: 2px solid #6d4aff; display: flex; justify-content: space-between; align-items: center; }
+.file-header h2 { color: #d0d0ff; font-size: 1.2em; margin: 0; }
+.file-meta { color: #888; font-size: 0.8em; }
+pre { padding: 18px; overflow-x: auto; background: #0f0f1e; margin: 0; white-space: pre; }
+code { font-family: "Courier New", monospace; color: #d0d0ff; font-size: 0.9em; }
+footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #4a4a8a; }
+</style>
+</head>
+<body>
+<header>
+<h1>KnightLight - Complete Source Code</h1>
+<div class="stats">22 files | 3618 lines | 2026-07-28 10:02</div>
+</header>
+<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> </nav>
+<div id="files">
+
+<div class="file" id="battle">
+    <div class="file-header"><h2>Battle.java</h2><span class="file-meta">180 lines | 6765 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.util.Log;
+import java.util.logging.Logger;
+import java.io.Serializable;
+
+public class Battle implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static final String TAG = "Battle";
+
+    public enum State {
+        PLAYER_TURN, ENEMY_TURN, VICTORY, DEFEAT, FLED
+    }
+
+    public enum Action {
+        ATTACK, USE_POTION, RUN, DEFEND
+    }
+
+    private Player player;
+    private Enemy enemy;
+    private CombatSystem combatSystem;
+    private State state;
+    private String lastMessage;
+    private final transient Object stateLock = new Object();
+
+    /**
+     * Initialize a battle between player and enemy.
+     * CRITICAL: Both player and enemy MUST be non-null.
+     */
+    public Battle(Player player, Enemy enemy) {
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
+        if (enemy == null) {
+            throw new IllegalArgumentException("Enemy cannot be null");
+        }
+        this.player = player;
+        this.enemy = enemy;
+        this.combatSystem = new CombatSystem(player, enemy);
+        this.state = State.PLAYER_TURN;
+        this.lastMessage = "Battle started! " + enemy.getName() + " appears!";
+        Logger.getLogger(getClass().getName()).info(TAG + ": Battle initialized: Player (Lvl " + player.getLevel() + ") vs " + enemy.getName() + " (Health: " + enemy.getHealth() + ")");
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public Enemy getEnemy() {
+        return enemy;
+    }
+
+    public State getState() {
+        synchronized (stateLock) {
+            return state;
+        }
+    }
+
+    public String getLastMessage() {
+        return lastMessage;
+    }
+
+    public CombatSystem getCombatSystem() {
+        return combatSystem;
+    }
+
+    /**
+     * Process a player action. Must be called when state is PLAYER_TURN.
+     * Transitions to ENEMY_TURN or terminal state (VICTORY/DEFEAT/FLED).
+     */
+    public void playerAction(Action action) {
+        if (action == null) {
+            Log.w(TAG, "playerAction called with null action");
+            return;
+        }
+        synchronized (stateLock) {
+            if (state != State.PLAYER_TURN) {
+                Log.w(TAG, "playerAction called when state is " + state);
+                return;
+            }
+            switch (action) {
+                case ATTACK:
+                    combatSystem.playerAttack();
+                    lastMessage = combatSystem.getLastLogEntry();
+                    Log.d(TAG, "Player attack: " + lastMessage);
+                    break;
+                case USE_POTION:
+                    if (player.usePotion()) {
+                        lastMessage = "You healed yourself!";
+                        Log.d(TAG, "Player used potion. Health: " + player.getCurrentHealth());
+                    } else {
+                        lastMessage = "No potions left!";
+                        Log.w(TAG, "Player attempted potion use but none available");
+                        return; // Action failed, stay in PLAYER_TURN
+                    }
+                    break;
+                case RUN:
+                    if (combatSystem.attemptFlee()) {
+                        state = State.FLED;
+                        lastMessage = "You fled successfully!";
+                        Log.i(TAG, "FLED: Player escaped from " + enemy.getName());
+                        return; // Exit — battle is over (fled)
+                    } else {
+                        lastMessage = "Failed to flee!";
+                        Log.d(TAG, "Player failed flee attempt");
+                        // Fall through to enemyTurn() — enemy counterattacks
+                    }
+                    break;
+                case DEFEND:
+                    lastMessage = "You brace for impact!";
+                    Log.d(TAG, "Player defended");
+                    break;
+                default:
+                    Log.w(TAG, "Unknown action: " + action);
+                    return;
+            }
+
+            // Check victory condition AFTER player action
+            if (!enemy.isAlive()) {
+                state = State.VICTORY;
+                lastMessage = "You defeated " + enemy.getName() + "!";
+                Logger.getLogger(getClass().getName()).info(TAG + ": VICTORY: Player defeated " + enemy.getName() + " | Player Health: " + player.getCurrentHealth());
+                // endCombat() already processes rewards internally — DO NOT DUPLICATE
+                CombatResult result = combatSystem.endCombat();
+                if (result == null) {
+                    Log.e(TAG, "CRITICAL: endCombat() returned null — rewards may not have been processed!");
+                } else if (!result.isSuccessful()) {
+                    Log.e(TAG, "endCombat() failed: " + result.getMessage());
+                } else {
+                    Logger.getLogger(getClass().getName()).info(TAG + ": Rewards processed: XP=" + result.getExperienceAwarded() + " Gold=" + result.getGoldAwarded());
+                }
+                return; // Battle over — VICTORY
+            }
+
+            // Transition to enemy turn
+            state = State.ENEMY_TURN;
+            enemyTurn();
+        }
+    }
+
+    /**
+     * Execute enemy's turn. Must be called when state is ENEMY_TURN.
+     * Transitions to PLAYER_TURN or DEFEAT.
+     */
+    public void enemyTurn() {
+        synchronized (stateLock) {
+            if (state != State.ENEMY_TURN) {
+                Log.w(TAG, "enemyTurn called when state is " + state);
+                return;
+            }
+            combatSystem.enemyAttack();
+            lastMessage = combatSystem.getLastLogEntry();
+            Log.d(TAG, "Enemy turn: " + lastMessage);
+
+            // Check defeat condition AFTER enemy attack
+            if (!player.isAlive()) {
+                state = State.DEFEAT;
+                lastMessage = enemy.getName() + " defeated you!";
+                Logger.getLogger(getClass().getName()).info(TAG + ": DEFEAT: Player defeated by " + enemy.getName() + " | Enemy Health: " + enemy.getHealth());
+                CombatResult result = combatSystem.endCombat();
+                if (result == null) {
+                    Log.e(TAG, "CRITICAL: endCombat() returned null on defeat");
+                } else {
+                    Log.i(TAG, "Defeat processed: " + result.getMessage());
+                }
+                return; // Battle over — DEFEAT
+            }
+
+            // Return to player turn
+            state = State.PLAYER_TURN;
+        }
+    }
+
+    /**
+     * Called from game loop if needed. Currently placeholder.
+     */
+    public void update() {
+        // Reserved for game loop integration
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="battleactivity">
+    <div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">162 lines | 5386 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.util.Log;
+import android.widget.Toast;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Button;
+import androidx.appcompat.app.AppCompatActivity;
+
+/**
+ * Battle activity that manages combat encounters between player and enemy.
+ * Handles turn-based combat, UI updates, and result reporting back to MainActivity.
+ */
+public class BattleActivity extends AppCompatActivity {
+    private static final String EXTRA_PLAYER = "player";
+    private static final String EXTRA_ENEMY = "enemy";
+    private static final long TURN_DELAY_MS = 1000;
+    private static final long RESULT_DELAY_MS = 2000;
+    private static final String TAG = "BattleActivity";
+
+    private Battle battle;
+    private BattleView battleView;
+    private Player player;
+    private Enemy enemy;
+    private Handler handler;
+    private boolean isDestroyed = false;
+    private Button btnAttack, btnDefend, btnFlee;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_battle);
+
+        battleView = findViewById(R.id.battle_view);
+        if (battleView == null) {
+            Log.e(TAG, "BattleView not found in layout");
+            finish();
+            return;
+        }
+
+        handler = new Handler(Looper.getMainLooper());
+        Intent intent = getIntent();
+        Bundle extras = intent.getExtras();
+        if (extras != null) {
+            player = (Player) extras.getSerializable(EXTRA_PLAYER);
+            enemy = (Enemy) extras.getSerializable(EXTRA_ENEMY);
+        }
+
+        if (player != null &amp;&amp; enemy != null) {
+            battle = new Battle(player, enemy);
+            battleView.setBattle(battle);
+        } else {
+            Log.e(TAG, "Missing player or enemy - finishing battle activity");
+            setResult(RESULT_CANCELED);
+            finish();
+            return;
+        }
+
+        // Wire up buttons
+        btnAttack = findViewById(R.id.btnAttack);
+        btnDefend = findViewById(R.id.btnDefend);
+        btnFlee = findViewById(R.id.btnFlee);
+
+        if (btnAttack != null) {
+            btnAttack.setOnClickListener(v -&gt; playerAction(Battle.Action.ATTACK));
+        }
+        if (btnDefend != null) {
+            btnDefend.setOnClickListener(v -&gt; playerAction(Battle.Action.DEFEND));
+        }
+        if (btnFlee != null) {
+            btnFlee.setOnClickListener(v -&gt; playerAction(Battle.Action.RUN));
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        isDestroyed = true;
+        handler.removeCallbacksAndMessages(null);
+    }
+
+    /**
+     * Handles player action and schedules enemy turn.
+     */
+    public void playerAction(Battle.Action action) {
+        if (battle == null || isDestroyed) {
+            Log.w(TAG, "playerAction: battle is null or activity destroyed");
+            return;
+        }
+        Log.d(TAG, "Player action: " + action);
+        battle.playerAction(action);
+        battleView.invalidate();
+
+        // Check if battle ended after player action (victory/fled)
+        if (isBattleOver()) {
+            handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
+            return;
+        }
+
+        // Schedule enemy turn after player animation
+        handler.postDelayed(this::processTurn, TURN_DELAY_MS);
+    }
+
+    /**
+     * Processes enemy turn and checks for battle completion.
+     */
+    private void processTurn() {
+        if (battle == null || isDestroyed) {
+            return;
+        }
+        Log.d(TAG, "Processing enemy turn");
+        battle.enemyTurn();
+        battleView.invalidate();
+        Log.d(TAG, "After enemy turn - Battle state: " + battle.getState());
+        if (isBattleOver()) {
+            Log.d(TAG, "Battle over after enemy action");
+            handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
+        }
+    }
+
+    /**
+     * Checks if battle has reached a terminal state.
+     */
+    private boolean isBattleOver() {
+        if (battle == null) return false;
+        Battle.State state = battle.getState();
+        return state == Battle.State.VICTORY || state == Battle.State.DEFEAT || state == Battle.State.FLED;
+    }
+
+    /**
+     * Shows battle result and returns to MainActivity.
+     * FIX: Rewards already handled by CombatSystem.endCombat() - no duplication here.
+     */
+    private void showBattleResult() {
+        Log.d(TAG, "Showing battle result");
+        if (isDestroyed) return;
+
+        if (battle == null || player == null || enemy == null) {
+            Log.e(TAG, "showBattleResult: null state detected");
+            setResult(RESULT_CANCELED);
+            finish();
+            return;
+        }
+
+        boolean battleWon = battle.getState() == Battle.State.VICTORY;
+
+        // FIX: Removed duplicate reward logic - CombatSystem.endCombat() already handles XP/gold
+        if (!battleWon) {
+            Log.d(TAG, "Defeat: Battle lost");
+        }
+
+        // Build result intent with safe types
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("enemyId", enemy.getId());
+        resultIntent.putExtra("updatedPlayer", player);
+        resultIntent.putExtra("battleWon", battleWon);
+        setResult(RESULT_OK, resultIntent);
+        finish();
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="battleview">
+    <div class="file-header"><h2>BattleView.java</h2><span class="file-meta">137 lines | 5367 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.util.Log;
+import android.util.AttributeSet;
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.view.View;
+
+public class BattleView extends View {
+    private Battle battle;
+    private Paint healthBarBackPaint, healthBarFillPaint, textPaint;
+
+    public BattleView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        Log.d("RoguelikeApp", "BattleView constructor called");
+        initPaints();
+    }
+
+    public BattleView(Context context, Battle battle) {
+        super(context);
+        this.battle = battle;
+        initPaints();
+    }
+
+    public void setBattle(Battle battle) {
+        this.battle = battle;
+        invalidate();
+    }
+
+    private void initPaints() {
+        healthBarBackPaint = new Paint();
+        healthBarBackPaint.setColor(Color.parseColor("#333333"));
+        healthBarBackPaint.setStyle(Paint.Style.FILL);
+
+        healthBarFillPaint = new Paint();
+        healthBarFillPaint.setColor(Color.parseColor("#00FF00"));
+        healthBarFillPaint.setStyle(Paint.Style.FILL);
+
+        textPaint = new Paint();
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(36);
+        textPaint.setTextAlign(Paint.Align.LEFT);
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (battle == null) {
+            Log.w("BattleView", "Battle is null in onDraw");
+            return;
+        }
+        int height = getHeight();
+        int statusAreaHeight = (int) (height * 0.75);
+        drawHealthBars(canvas, statusAreaHeight);
+        drawMessage(canvas, statusAreaHeight / 2);
+    }
+
+    private void drawHealthBars(Canvas canvas, int statusAreaHeight) {
+        Player player = battle.getPlayer();
+        Enemy enemy = battle.getEnemy();
+        if (player == null || enemy == null) {
+            Log.w("BattleView", "Player or Enemy is null in drawHealthBars");
+            return;
+        }
+
+        int barWidth = getWidth() / 2 - 20;
+        int barHeight = 30;
+        int barX = 10;
+
+        // Player health bar (always draw)
+        int playerMaxHealth = player.getMaxHealth();
+        int playerCurrentHealth = Math.min(player.getCurrentHealth(), playerMaxHealth);
+        playerCurrentHealth = Math.max(0, playerCurrentHealth);
+        int playerBarY = 10;
+
+        canvas.drawRect(barX, playerBarY, barX + barWidth, playerBarY + barHeight, healthBarBackPaint);
+        float playerHealthRatio = (float) playerCurrentHealth / playerMaxHealth;
+        canvas.drawRect(barX, playerBarY, barX + (int) (barWidth * playerHealthRatio), playerBarY + barHeight, healthBarFillPaint);
+        canvas.drawText("Player: " + playerCurrentHealth + "/" + playerMaxHealth, barX + 5, playerBarY + 22, textPaint);
+
+        // Enemy health bar (show skull if dead)
+        int enemyHealth = enemy.getHealth();
+        int enemyBarX = barX + barWidth + 20;
+        int enemyBarY = 10;
+
+        if (enemyHealth &gt; 0) {
+            int enemyMaxHealth = enemy.getMaxHealth();
+            int enemyCurrentHealth = Math.min(enemyHealth, enemyMaxHealth);
+            enemyCurrentHealth = Math.max(0, enemyCurrentHealth);
+
+            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + barWidth, enemyBarY + barHeight, healthBarBackPaint);
+            float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
+            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio), enemyBarY + barHeight, healthBarFillPaint);
+            canvas.drawText("Enemy: " + enemyCurrentHealth + "/" + enemy.getMaxHealth(), enemyBarX + 5, enemyBarY + 22, textPaint);
+        } else {
+            drawSkull(canvas, enemyBarX + barWidth / 2 - 15, enemyBarY, 30);
+            Paint skullText = new Paint(textPaint);
+            skullText.setColor(Color.parseColor("#FFD700"));
+            canvas.drawText(enemy.getName() + " DEFEATED", enemyBarX + 5, enemyBarY + 22, skullText);
+        }
+    }
+
+    private void drawSkull(Canvas canvas, int x, int y, int size) {
+        Paint skullPaint = new Paint();
+        skullPaint.setColor(Color.parseColor("#FFD700"));
+        skullPaint.setStyle(Paint.Style.FILL);
+
+        // Skull shape: main cranium
+        canvas.drawCircle(x + size / 2, y + size / 3, size / 3, skullPaint);
+
+        // Eye sockets
+        canvas.drawCircle(x + size / 4, y + size / 3, size / 5, skullPaint);
+        canvas.drawCircle(x + 3 * size / 4, y + size / 3, size / 5, skullPaint);
+
+        // Jaw
+        canvas.drawRect(x + size / 4, y + 2 * size / 3, x + 3 * size / 4, y + size, skullPaint);
+
+        // Eye pupils (black)
+        Paint eyePaint = new Paint();
+        eyePaint.setColor(Color.BLACK);
+        canvas.drawCircle(x + size / 4, y + size / 3, size / 10, eyePaint);
+        canvas.drawCircle(x + 3 * size / 4, y + size / 3, size / 10, eyePaint);
+    }
+
+    private void drawMessage(Canvas canvas, int y) {
+        if (battle == null) return;
+        String message = battle.getLastMessage();
+        if (message != null &amp;&amp; !message.isEmpty()) {
+            Paint messagePaint = new Paint(textPaint);
+            messagePaint.setTextSize(32);
+            messagePaint.setColor(Color.YELLOW);
+            canvas.drawText(message, 10, y, messagePaint);
+        }
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="character">
+    <div class="file-header"><h2>Character.java</h2><span class="file-meta">100 lines | 2037 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.io.Serializable;
+
+/**
+ * Base class for all characters in the game (player and enemies).
+ * Manages position, health, and combat stats.
+ */
+public class Character implements Serializable {
+    protected int x;
+    protected int y;
+    protected int maxHealth;
+    protected int currentHealth;
+    protected int attack;
+    protected int armor;
+    protected int dodgeChance;
+    protected int criticalChance;
+
+    /**
+     * Constructor for Character.
+     */
+    public Character(int x, int y, int maxHealth, int attack) {
+        this.x = x;
+        this.y = y;
+        this.maxHealth = maxHealth;
+        this.currentHealth = maxHealth;
+        this.attack = attack;
+        this.armor = 0;
+        this.dodgeChance = 0;
+        this.criticalChance = 0;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public void setX(int x) {
+        this.x = x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public void setY(int y) {
+        this.y = y;
+    }
+
+    public int getHealth() {
+        return currentHealth;
+    }
+
+    public int getMaxHealth() {
+        return maxHealth;
+    }
+
+    public void takeDamage(int damage) {
+        this.currentHealth = Math.max(0, currentHealth - damage);
+    }
+
+    public void heal(int amount) {
+        this.currentHealth = Math.min(maxHealth, currentHealth + amount);
+    }
+
+    public boolean isAlive() {
+        return currentHealth &gt; 0;
+    }
+
+    public int getAttack() {
+        return attack;
+    }
+
+    public void setAttack(int attack) {
+        this.attack = attack;
+    }
+
+    public int getArmor() {
+        return armor;
+    }
+
+    public void setArmor(int armor) {
+        this.armor = armor;
+    }
+
+    public int getDodgeChance() {
+        return dodgeChance;
+    }
+
+    public void setDodgeChance(int dodge) {
+        this.dodgeChance = dodge;
+    }
+
+    public int getCriticalChance() {
+        return criticalChance;
+    }
+
+    public void setCriticalChance(int crit) {
+        this.criticalChance = crit;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="combatresult">
+    <div class="file-header"><h2>CombatResult.java</h2><span class="file-meta">67 lines | 1762 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+/**
+ * Represents the result of a combat encounter.
+ * Holds both the outcome (VICTORY, DEFEAT, FLED, ONGOING) and any associated data.
+ */
+public class CombatResult {
+    public enum Outcome {
+        ONGOING, VICTORY, DEFEAT, FLED
+    }
+
+    private final Outcome outcome;
+    private final String message;
+    private final int experienceAwarded;
+    private final int goldAwarded;
+
+    // Private constructor — use factory methods instead
+    private CombatResult(Outcome outcome, String message, int xp, int gold) {
+        this.outcome = outcome;
+        this.message = message;
+        this.experienceAwarded = xp;
+        this.goldAwarded = gold;
+    }
+
+    // Factory methods for common outcomes
+    public static CombatResult ongoing() {
+        return new CombatResult(Outcome.ONGOING, "Combat ongoing", 0, 0);
+    }
+
+    public static CombatResult victory(String message, int xp, int gold) {
+        return new CombatResult(Outcome.VICTORY, message, xp, gold);
+    }
+
+    public static CombatResult defeat(String message) {
+        return new CombatResult(Outcome.DEFEAT, message, 0, 0);
+    }
+
+    public static CombatResult fled(String message) {
+        return new CombatResult(Outcome.FLED, message, 0, 0);
+    }
+
+    // Getters
+    public Outcome getOutcome() {
+        return outcome;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public int getExperienceAwarded() {
+        return experienceAwarded;
+    }
+
+    public int getGoldAwarded() {
+        return goldAwarded;
+    }
+
+    public boolean isSuccessful() {
+        return outcome == Outcome.VICTORY;
+    }
+
+    @Override
+    public String toString() {
+        return outcome + (message != null ? ": " + message : "");
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="combatsystem">
+    <div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">124 lines | 4001 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.util.Log;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CombatSystem {
+    private static final String TAG = "CombatSystem";
+
+    private Player player;
+    private Enemy enemy;
+    private List&lt;String&gt; combatLog;
+    private String lastLogEntry;
+
+    public CombatSystem(Player player, Enemy enemy) {
+        this.player = player;
+        this.enemy = enemy;
+        this.combatLog = new ArrayList&lt;&gt;();
+        this.lastLogEntry = "";
+        Log.d(TAG, "CombatSystem initialized with player vs " + enemy.getName());
+    }
+
+    public String getLastLogEntry() {
+        return lastLogEntry;
+    }
+
+    public List&lt;String&gt; getCombatLog() {
+        return new ArrayList&lt;&gt;(combatLog);
+    }
+
+    public void playerAttack() {
+        if (player == null || enemy == null) {
+            Log.w(TAG, "playerAttack called with null player or enemy");
+            return;
+        }
+
+        int playerAttack = player.getAttack();
+        int enemyDefense = enemy.getArmor();
+
+        // Damage calculation: max(1, attack - defense + random 0-4)
+        int damage = Math.max(1, playerAttack - enemyDefense + (int) (Math.random() * 5));
+
+        enemy.takeDamage(damage);
+        lastLogEntry = "You attack for " + damage + " damage!";
+        combatLog.add(lastLogEntry);
+        Log.d(TAG, lastLogEntry);
+    }
+
+    public void enemyAttack() {
+        if (player == null || enemy == null) {
+            Log.w(TAG, "enemyAttack called with null player or enemy");
+            return;
+        }
+
+        int enemyAttack = enemy.getAttack();
+        int playerDefense = player.getArmor();
+
+        // Base damage calculation
+        int baseDamage = Math.max(1, enemyAttack - playerDefense);
+
+        // Apply variance (±0-3)
+        int variance = (int) (Math.random() * 4) - 1;
+        int damage = Math.max(1, baseDamage + variance);
+
+        player.takeDamage(damage);
+        lastLogEntry = enemy.getName() + " attacks for " + damage + " damage!";
+        combatLog.add(lastLogEntry);
+        Log.d(TAG, lastLogEntry);
+    }
+
+    public boolean attemptFlee() {
+        double fleeChance = 0.3;
+        boolean success = Math.random() &lt; fleeChance;
+        lastLogEntry = success ? "You escaped!" : "Failed to escape!";
+        combatLog.add(lastLogEntry);
+        Log.d(TAG, lastLogEntry);
+        return success;
+    }
+
+    /**
+     * Called when combat ends. Handles victory/defeat/ongoing state.
+     * Returns CombatResult with outcome and any rewards.
+     * FIX: Uses Enemy's configured reward values instead of inflated formula.
+     */
+    public CombatResult endCombat() {
+        // Victory: Enemy defeated
+        if (!enemy.isAlive()) {
+            // FIX: Was 50 * enemy.getHealth() (1000 XP!) - now uses Enemy's config
+            int xpReward = enemy.getExperienceReward();
+            int goldReward = enemy.getGoldReward();
+
+            if (xpReward &gt; 0) {
+                player.addExperience(xpReward);
+                combatLog.add("Gained " + xpReward + " experience!");
+            }
+
+            if (goldReward &gt; 0) {
+                player.addGold(goldReward);
+                combatLog.add("Gained " + goldReward + " gold!");
+            }
+
+            Log.d(TAG, "Victory - Player gained " + xpReward + "xp and " + goldReward + "g");
+            return CombatResult.victory(player.getName() + " defeated " + enemy.getName() + "!", xpReward, goldReward);
+        }
+
+        // Defeat: Player defeated
+        if (!player.isAlive()) {
+            Log.d(TAG, "Defeat - Player defeated by " + enemy.getName());
+            return CombatResult.defeat(player.getName() + " was defeated by " + enemy.getName() + "!");
+        }
+
+        // Combat still ongoing (neither party defeated)
+        Log.w(TAG, "endCombat called but combat is still ongoing");
+        return CombatResult.ongoing();
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public Enemy getEnemy() {
+        return enemy;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="dungeon">
+    <div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">214 lines | 6070 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Dungeon {
+    public static final char TILE_WALL = '#';
+    public static final char TILE_FLOOR = '.';
+    public static final char TILE_GOLD = 'G';
+
+    private char[][] tiles;
+    private int width;
+    private int height;
+    private List&lt;Room&gt; rooms;
+
+    public Dungeon(int width, int height) {
+        this.width = width;
+        this.height = height;
+        this.tiles = new char[height][width];
+        this.rooms = new ArrayList&lt;&gt;();
+
+        initializeDungeon();
+        generateDungeon();
+    }
+
+    private void initializeDungeon() {
+        for (int y = 0; y &lt; height; y++) {
+            for (int x = 0; x &lt; width; x++) {
+                tiles[y][x] = TILE_WALL;
+            }
+        }
+    }
+
+    private void generateDungeon() {
+        int roomCount = 5 + (int)(Math.random() * 5);
+        for (int i = 0; i &lt; roomCount; i++) {
+            int roomWidth = 8 + (int)(Math.random() * 8);
+            int roomHeight = 8 + (int)(Math.random() * 8);
+            int roomX = (int)(Math.random() * (width - roomWidth));
+            int roomY = (int)(Math.random() * (height - roomHeight));
+
+            Room room = new Room(roomX, roomY, roomWidth, roomHeight);
+            if (canPlaceRoom(room)) {
+                rooms.add(room);
+                carveRoom(room);
+            }
+        }
+
+        connectRooms();
+        placeGold();
+    }
+
+    private boolean canPlaceRoom(Room room) {
+        for (Room existingRoom : rooms) {
+            if (room.intersects(existingRoom)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void carveRoom(Room room) {
+        for (int y = room.y; y &lt; room.y + room.height; y++) {
+            for (int x = room.x; x &lt; room.x + room.width; x++) {
+                if (x &gt;= 0 &amp;&amp; x &lt; width &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; height) {
+                    tiles[y][x] = TILE_FLOOR;
+                }
+            }
+        }
+    }
+
+    private void connectRooms() {
+        for (int i = 0; i &lt; rooms.size() - 1; i++) {
+            Room room1 = rooms.get(i);
+            Room room2 = rooms.get(i + 1);
+
+            int x1 = room1.getCenterX();
+            int y1 = room1.getCenterY();
+            int x2 = room2.getCenterX();
+            int y2 = room2.getCenterY();
+
+            if (Math.random() &lt; 0.5) {
+                carveCorridor(x1, y1, x2, y1);
+                carveCorridor(x2, y1, x2, y2);
+            } else {
+                carveCorridor(x1, y1, x1, y2);
+                carveCorridor(x1, y2, x2, y2);
+            }
+        }
+    }
+
+    private void carveCorridor(int x1, int y1, int x2, int y2) {
+        int minX = Math.min(x1, x2);
+        int maxX = Math.max(x1, x2);
+        int minY = Math.min(y1, y2);
+        int maxY = Math.max(y1, y2);
+
+        for (int x = minX; x &lt;= maxX; x++) {
+            if (x &gt;= 0 &amp;&amp; x &lt; width &amp;&amp; y1 &gt;= 0 &amp;&amp; y1 &lt; height) {
+                tiles[y1][x] = TILE_FLOOR;
+            }
+        }
+
+        for (int y = minY; y &lt;= maxY; y++) {
+            if (x2 &gt;= 0 &amp;&amp; x2 &lt; width &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; height) {
+                tiles[y][x2] = TILE_FLOOR;
+            }
+        }
+    }
+
+    private void placeGold() {
+        for (Room room : rooms) {
+            if (Math.random() &lt; 0.3) {
+                int x = room.x + (int)(Math.random() * room.width);
+                int y = room.y + (int)(Math.random() * room.height);
+                if (isWalkable(x, y)) {
+                    tiles[y][x] = TILE_GOLD;
+                }
+            }
+        }
+    }
+
+    public boolean isWalkable(int x, int y) {
+        if (x &lt; 0 || x &gt;= width || y &lt; 0 || y &gt;= height) {
+            return false;
+        }
+        char tile = tiles[y][x];
+        return tile == TILE_FLOOR || tile == TILE_GOLD;
+    }
+
+    public char getTile(int x, int y) {
+        if (x &lt; 0 || x &gt;= width || y &lt; 0 || y &gt;= height) {
+            return TILE_WALL;
+        }
+        return tiles[y][x];
+    }
+
+    public void setTile(int x, int y, char tile) {
+        if (x &gt;= 0 &amp;&amp; x &lt; width &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; height) {
+            tiles[y][x] = tile;
+        }
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public int[] findSpawnPosition() {
+        if (rooms.isEmpty()) {
+            return new int[]{width / 2, height / 2};
+        }
+
+        Room spawnRoom = rooms.get(0);
+        carveSpawnArea(spawnRoom);
+        int spawnX = spawnRoom.getCenterX();
+        int spawnY = spawnRoom.getCenterY();
+        if (isWalkable(spawnX, spawnY)) {
+            return new int[]{spawnX, spawnY};
+        }
+
+        for (int y = spawnRoom.y; y &lt; spawnRoom.y + spawnRoom.height; y++) {
+            for (int x = spawnRoom.x; x &lt; spawnRoom.x + spawnRoom.width; x++) {
+                if (isWalkable(x, y)) {
+                    return new int[]{x, y};
+                }
+            }
+        }
+
+        return new int[]{spawnX, spawnY};
+    }
+
+    private void carveSpawnArea(Room room) {
+        for (int y = room.y; y &lt; room.y + room.height; y++) {
+            for (int x = room.x; x &lt; room.x + room.width; x++) {
+                if (x &gt;= 0 &amp;&amp; x &lt; width &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; height) {
+                    tiles[y][x] = TILE_FLOOR;
+                }
+            }
+        }
+    }
+
+    public char[][] getGrid() {
+        return tiles;
+    }
+
+    public static class Room {
+        public int x, y, width, height;
+
+        public Room(int x, int y, int width, int height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        }
+
+        public int getCenterX() {
+            return x + width / 2;
+        }
+
+        public int getCenterY() {
+            return y + height / 2;
+        }
+
+        public boolean intersects(Room other) {
+            int padding = 2;
+            return !(x + width + padding &lt; other.x || other.x + other.width + padding &lt; x ||
+                     y + height + padding &lt; other.y || other.y + other.height + padding &lt; y);
+        }
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="dungeonlevel">
+    <div class="file-header"><h2>DungeonLevel.java</h2><span class="file-meta">180 lines | 5721 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import com.knightlight.game.Equipment.Rarity;
+
+/**
+ * Represents a single dungeon floor/level.
+ * Encapsulates floor difficulty, enemy spawning parameters, and loot mechanics.
+ * Thread-safe immutable design.
+ */
+public class DungeonLevel {
+    private final int floorNumber;
+    private final int baseEnemyCount;
+    private final float enemyDifficultyScaling;  // Multiplier for enemy stats
+    private final float lootRarityThreshold;     // Min roll for rare+ loot
+    private final String floorTheme;             // "Cavern", "Tomb", "Laboratory", etc.
+    private final int minimumLevel;              // Recommended player level
+    private final int baseLootXP;                // Base XP from defeating floor boss
+
+    private DungeonLevel(Builder builder) {
+        this.floorNumber = builder.floorNumber;
+        this.baseEnemyCount = builder.baseEnemyCount;
+        this.enemyDifficultyScaling = builder.enemyDifficultyScaling;
+        this.lootRarityThreshold = builder.lootRarityThreshold;
+        this.floorTheme = builder.floorTheme;
+        this.minimumLevel = builder.minimumLevel;
+        this.baseLootXP = builder.baseLootXP;
+    }
+
+    // ===== Getters =====
+    public int getFloorNumber() {
+        return floorNumber;
+    }
+
+    public int getBaseEnemyCount() {
+        return baseEnemyCount;
+    }
+
+    public float getEnemyDifficultyScaling() {
+        return enemyDifficultyScaling;
+    }
+
+    public float getLootRarityThreshold() {
+        return lootRarityThreshold;
+    }
+
+    public String getFloorTheme() {
+        return floorTheme;
+    }
+
+    public int getMinimumLevel() {
+        return minimumLevel;
+    }
+
+    public int getBaseLootXP() {
+        return baseLootXP;
+    }
+
+    // ===== Difficulty Calculations =====
+
+    /**
+     * Returns the expected enemy count for this floor,
+     * accounting for procedural scaling.
+     */
+    public int getScaledEnemyCount() {
+        return Math.max(1, (int) (baseEnemyCount + (floorNumber * 0.5)));
+    }
+
+    /**
+     * Returns scaled enemy HP based on floor depth.
+     * Base calculation: 20 HP * (1.3 ^ (floor - 1))
+     */
+    public int getScaledEnemyHP() {
+        return (int) (20 * Math.pow(1.3, floorNumber - 1));
+    }
+
+    /**
+     * Returns scaled enemy attack based on floor depth.
+     * Base calculation: 5 ATK * (1.2 ^ (floor - 1))
+     */
+    public int getScaledEnemyAttack() {
+        return (int) (5 * Math.pow(1.2, floorNumber - 1));
+    }
+
+    /**
+     * Returns scaled enemy defense based on floor depth.
+     * Base calculation: 1 DEF * (1.15 ^ (floor - 1))
+     */
+    public int getScaledEnemyDefense() {
+        return Math.max(0, (int) (1 * Math.pow(1.15, floorNumber - 1)));
+    }
+
+    /**
+     * Determines if a player is under-leveled for this floor.
+     * Recommendation: player level &gt;= floor minimum level.
+     */
+    public boolean isPlayerUnderleveled(int playerLevel) {
+        return playerLevel &lt; minimumLevel;
+    }
+
+    public static Builder builder(int floorNumber) {
+        return new Builder(floorNumber);
+    }
+
+    // ===== Builder Pattern =====
+    public static class Builder {
+        private final int floorNumber;
+
+
+        private int baseEnemyCount = 3;
+        private float enemyDifficultyScaling = 1.0f;
+        private float lootRarityThreshold = 0.6f;
+        private String floorTheme = "Generic Dungeon";
+        private int minimumLevel = 1;
+        private int baseLootXP = 100;
+
+        public Builder(int floorNumber) {
+            if (floorNumber &lt; 1 || floorNumber &gt; 99) {
+                throw new IllegalArgumentException("Floor number must be 1-99.");
+            }
+            this.floorNumber = floorNumber;
+            // Auto-scale minimum level
+            this.minimumLevel = Math.max(1, floorNumber - 1);
+            // Auto-scale base XP
+            this.baseLootXP = (int) (100 * Math.pow(1.2, floorNumber - 1));
+        }
+
+        public Builder baseEnemyCount(int count) {
+            if (count &lt; 1 || count &gt; 20) {
+                throw new IllegalArgumentException("Base enemy count must be 1-20.");
+            }
+            this.baseEnemyCount = count;
+            return this;
+        }
+
+        public Builder enemyDifficultyScaling(float scaling) {
+            if (scaling &lt; 0.5f || scaling &gt; 3.0f) {
+                throw new IllegalArgumentException("Difficulty scaling must be 0.5-3.0.");
+            }
+            this.enemyDifficultyScaling = scaling;
+            return this;
+        }
+
+        public Builder lootRarityThreshold(float threshold) {
+            if (threshold &lt; 0.0f || threshold &gt; 1.0f) {
+                throw new IllegalArgumentException("Rarity threshold must be 0.0-1.0.");
+            }
+            this.lootRarityThreshold = threshold;
+            return this;
+        }
+
+        public Builder floorTheme(String theme) {
+            if (theme == null || theme.trim().isEmpty()) {
+                throw new IllegalArgumentException("Theme cannot be null or empty.");
+            }
+            this.floorTheme = theme;
+            return this;
+        }
+
+        public Builder minimumLevel(int level) {
+            if (level &lt; 1 || level &gt; 99) {
+                throw new IllegalArgumentException("Minimum level must be 1-99.");
+            }
+            this.minimumLevel = level;
+            return this;
+        }
+
+        public DungeonLevel build() {
+            return new DungeonLevel(this);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+            "DungeonLevel{floor=%d, theme='%s', minLv=%d, enemies=%d, rarityThresh=%.2f}",
+            floorNumber, floorTheme, minimumLevel, baseEnemyCount, lootRarityThreshold
+        );
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="dungeonmanager">
+    <div class="file-header"><h2>DungeonManager.java</h2><span class="file-meta">248 lines | 6583 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ * Thread-safe manager for dungeon progression and floor state.
+ * Maintains the collection of dungeon levels, current floor position,
+ * and coordinates floor transitions with scaling logic.
+ */
+public class DungeonManager {
+    private final Map&lt;Integer, DungeonLevel&gt; levels;
+    private final int maxFloor;
+    private int currentFloor;
+    private int floorsVisited = 0;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    /**
+     * Private constructor enforces Builder pattern.
+     */
+    private DungeonManager(Builder builder) {
+        this.levels = new TreeMap&lt;&gt;(builder.levels);
+        this.maxFloor = builder.maxFloor;
+        this.currentFloor = builder.startFloor;
+    }
+
+    /**
+     * Get the DungeonLevel for a specific floor.
+     * @param floorNumber the floor number (1-99)
+     * @return the DungeonLevel, or null if not generated
+     */
+    public DungeonLevel getLevel(int floorNumber) {
+        lock.readLock().lock();
+        try {
+            return levels.get(floorNumber);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Get or generate a DungeonLevel for a specific floor.
+     * @param floorNumber the floor number (1-99)
+     * @return the DungeonLevel
+     */
+    public DungeonLevel getOrCreateLevel(int floorNumber) {
+        lock.readLock().lock();
+        try {
+            if (levels.containsKey(floorNumber)) {
+                return levels.get(floorNumber);
+            }
+        } finally {
+            lock.readLock().unlock();
+        }
+
+        // Generate new level outside read lock
+        DungeonLevel newLevel = DungeonLevel.builder(currentFloor + 1)
+                
+                .baseEnemyCount(5)
+                .enemyDifficultyScaling(1.0f)
+                .lootRarityThreshold(0.2f)
+                .build();
+
+        lock.writeLock().lock();
+        try {
+            // Double-check pattern
+            if (!levels.containsKey(floorNumber)) {
+                levels.put(floorNumber, newLevel);
+            }
+            return levels.get(floorNumber);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Attempt to progress to the next floor.
+     * @return true if progression successful, false if at max floor
+     */
+    public boolean progressFloor() {
+        lock.writeLock().lock();
+        try {
+            if (currentFloor &lt; maxFloor) {
+                currentFloor++;
+                return true;
+            }
+            return false;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Retreat to the previous floor.
+     * @return true if retreat successful, false if already on floor 1
+     */
+    public boolean retreatFloor() {
+        lock.writeLock().lock();
+        try {
+            if (currentFloor &gt; 1) {
+                currentFloor--;
+                return true;
+            }
+            return false;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Get the current floor number.
+     */
+    public int getCurrentFloor() {
+        lock.readLock().lock();
+        try {
+            return currentFloor;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Get the current DungeonLevel.
+     */
+    public DungeonLevel getCurrentLevel() {
+        return getOrCreateLevel(getCurrentFloor());
+    }
+
+    /**
+     * Set the current floor (for dungeon entry or save state restore).
+     * @param floorNumber the target floor (1-99)
+     * @return true if valid, false otherwise
+     */
+    public boolean setCurrentFloor(int floorNumber) {
+        lock.writeLock().lock();
+        try {
+            if (floorNumber &gt;= 1 &amp;&amp; floorNumber &lt;= maxFloor) {
+                currentFloor = floorNumber;
+                return true;
+            }
+            return false;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Check if player can progress further.
+     */
+    public boolean canProgress() {
+        lock.readLock().lock();
+        try {
+            return currentFloor &lt; maxFloor;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Get the maximum floor depth.
+     */
+    public int getMaxFloor() {
+        return maxFloor;
+    }
+
+    /**
+     * Get all generated levels (snapshot for iteration).
+     */
+    public Map&lt;Integer, DungeonLevel&gt; getAllLevels() {
+        lock.readLock().lock();
+        try {
+            return new TreeMap&lt;&gt;(levels);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Clear all cached levels (for memory management).
+     */
+    public void clearLevels() {
+        lock.writeLock().lock();
+        try {
+            levels.clear();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Builder for DungeonManager.
+     */
+    public static class Builder {
+        private final Map&lt;Integer, DungeonLevel&gt; levels = new TreeMap&lt;&gt;();
+        private int maxFloor = 99;
+        private int startFloor = 1;
+
+        public Builder() {}
+
+        public Builder maxFloor(int maxFloor) {
+            this.maxFloor = Math.max(1, Math.min(maxFloor, 99));
+            return this;
+        }
+
+        public Builder startFloor(int startFloor) {
+            this.startFloor = Math.max(1, Math.min(startFloor, this.maxFloor));
+            return this;
+        }
+
+        public Builder addLevel(DungeonLevel level) {
+            if (level != null) {
+                levels.put(level.getFloorNumber(), level);
+            }
+            return this;
+        }
+
+        public Builder addLevels(Map&lt;Integer, DungeonLevel&gt; levelsMap) {
+            if (levelsMap != null) {
+                levels.putAll(levelsMap);
+            }
+            return this;
+        }
+
+        public DungeonManager build() {
+            return new DungeonManager(this);
+        }
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @Override
+    public String toString() {
+        lock.readLock().lock();
+        try {
+            return String.format("DungeonManager{currentFloor=%d, maxFloor=%d, levelsLoaded=%d}",
+                    currentFloor, maxFloor, levels.size());
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    public int getFloorsVisited() {
+        return floorsVisited;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="enemy">
+    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">70 lines | 1741 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.io.Serializable;
+
+public class Enemy extends Character implements Serializable {
+    private transient Dungeon dungeon;
+    private String name;
+    private String id;
+    private int goldReward;
+    private int experienceReward;
+    private boolean isBoss;
+
+    public Enemy(int x, int y, int maxHealth, int attack, Dungeon dungeon, String name, int armor, int dodge, int critChance) {
+        super(x, y, maxHealth, attack);
+        this.dungeon = dungeon;
+        this.name = name;
+        this.id = name + "_" + System.nanoTime();
+        this.armor = armor;
+        this.dodgeChance = dodge;
+        this.criticalChance = critChance;
+        this.goldReward = 5 + (int)(Math.random() * 10);
+        this.experienceReward = 10 + (int)(Math.random() * 20);
+        this.isBoss = false;
+    }
+
+    public void moveToward(Character target) {
+        if (target == null || dungeon == null) {
+            return;
+        }
+        int targetX = target.getX();
+        int targetY = target.getY();
+        if (x &gt; targetX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
+            x--;
+        } else if (y &gt; targetY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
+            y--;
+        }
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public int getGoldReward() {
+        return goldReward;
+    }
+
+    public int getExperienceReward() {
+        return experienceReward;
+    }
+
+    public boolean isDefeated() {
+        return !isAlive();
+    }
+
+    public boolean isDead() {
+        return !isAlive();
+    }
+
+    public boolean isBoss() {
+        return isBoss;
+    }
+
+    public void setBoss(boolean boss) {
+        this.isBoss = boss;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="equipment">
+    <div class="file-header"><h2>Equipment.java</h2><span class="file-meta">127 lines | 3571 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.io.Serializable;
+
+/**
+ * Immutable Equipment item with rarity, stats, and type classification.
+ * Uses Builder pattern for safe, flexible construction.
+ */
+public class Equipment implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    public enum Type {
+        WEAPON, ARMOR, RING
+    }
+
+    public enum Rarity {
+        COMMON("#CCCCCC"),           // Light gray
+        UNCOMMON("#4CAF50"),         // Green
+        RARE("#2196F3"),             // Blue
+        LEGENDARY("#FFD700");        // Gold
+
+        private final String hexColor;
+
+        Rarity(String hexColor) {
+            this.hexColor = hexColor;
+        }
+
+        public String getHexColor() {
+            return hexColor;
+        }
+    }
+
+    private final String name;
+    private final Type type;
+    private final Rarity rarity;
+    private int floorFound;
+    private final int attackBonus;
+    private final int defenseBonus;
+    private final int hpBonus;
+    private final String description;
+
+    /**
+     * Private constructor. Use Builder to instantiate.
+     */
+    private Equipment(Builder builder) {
+        this.name = builder.name;
+        this.type = builder.type;
+        this.rarity = builder.rarity;
+        this.attackBonus = builder.attackBonus;
+        this.defenseBonus = builder.defenseBonus;
+        this.hpBonus = builder.hpBonus;
+        this.description = builder.description;
+    }
+
+    // Getters
+    public String getName() { return name; }
+    public Type getType() { return type; }
+    public int getFloorFound() { return floorFound; }
+
+    public Rarity getRarity() { return rarity; }
+    public int getAttackBonus() { return attackBonus; }
+    public int getDefenseBonus() { return defenseBonus; }
+    public int getHpBonus() { return hpBonus; }
+    public String getDescription() { return description; }
+
+    @Override
+    public String toString() {
+        return String.format("[%s] %s (%s) | ATK+%d DEF+%d HP+%d",
+                rarity, name, type, attackBonus, defenseBonus, hpBonus);
+    }
+
+    /**
+     * Builder class for Equipment construction.
+     */
+    public static class Builder {
+        private final String name;
+        private final Type type;
+        private Rarity rarity = Rarity.COMMON;
+    private int floorFound;
+        private int attackBonus = 0;
+        private int defenseBonus = 0;
+        private int hpBonus = 0;
+        private String description = "";
+
+        public Builder(String name, Type type) {
+            this.name = name;
+            this.type = type;
+        }
+
+        public Builder rarity(Rarity rarity) {
+            this.rarity = rarity;
+            return this;
+        }
+
+        public Builder attackBonus(int bonus) {
+            this.attackBonus = bonus;
+            return this;
+        }
+
+        public Builder defenseBonus(int bonus) {
+            this.defenseBonus = bonus;
+            return this;
+        }
+
+        public Builder hpBonus(int bonus) {
+            this.hpBonus = bonus;
+            return this;
+        }
+
+        public Builder description(String desc) {
+            this.description = desc;
+            return this;
+        }
+
+        public Equipment build() {
+            if (name == null || name.isEmpty()) {
+                throw new IllegalArgumentException("Equipment name cannot be null or empty");
+            }
+            if (type == null) {
+                throw new IllegalArgumentException("Equipment type cannot be null");
+            }
+            return new Equipment(this);
+        }
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="experiencesystem">
+    <div class="file-header"><h2>ExperienceSystem.java</h2><span class="file-meta">116 lines | 3695 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.util.Log;
+import java.io.Serializable;
+
+public class ExperienceSystem implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static final String TAG = "ExperienceSystem";
+    private int currentLevel;
+    private long currentExperience;
+    private long experienceForNextLevel;
+    private final Object levelLock = new Object();
+
+    // Experience thresholds using exponential scaling: baseExp * (1.5 ^ (level - 1))
+    private static final long BASE_EXPERIENCE = 100L;
+    private static final double EXP_MULTIPLIER = 1.5;
+
+    // Stat growth per level
+    private static final int HEALTH_PER_LEVEL = 5;
+    private static final int ATTACK_PER_LEVEL = 2;
+    private static final int DEFENSE_PER_LEVEL = 1;
+
+    public ExperienceSystem() {
+        this.currentLevel = 1;
+        this.currentExperience = 0;
+        this.experienceForNextLevel = calculateExperienceThreshold(1);
+        Log.d(TAG, "ExperienceSystem initialized");
+    }
+
+    /**
+     * Calculates experience needed for a given level
+     * @param level Target level (1-based)
+     * @return Experience points required
+     */
+    private static long calculateExperienceThreshold(int level) {
+        if (level &lt; 1) {
+            Log.w(TAG, "Invalid level requested: " + level);
+            return 0L;
+        }
+        // Exponential scaling: 100 * 1.5^(level-1)
+        return Math.round(BASE_EXPERIENCE * Math.pow(EXP_MULTIPLIER, level - 1));
+    }
+
+    /**
+     * Add experience and check for level-up
+     * FIX #9: Restore truncated addExperience() level-up loop
+     * @param amount Experience to add (validated to be non-negative)
+     * @return Number of levels gained (0 if no level-up)
+     */
+    public synchronized int addExperience(int amount) {
+        if (amount &lt; 0) {
+            Log.w(TAG, "Negative experience amount ignored: " + amount);
+            return 0;
+        }
+
+        currentExperience += amount;
+        int levelsGained = 0;
+
+        // Level-up loop: keep leveling while experience exceeds threshold
+        while (currentExperience &gt;= experienceForNextLevel) {
+            currentExperience -= experienceForNextLevel;
+            currentLevel++;
+            experienceForNextLevel = calculateExperienceThreshold(currentLevel);
+            levelsGained++;
+            Log.d(TAG, "Level up! New level: " + currentLevel);
+        }
+
+        Log.d(TAG, "Added " + amount + " experience. Total: " + currentExperience + "/" + experienceForNextLevel);
+        return levelsGained;
+    }
+
+    public int getCurrentLevel() {
+        synchronized (levelLock) {
+            return currentLevel;
+        }
+    }
+
+    public long getCurrentExperience() {
+        synchronized (levelLock) {
+            return currentExperience;
+        }
+    }
+
+    public long getExperienceForNextLevel() {
+        synchronized (levelLock) {
+            return experienceForNextLevel;
+        }
+    }
+
+    public void setCurrentLevel(int level) {
+        synchronized (levelLock) {
+            this.currentLevel = level;
+            this.experienceForNextLevel = calculateExperienceThreshold(level);
+            Log.d(TAG, "Level set to: " + level);
+        }
+    }
+
+    public void setCurrentExperience(long experience) {
+        synchronized (levelLock) {
+            this.currentExperience = experience;
+            Log.d(TAG, "Experience set to: " + experience);
+        }
+    }
+
+    public static int getHealthPerLevel() {
+        return HEALTH_PER_LEVEL;
+    }
+
+    public static int getAttackPerLevel() {
+        return ATTACK_PER_LEVEL;
+    }
+
+    public static int getDefensePerLevel() {
+        return DEFENSE_PER_LEVEL;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="game">
+    <div class="file-header"><h2>Game.java</h2><span class="file-meta">182 lines | 5591 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.util.Log;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Game {
+    public enum GameState {
+        PLAYING, WON, LOST
+    }
+
+    private static final int ENEMY_HEALTH = 20;
+    private static final int ENEMY_ATTACK_POWER = 5;
+    private static final int ENEMY_ARMOR = 2;
+    private static final int ENEMY_DODGE = 10;
+    private static final int ENEMY_CRIT = 5;
+    private static final int BOSS_HEALTH = 100;
+    private static final int BOSS_DAMAGE = 15;
+    private static final int BOSS_ARMOR = 5;
+    private static final int BOSS_UNLOCK_GOLD = 100;
+    private static final String BOSS_NAME = "Dragon";
+
+    private Player player;
+    private Dungeon dungeon;
+    private List&lt;Enemy&gt; enemies;
+    private GameState state;
+    private int turnCount;
+    private Enemy encounteredEnemy;
+
+    public Game() {
+        this.dungeon = new Dungeon(50, 50);
+        int[] spawnPos = dungeon.findSpawnPosition();
+        this.player = new Player(spawnPos[0], spawnPos[1]);
+        this.enemies = new ArrayList&lt;&gt;();
+        this.state = GameState.PLAYING;
+        this.turnCount = 0;
+        this.encounteredEnemy = null;
+        generateEnemies();
+    }
+
+    private void generateEnemies() {
+        int enemiesSpawned = 0;
+        int maxAttempts = 100;
+        int attempts = 0;
+
+        while (enemiesSpawned &lt; 5 &amp;&amp; attempts &lt; maxAttempts) {
+            int x = (int)(Math.random() * dungeon.getWidth());
+            int y = (int)(Math.random() * dungeon.getHeight());
+
+            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                Enemy enemy = new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon, "Goblin", ENEMY_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
+                enemies.add(enemy);
+                enemiesSpawned++;
+            }
+            attempts++;
+        }
+
+        // FIX: Added turnCount gate so boss can't be unlocked by gold farming alone
+        if (turnCount &gt;= 30 &amp;&amp; player.getGoldCollected() &gt;= BOSS_UNLOCK_GOLD) {
+            int bossAttempts = 0;
+            while (bossAttempts &lt; 50) {
+                int x = (int)(Math.random() * dungeon.getWidth());
+                int y = (int)(Math.random() * dungeon.getHeight());
+
+                if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                    Enemy boss = new Enemy(x, y, BOSS_HEALTH, BOSS_DAMAGE, dungeon, BOSS_NAME, BOSS_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
+                    boss.setBoss(true);
+                    enemies.add(boss);
+                    break;
+                }
+                bossAttempts++;
+            }
+        }
+    }
+
+    // Call this after boss unlock conditions might have changed
+    public void checkBossSpawn() {
+        if (turnCount &gt;= 30 &amp;&amp; player.getGoldCollected() &gt;= BOSS_UNLOCK_GOLD) {
+            boolean hasBoss = false;
+            for (Enemy e : enemies) {
+                if (e != null &amp;&amp; e.isBoss() &amp;&amp; !e.isDead()) {
+                    hasBoss = true;
+                    break;
+                }
+            }
+            if (!hasBoss) {
+                generateBoss();
+            }
+        }
+    }
+
+    private void generateBoss() {
+        int bossAttempts = 0;
+        while (bossAttempts &lt; 50) {
+            int x = (int)(Math.random() * dungeon.getWidth());
+            int y = (int)(Math.random() * dungeon.getHeight());
+
+            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                Enemy boss = new Enemy(x, y, BOSS_HEALTH, BOSS_DAMAGE, dungeon, BOSS_NAME, BOSS_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
+                boss.setBoss(true);
+                enemies.add(boss);
+                break;
+            }
+            bossAttempts++;
+        }
+    }
+
+    public boolean playerMove(int dx, int dy) {
+        if (player == null || dungeon == null) {
+            return false;
+        }
+
+        int newX = player.getX() + dx;
+        int newY = player.getY() + dy;
+
+        if (!dungeon.isWalkable(newX, newY)) {
+            return false;
+        }
+
+        player.move(dx, dy);
+        turnCount++;
+
+        char tile = dungeon.getTile(newX, newY);
+        if (tile == Dungeon.TILE_GOLD) {
+            player.addGold(10);
+            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+            checkBossSpawn();
+        }
+
+        for (Enemy enemy : enemies) {
+            if (enemy != null &amp;&amp; !enemy.isDead() &amp;&amp;
+                enemy.getX() == newX &amp;&amp; enemy.getY() == newY) {
+                encounteredEnemy = enemy;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void resolveEncounter(Enemy enemy, boolean playerWins) {
+        if (playerWins) {
+            // FIX: Rewards now handled by CombatSystem.endCombat() - don't duplicate
+            enemy.takeDamage(9999);
+        } else {
+            player.takeDamage(enemy.getAttack());
+            if (!player.isAlive()) {
+                state = GameState.LOST;
+            }
+        }
+
+        if (enemy.isBoss() &amp;&amp; !enemy.isAlive()) {
+            state = GameState.WON;
+        }
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public Dungeon getDungeon() {
+        return dungeon;
+    }
+
+    public List&lt;Enemy&gt; getEnemies() {
+        return enemies;
+    }
+
+    public GameState getState() {
+        return state;
+    }
+
+    public int getTurnCount() {
+        return turnCount;
+    }
+
+    public Enemy getAndClearEncounteredEnemy() {
+        Enemy temp = encounteredEnemy;
+        encounteredEnemy = null;
+        return temp;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="gamebalance">
+    <div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">49 lines | 1776 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+/**
+ * Centralized game balance and configuration constants.
+ * Eliminates magic numbers and improves maintainability.
+ */
+public class GameBalance {
+    
+    // Prevent instantiation
+    private GameBalance() {
+        throw new AssertionError("Cannot instantiate GameBalance");
+    }
+
+    // Player balance
+    public static final int PLAYER_MAX_HEALTH = 100;
+    public static final int PLAYER_BASE_ATTACK = 15;
+    public static final int PLAYER_INITIAL_GOLD = 0;
+    public static final int PLAYER_INITIAL_POTIONS = 3;
+    public static final int POTION_HEAL_AMOUNT = 25;
+
+    // Enemy balance
+    public static final int ENEMY_BASE_HEALTH = 30;
+    public static final int ENEMY_BASE_ATTACK = 8;
+    public static final int ENEMY_HEALTH_VARIANCE = 10;
+    public static final int ENEMY_GOLD_REWARD = 50;
+
+    // Boss balance
+    public static final int BOSS_HEALTH_MULTIPLIER = 2;
+    public static final float BOSS_ATTACK_MULTIPLIER = 1.5f;
+    public static final int BOSS_GOLD_REWARD = 200;
+
+    // Battle balance
+    public static final int BATTLE_DAMAGE_VARIANCE_PERCENT = 25;
+    public static final float DEFENSE_REDUCTION_MULTIPLIER = 0.5f;
+    public static final double FLEE_SUCCESS_RATE = 0.5;
+
+    // Game progression
+    public static final int GOLD_WIN_CONDITION = 500;
+    public static final int DUNGEON_WALL_PROBABILITY = 20;
+    public static final int DUNGEON_ENEMY_SPAWN_RATE = 30;
+
+    // Difficulty scaling
+    public static final float EASY_DIFFICULTY_MULTIPLIER = 0.75f;
+    public static final float NORMAL_DIFFICULTY_MULTIPLIER = 1.0f;
+    public static final float HARD_DIFFICULTY_MULTIPLIER = 1.25f;
+
+    // Logging
+    public static final boolean DEBUG_MODE = true; // Set to BuildConfig.DEBUG in production
+}</code></pre>
+</div>
+
+<div class="file" id="gameview">
+    <div class="file-header"><h2>GameView.java</h2><span class="file-meta">336 lines | 12340 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.util.Log;
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
+import java.util.List;
+
+public class GameView extends View {
+    private static final float ENEMY_RADIUS = 0.4f;
+    private Game game;
+    private Paint tileWallPaint, tileFloorPaint, tileGoldPaint, playerPaint, enemyPaint, textPaint, buttonPaint, buttonPressPaint;
+    private float tileSize;
+    private GameListener listener;
+    private Rect btnUp, btnDown, btnLeft, btnRight, btnQuit;
+    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, emojiPaint;
+
+    private final Object buttonLock = new Object();
+    private boolean btnUpPressed = false, btnDownPressed = false, btnLeftPressed = false, btnRightPressed = false;
+
+    public interface GameListener {
+        void onGameOver(Game.GameState state);
+        void onQuitRequested();
+        void onEncounter(Enemy enemy);
+    }
+
+    public GameView(Context context) {
+        super(context);
+        initPaints();
+        initButtons();
+    }
+
+    public GameView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        Log.d("RoguelikeApp", "GameView constructor called");
+        initPaints();
+        initButtons();
+    }
+
+    private void initPaints() {
+        tileWallPaint = new Paint();
+        tileWallPaint.setColor(Color.parseColor("#1a1a1a"));
+        tileWallPaint.setStyle(Paint.Style.FILL);
+
+        tileFloorPaint = new Paint();
+        tileFloorPaint.setColor(Color.parseColor("#333333"));
+        tileFloorPaint.setStyle(Paint.Style.FILL);
+
+        tileGoldPaint = new Paint();
+        tileGoldPaint.setColor(Color.parseColor("#FFD700"));
+        tileGoldPaint.setStyle(Paint.Style.FILL);
+
+        playerPaint = new Paint();
+        playerPaint.setColor(Color.parseColor("#00FF00"));
+        playerPaint.setStyle(Paint.Style.FILL);
+
+        enemyPaint = new Paint();
+        enemyPaint.setColor(Color.parseColor("#FF0000"));
+        enemyPaint.setStyle(Paint.Style.FILL);
+
+        textPaint = new Paint();
+        textPaint.setTextSize(40);
+        textPaint.setColor(Color.WHITE);
+
+        emojiPaint = new Paint();
+        emojiPaint.setTextSize(tileSize * 0.8f);
+        emojiPaint.setTextAlign(Paint.Align.CENTER);
+
+        buttonPaint = new Paint();
+        buttonPaint.setColor(Color.parseColor("#00FF00"));
+        buttonPaint.setStyle(Paint.Style.FILL);
+
+        buttonPressPaint = new Paint();
+        buttonPressPaint.setColor(Color.parseColor("#00AA00"));
+        buttonPressPaint.setStyle(Paint.Style.FILL);
+
+        overlayPaint = new Paint();
+        overlayPaint.setColor(Color.argb(200, 0, 0, 0));
+
+        gameOverTextPaint = new Paint();
+        gameOverTextPaint.setColor(Color.WHITE);
+        gameOverTextPaint.setTextSize(64);
+        gameOverTextPaint.setTextAlign(Paint.Align.CENTER);
+
+        buttonLabelPaint = new Paint();
+        buttonLabelPaint.setColor(Color.BLACK);
+        buttonLabelPaint.setTextSize(20);
+        buttonLabelPaint.setTextAlign(Paint.Align.CENTER);
+    }
+
+    private void initButtons() {
+        btnUp = new Rect();
+        btnDown = new Rect();
+        btnLeft = new Rect();
+        btnRight = new Rect();
+        btnQuit = new Rect();
+    }
+
+    public void setGame(Game game) {
+        this.game = game;
+    }
+
+    public void setGameListener(GameListener listener) {
+        this.listener = listener;
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (game == null) {
+            Log.w("GameView", "Game is null in onDraw");
+            return;
+        }
+
+        int width = getWidth(), height = getHeight();
+        int gameAreaHeight = (int) (height * 0.75);
+        int buttonAreaHeight = height - gameAreaHeight;
+
+        Dungeon dungeon = game.getDungeon();
+        if (dungeon == null) {
+            Log.w("GameView", "Dungeon is null in onDraw");
+            return;
+        }
+
+        tileSize = (float) width / dungeon.getWidth();
+        drawDungeon(canvas, dungeon);
+        drawPlayer(canvas);
+        drawEnemies(canvas);
+        drawStatus(canvas, gameAreaHeight);
+        drawButtons(canvas, gameAreaHeight, buttonAreaHeight);
+
+        Game.GameState state = game.getState();
+        if (state != Game.GameState.PLAYING) {
+            drawGameOverOverlay(canvas, width, gameAreaHeight);
+        }
+    }
+
+    private void drawDungeon(Canvas canvas, Dungeon dungeon) {
+        for (int y = 0; y &lt; dungeon.getHeight(); y++) {
+            for (int x = 0; x &lt; dungeon.getWidth(); x++) {
+                float xPos = x * tileSize;
+                float yPos = y * tileSize;
+
+                char tile = dungeon.getTile(x, y);
+                if (tile == Dungeon.TILE_WALL) {
+                    canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileWallPaint);
+                } else if (tile == Dungeon.TILE_FLOOR) {
+                    canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
+                } else if (tile == Dungeon.TILE_GOLD) {
+                    canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
+                    canvas.drawCircle(xPos + tileSize / 2, yPos + tileSize / 2, tileSize * 0.3f, tileGoldPaint);
+                }
+            }
+        }
+    }
+
+    private void drawPlayer(Canvas canvas) {
+        Player player = game.getPlayer();
+        if (player == null) {
+            Log.w("GameView", "Player is null in drawPlayer");
+            return;
+        }
+
+        float x = player.getX() * tileSize + tileSize / 2;
+        float y = player.getY() * tileSize + tileSize / 2;
+        canvas.drawCircle(x, y, tileSize * 0.4f, playerPaint);
+    }
+
+    private void drawEnemies(Canvas canvas) {
+        List&lt;Enemy&gt; enemies = game.getEnemies();
+        if (enemies == null) {
+            Log.w("GameView", "Enemies list is null in drawEnemies");
+            return;
+        }
+
+        for (Enemy enemy : enemies) {
+            if (enemy == null) continue;
+
+            float x = enemy.getX() * tileSize + tileSize / 2;
+            float y = enemy.getY() * tileSize + tileSize / 2;
+
+            if (enemy.isBoss()) {
+                if (!enemy.isDead()) {
+                    float dragonSize = tileSize * 4;
+                    Paint dragonPaint = new Paint(emojiPaint);
+                    dragonPaint.setTextSize(dragonSize);
+                    Rect bounds = new Rect();
+                    dragonPaint.getTextBounds("🐉", 0, 1, bounds);
+                    float dragonY = y + (dragonSize - bounds.height()) / 2;
+                    canvas.drawText("🐉", x, dragonY, dragonPaint);
+                } else {
+                    float dragonSize = tileSize * 4;
+                    Paint skullPaint = new Paint(emojiPaint);
+                    skullPaint.setTextSize(dragonSize);
+                    Rect bounds = new Rect();
+                    skullPaint.getTextBounds("☠️", 0, 1, bounds);
+                    float skullY = y + (dragonSize - bounds.height()) / 2;
+                    canvas.drawText("☠️", x, skullY, skullPaint);
+                }
+            } else {
+                if (!enemy.isDead()) {
+                    canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
+                } else {
+                    Rect bounds = new Rect();
+                    emojiPaint.getTextBounds("☠️", 0, 1, bounds);
+                    float emojiY = y + (tileSize - bounds.height()) / 2;
+                    canvas.drawText("☠️", x, emojiY, emojiPaint);
+                }
+            }
+        }
+    }
+
+    private void drawStatus(Canvas canvas, int gameAreaHeight) {
+        Player player = game.getPlayer();
+        if (player == null) {
+            Log.w("GameView", "Player is null in drawStatus");
+            return;
+        }
+
+        String status = String.format("LVL: %d (XP: %d) | HP: %d/%d | Gold: %d | Turn: %d",
+                player.getLevel(), player.getExperience(),
+                player.getCurrentHealth(), player.getMaxHealth(),
+                player.getGoldCollected(), game.getTurnCount());
+        canvas.drawText(status, 10, gameAreaHeight - 10, textPaint);
+    }
+
+    private void drawButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
+        int buttonWidth = getWidth() / 5;
+        int buttonHeight = buttonAreaHeight / 2;
+        int startY = gameAreaHeight;
+
+        btnUp.set(0, startY, buttonWidth, startY + buttonHeight);
+        btnDown.set(buttonWidth, startY, 2 * buttonWidth, startY + buttonHeight);
+        btnLeft.set(2 * buttonWidth, startY, 3 * buttonWidth, startY + buttonHeight);
+        btnRight.set(3 * buttonWidth, startY, 4 * buttonWidth, startY + buttonHeight);
+        btnQuit.set(4 * buttonWidth, startY, 5 * buttonWidth, startY + buttonHeight);
+
+        synchronized (buttonLock) {
+            drawButton(canvas, btnUp, "UP", btnUpPressed);
+            drawButton(canvas, btnDown, "DOWN", btnDownPressed);
+            drawButton(canvas, btnLeft, "LEFT", btnLeftPressed);
+            drawButton(canvas, btnRight, "RIGHT", btnRightPressed);
+        }
+        drawButton(canvas, btnQuit, "QUIT", false);
+    }
+
+    private void drawButton(Canvas canvas, Rect rect, String label, boolean pressed) {
+        Paint paint = pressed ? buttonPressPaint : buttonPaint;
+        canvas.drawRect(rect, paint);
+        canvas.drawText(label, rect.centerX(), rect.centerY() + 10, buttonLabelPaint);
+    }
+
+    private void drawGameOverOverlay(Canvas canvas, int width, int gameAreaHeight) {
+        canvas.drawRect(0, 0, width, gameAreaHeight, overlayPaint);
+        String message = game.getState() == Game.GameState.WON ? "YOU WIN!" : "GAME OVER";
+        canvas.drawText(message, width / 2, gameAreaHeight / 2, gameOverTextPaint);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int action = event.getAction();
+        float x = event.getX(), y = event.getY();
+
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                handleButtonPress(x, y);
+                break;
+            case MotionEvent.ACTION_UP:
+                handleButtonRelease();
+                break;
+        }
+        invalidate();
+        return true;
+    }
+
+    private void handleButtonPress(float x, float y) {
+        if (game == null) {
+            Log.w("GameView", "Game is null in handleButtonPress");
+            return;
+        }
+
+        boolean encounterOccurred = false;
+
+        if (btnUp != null &amp;&amp; btnUp.contains((int) x, (int) y)) {
+            synchronized (buttonLock) {
+                btnUpPressed = true;
+            }
+            encounterOccurred = game.playerMove(0, -1);
+        } else if (btnDown != null &amp;&amp; btnDown.contains((int) x, (int) y)) {
+            synchronized (buttonLock) {
+                btnDownPressed = true;
+            }
+            encounterOccurred = game.playerMove(0, 1);
+        } else if (btnLeft != null &amp;&amp; btnLeft.contains((int) x, (int) y)) {
+            synchronized (buttonLock) {
+                btnLeftPressed = true;
+            }
+            encounterOccurred = game.playerMove(-1, 0);
+        } else if (btnRight != null &amp;&amp; btnRight.contains((int) x, (int) y)) {
+            synchronized (buttonLock) {
+                btnRightPressed = true;
+            }
+            encounterOccurred = game.playerMove(1, 0);
+        } else if (btnQuit != null &amp;&amp; btnQuit.contains((int) x, (int) y)) {
+            if (listener != null) {
+                listener.onQuitRequested();
+            }
+        }
+
+        if (encounterOccurred &amp;&amp; listener != null) {
+            Enemy enemy = game.getAndClearEncounteredEnemy();
+            if (enemy != null) {
+                listener.onEncounter(enemy);
+            }
+        }
+
+        Game.GameState state = game.getState();
+        if (state != Game.GameState.PLAYING &amp;&amp; listener != null) {
+            listener.onGameOver(state);
+        }
+    }
+
+    private void handleButtonRelease() {
+        synchronized (buttonLock) {
+            btnUpPressed = false;
+            btnDownPressed = false;
+            btnLeftPressed = false;
+            btnRightPressed = false;
+        }
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="inputvalidator">
+    <div class="file-header"><h2>InputValidator.java</h2><span class="file-meta">248 lines | 7697 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ * Thread-safe utility for validating inputs across the roguelike system.
+ * Provides static methods for common validation patterns used by dungeon,
+ * combat, player, and equipment systems.
+ */
+public class InputValidator {
+    private static final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    // Private constructor prevents instantiation
+    private InputValidator() {
+        throw new AssertionError("InputValidator is a utility class");
+    }
+
+    /**
+     * Validate floor number for dungeon progression.
+     * @param floorNumber the floor to validate
+     * @param maxFloor the maximum allowed floor
+     * @return true if valid (1 &lt;= floorNumber &lt;= maxFloor), false otherwise
+     */
+    public static boolean isValidFloorNumber(int floorNumber, int maxFloor) {
+        return floorNumber &gt;= 1 &amp;&amp; floorNumber &lt;= maxFloor;
+    }
+
+    /**
+     * Validate base dungeon floor number (1-99).
+     * @param floorNumber the floor to validate
+     * @return true if valid, false otherwise
+     */
+    public static boolean isValidFloorNumber(int floorNumber) {
+        return isValidFloorNumber(floorNumber, 99);
+    }
+
+    /**
+     * Validate enemy count for a dungeon level.
+     * @param baseEnemyCount the count to validate
+     * @return true if valid (1-20), false otherwise
+     */
+    public static boolean isValidBaseEnemyCount(int baseEnemyCount) {
+        return baseEnemyCount &gt;= 1 &amp;&amp; baseEnemyCount &lt;= 20;
+    }
+
+    /**
+     * Validate difficulty scaling multiplier.
+     * @param difficultyScaling the multiplier to validate
+     * @return true if valid (0.5-3.0), false otherwise
+     */
+    public static boolean isValidDifficultyScaling(double difficultyScaling) {
+        return difficultyScaling &gt;= 0.5 &amp;&amp; difficultyScaling &lt;= 3.0;
+    }
+
+    /**
+     * Validate rarity threshold for loot drops.
+     * @param rarityThreshold the threshold to validate
+     * @return true if valid (0.0-1.0), false otherwise
+     */
+    public static boolean isValidRarityThreshold(double rarityThreshold) {
+        return rarityThreshold &gt;= 0.0 &amp;&amp; rarityThreshold &lt;= 1.0;
+    }
+
+    /**
+     * Validate a player or character name.
+     * @param name the name to validate
+     * @return true if valid (1-32 characters, alphanumeric + space/underscore), false otherwise
+     */
+    public static boolean isValidName(String name) {
+        if (name == null || name.isEmpty() || name.length() &gt; 32) {
+            return false;
+        }
+        return name.matches("[a-zA-Z0-9_\\s]+");
+    }
+
+    /**
+     * Validate a character's health value.
+     * @param health the health to validate
+     * @return true if valid (&gt;= 0), false otherwise
+     */
+    public static boolean isValidHealth(int health) {
+        return health &gt;= 0;
+    }
+
+    /**
+     * Validate a character's attack stat.
+     * @param attack the attack value to validate
+     * @return true if valid (&gt;= 1), false otherwise
+     */
+    public static boolean isValidAttack(int attack) {
+        return attack &gt;= 1;
+    }
+
+    /**
+     * Validate a character's defense stat.
+     * @param defense the defense value to validate
+     * @return true if valid (&gt;= 0), false otherwise
+     */
+    public static boolean isValidDefense(int defense) {
+        return defense &gt;= 0;
+    }
+
+    /**
+     * Validate a player level.
+     * @param level the level to validate
+     * @return true if valid (1-100), false otherwise
+     */
+    public static boolean isValidPlayerLevel(int level) {
+        return level &gt;= 1 &amp;&amp; level &lt;= 100;
+    }
+
+    /**
+     * Validate experience points.
+     * @param experience the XP to validate
+     * @return true if valid (&gt;= 0), false otherwise
+     */
+    public static boolean isValidExperience(int experience) {
+        return experience &gt;= 0;
+    }
+
+    /**
+     * Validate inventory capacity.
+     * @param capacity the capacity to validate
+     * @return true if valid (1-100), false otherwise
+     */
+    public static boolean isValidInventoryCapacity(int capacity) {
+        return capacity &gt;= 1 &amp;&amp; capacity &lt;= 100;
+    }
+
+    /**
+     * Validate current inventory size.
+     * @param size the size to validate
+     * @param capacity the max capacity
+     * @return true if valid (0 &lt;= size &lt;= capacity), false otherwise
+     */
+    public static boolean isValidInventorySize(int size, int capacity) {
+        return size &gt;= 0 &amp;&amp; size &lt;= capacity;
+    }
+
+    /**
+     * Validate an equipment stat bonus (ATK, DEF, or HP bonus).
+     * @param bonus the bonus to validate
+     * @return true if valid (-50 to +100), false otherwise
+     */
+    public static boolean isValidEquipmentBonus(int bonus) {
+        return bonus &gt;= -50 &amp;&amp; bonus &lt;= 100;
+    }
+
+    /**
+     * Validate a hit chance probability.
+     * @param hitChance the probability to validate
+     * @return true if valid (0.0-1.0), false otherwise
+     */
+    public static boolean isValidHitChance(double hitChance) {
+        return hitChance &gt;= 0.0 &amp;&amp; hitChance &lt;= 1.0;
+    }
+
+    /**
+     * Validate damage amount.
+     * @param damage the damage to validate
+     * @return true if valid (&gt;= 1), false otherwise
+     */
+    public static boolean isValidDamage(int damage) {
+        return damage &gt;= 1;
+    }
+
+    /**
+     * Validate enemy level (scaled with floor).
+     * @param enemyLevel the level to validate
+     * @return true if valid (1-100), false otherwise
+     */
+    public static boolean isValidEnemyLevel(int enemyLevel) {
+        return enemyLevel &gt;= 1 &amp;&amp; enemyLevel &lt;= 100;
+    }
+
+    /**
+     * Validate experience reward amount.
+     * @param reward the reward to validate
+     * @return true if valid (&gt;= 10), false otherwise
+     */
+    public static boolean isValidExperienceReward(int reward) {
+        return reward &gt;= 10;
+    }
+
+    /**
+     * Validate a percentage value.
+     * @param percentage the percentage to validate
+     * @return true if valid (0-100), false otherwise
+     */
+    public static boolean isValidPercentage(double percentage) {
+        return percentage &gt;= 0.0 &amp;&amp; percentage &lt;= 100.0;
+    }
+
+    /**
+     * Validate a multiplier/scalar value (commonly used for floor scaling).
+     * @param scalar the scalar to validate
+     * @return true if valid (0.1-10.0), false otherwise
+     */
+    public static boolean isValidScalar(double scalar) {
+        return scalar &gt;= 0.1 &amp;&amp; scalar &lt;= 10.0;
+    }
+
+    /**
+     * Validate a non-null object.
+     * @param obj the object to validate
+     * @return true if not null, false otherwise
+     */
+    public static boolean isNotNull(Object obj) {
+        return obj != null;
+    }
+
+    /**
+     * Validate a non-empty string.
+     * @param str the string to validate
+     * @return true if not null and not empty, false otherwise
+     */
+    public static boolean isNotEmpty(String str) {
+        return str != null &amp;&amp; !str.isEmpty();
+    }
+
+    /**
+     * Clamp an integer value to a range.
+     * @param value the value to clamp
+     * @param min the minimum value
+     * @param max the maximum value
+     * @return clamped value
+     */
+    public static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    /**
+     * Clamp a double value to a range.
+     * @param value the value to clamp
+     * @param min the minimum value
+     * @param max the maximum value
+     * @return clamped value
+     */
+    public static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    @Override
+    public String toString() {
+        return "InputValidator{utility class}";
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="inventory">
+    <div class="file-header"><h2>Inventory.java</h2><span class="file-meta">25 lines | 550 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Inventory implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
+    private List&lt;Equipment&gt; equipment;
+    
+    public Inventory() {
+        this.equipment = new ArrayList&lt;&gt;();
+    }
+    
+    public void addEquipment(Equipment item) {
+        if (item != null) {
+            equipment.add(item);
+        }
+    }
+    
+    public List&lt;Equipment&gt; getEquipment() {
+        return equipment;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="inventorysystem">
+    <div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">246 lines | 8192 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+import android.util.Log;
+
+import java.util.logging.Logger;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Thread-safe inventory management system for weapons, armor, rings, and potions.
+ * Enforces capacity limits and tracks equipped items.
+ */
+public class InventorySystem implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static final String TAG = "InventorySystem";
+
+    private static final int MAX_WEAPONS = 10;
+    private static final int MAX_ARMOR = 10;
+    private static final int MAX_RINGS = 5;
+    private static final int MAX_POTIONS = 99;
+
+    private final List&lt;Equipment&gt; weapons = new ArrayList&lt;&gt;();
+    private final List&lt;Equipment&gt; armor = new ArrayList&lt;&gt;();
+    private final List&lt;Equipment&gt; rings = new ArrayList&lt;&gt;();
+
+    private Equipment equippedWeapon = null;
+    private Equipment equippedArmor = null;
+    private Equipment equippedRing = null;
+
+    private int healthPotions = 0;
+
+    /**
+     * Add equipment to inventory. Returns true if successful, false if full.
+     */
+    public synchronized boolean addEquipment(Equipment equipment) {
+        if (equipment == null) {
+            Log.w(TAG, "Attempted to add null equipment");
+            return false;
+        }
+
+        List&lt;Equipment&gt; targetList = getListForType(equipment.getType());
+        int maxCapacity = getMaxCapacity(equipment.getType());
+
+        if (targetList.size() &gt;= maxCapacity) {
+            Log.w(TAG, "Inventory full for " + equipment.getType());
+            return false;
+        }
+
+        targetList.add(equipment);
+        Log.d(TAG, "Added: " + equipment.getName());
+        return true;
+    }
+
+    /**
+     * Remove equipment from inventory.
+     */
+    public synchronized boolean removeEquipment(Equipment equipment) {
+        Equipment.Type type = equipment.getType();
+        List&lt;Equipment&gt; targetList = getListForType(type);
+
+        if (targetList.remove(equipment)) {
+            // If equipped item was removed, unequip it
+            if (equipment.equals(equippedWeapon)) {
+                equippedWeapon = null;
+            } else if (equipment.equals(equippedArmor)) {
+                equippedArmor = null;
+            } else if (equipment.equals(equippedRing)) {
+                equippedRing = null;
+            }
+            Log.d(TAG, "Removed: " + equipment.getName());
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Equip an item. Returns true if successful.
+     */
+    public synchronized boolean equip(Equipment equipment) {
+        if (equipment == null) {
+            Log.w(TAG, "Cannot equip null equipment");
+            return false;
+        }
+
+        switch (equipment.getType()) {
+            case WEAPON:
+                if (!weapons.contains(equipment)) {
+                    Log.w(TAG, "Weapon not in inventory");
+                    return false;
+                }
+                equippedWeapon = equipment;
+                Log.d(TAG, "Equipped weapon: " + equipment.getName());
+                return true;
+
+            case ARMOR:
+                if (!armor.contains(equipment)) {
+                    Log.w(TAG, "Armor not in inventory");
+                    return false;
+                }
+                equippedArmor = equipment;
+                Log.d(TAG, "Equipped armor: " + equipment.getName());
+                return true;
+
+            case RING:
+                if (!rings.contains(equipment)) {
+                    Log.w(TAG, "Ring not in inventory");
+                    return false;
+                }
+                equippedRing = equipment;
+                Log.d(TAG, "Equipped ring: " + equipment.getName());
+                return true;
+
+            default:
+                Log.w(TAG, "Unknown equipment type");
+                return false;
+        }
+    }
+
+    /**
+     * Unequip an item type.
+     */
+    public synchronized void unequip(Equipment.Type type) {
+        switch (type) {
+            case WEAPON:
+                equippedWeapon = null;
+                break;
+            case ARMOR:
+                equippedArmor = null;
+                break;
+            case RING:
+                equippedRing = null;
+                break;
+        }
+        Log.d(TAG, "Unequipped: " + type);
+    }
+
+    /**
+     * Get current health potion count.
+     */
+    public synchronized int getHealthPotions() {
+        return healthPotions;
+    }
+
+    /**
+     * Use one health potion. Returns true if successful, false if none available.
+     */
+    public synchronized boolean usePotion() {
+        if (healthPotions &gt; 0) {
+            healthPotions--;
+            Log.d(TAG, "Used health potion. Remaining: " + healthPotions);
+            return true;
+        }
+        Log.w(TAG, "No health potions available");
+        return false;
+    }
+
+    /**
+     * Add health potions to inventory. Returns true if successful, false if would exceed max.
+     */
+    public synchronized boolean addHealthPotions(int count) {
+        if (count &lt; 0) {
+            Log.w(TAG, "Cannot add negative potions");
+            return false;
+        }
+        if (healthPotions + count &lt;= MAX_POTIONS) {
+            healthPotions += count;
+            Log.d(TAG, "Added " + count + " health potions. Total: " + healthPotions);
+            return true;
+        }
+        Log.w(TAG, "Health potion capacity exceeded. Max: " + MAX_POTIONS);
+        return false;
+    }
+
+    // Getters for equipped items
+    public synchronized Equipment getEquippedWeapon() { return equippedWeapon; }
+    public synchronized Equipment getEquippedArmor() { return equippedArmor; }
+    public synchronized Equipment getEquippedRing() { return equippedRing; }
+
+    // Getters for inventory lists (defensive copies)
+    public synchronized List&lt;Equipment&gt; getWeapons() { return new ArrayList&lt;&gt;(weapons); }
+    public synchronized List&lt;Equipment&gt; getArmor() { return new ArrayList&lt;&gt;(armor); }
+    public synchronized List&lt;Equipment&gt; getRings() { return new ArrayList&lt;&gt;(rings); }
+
+    /**
+     * Calculate total stat bonuses from equipped items.
+     */
+    public synchronized int getTotalAttackBonus() {
+        int total = 0;
+        if (equippedWeapon != null) total += equippedWeapon.getAttackBonus();
+        if (equippedArmor != null) total += equippedArmor.getAttackBonus();
+        if (equippedRing != null) total += equippedRing.getAttackBonus();
+        return total;
+    }
+
+    public synchronized int getTotalDefenseBonus() {
+        int total = 0;
+        if (equippedWeapon != null) total += equippedWeapon.getDefenseBonus();
+        if (equippedArmor != null) total += equippedArmor.getDefenseBonus();
+        if (equippedRing != null) total += equippedRing.getDefenseBonus();
+        return total;
+    }
+
+    public synchronized int getTotalHpBonus() {
+        int total = 0;
+        if (equippedWeapon != null) total += equippedWeapon.getHpBonus();
+        if (equippedArmor != null) total += equippedArmor.getHpBonus();
+        if (equippedRing != null) total += equippedRing.getHpBonus();
+        return total;
+    }
+
+    // Private helpers
+    private List&lt;Equipment&gt; getListForType(Equipment.Type type) {
+        switch (type) {
+            case WEAPON: return weapons;
+            case ARMOR: return armor;
+            case RING: return rings;
+            default: throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+
+    private int getMaxCapacity(Equipment.Type type) {
+        switch (type) {
+            case WEAPON: return MAX_WEAPONS;
+            case ARMOR: return MAX_ARMOR;
+            case RING: return MAX_RINGS;
+            default: return 0;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return String.format("Inventory [W:%d/%d | A:%d/%d | R:%d/%d | P:%d/%d]",
+                weapons.size(), MAX_WEAPONS,
+                armor.size(), MAX_ARMOR,
+                rings.size(), MAX_RINGS,
+                healthPotions, MAX_POTIONS);
+    }
+    public synchronized List&lt;Equipment&gt; getAllEquipment() {
+        List&lt;Equipment&gt; all = new ArrayList&lt;&gt;(weapons);
+        all.addAll(armor);
+        all.addAll(rings);
+        return all;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="loottable">
+    <div class="file-header"><h2>LootTable.java</h2><span class="file-meta">252 lines | 8123 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import com.knightlight.game.Equipment;
+
+import java.util.*;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+/**
+ * Thread-safe, immutable loot table for generating equipment drops.
+ * Defines rarity tiers, drop pools, and probabilistic loot generation
+ * based on floor difficulty and rarity thresholds.
+ */
+public class LootTable {
+    private final Map&lt;Equipment.Rarity, List&lt;Equipment&gt;&gt; poolsByRarity;
+    private final Map&lt;Equipment.Rarity, Double&gt; rarityWeights;
+    private final Random random;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    /**
+     * Rarity tier enumeration (mirrors Equipment.Rarity).
+     * Maps to drop probability weights.
+     */
+    public enum LootRarity {
+        COMMON(1.0),
+        UNCOMMON(0.4),
+        RARE(0.15),
+        EPIC(0.04),
+        LEGENDARY(0.01);
+
+        private final double weight;
+
+        LootRarity(double weight) {
+            this.weight = weight;
+        }
+
+        public double getWeight() {
+            return weight;
+        }
+    }
+
+    /**
+     * Private constructor enforces Builder pattern.
+     */
+    private LootTable(Builder builder) {
+        this.poolsByRarity = new EnumMap&lt;&gt;(builder.poolsByRarity);
+        this.rarityWeights = new EnumMap&lt;&gt;(builder.rarityWeights);
+        this.random = new Random();
+    }
+
+    /**
+     * Generate a single loot item based on floor and rarity threshold.
+     * @param floorNumber the dungeon floor (1-99)
+     * @param rarityThreshold the probability threshold (0.0-1.0) from DungeonLevel
+     * @return a randomly generated Equipment item, or null if no loot drops
+     */
+    public Equipment generateLoot(int floorNumber, double rarityThreshold) {
+        lock.readLock().lock();
+        try {
+            // Roll for loot drop
+            if (random.nextDouble() &gt; rarityThreshold) {
+                return null; // No loot
+            }
+
+            // Select rarity tier based on weights
+            Equipment.Rarity selectedRarity = selectRarityByWeight();
+            if (selectedRarity == null) {
+                return null;
+            }
+
+            List&lt;Equipment&gt; pool = poolsByRarity.get(selectedRarity);
+            if (pool == null || pool.isEmpty()) {
+                return null;
+            }
+
+            // Select random item from rarity pool
+            Equipment baseItem = pool.get(random.nextInt(pool.size()));
+
+            // Scale stats by floor multiplier: 1.0 + (floor - 1) * 0.05
+            double floorScalar = 1.0 + (floorNumber - 1) * 0.05;
+            int scaledATK = (int) (baseItem.getAttackBonus() * floorScalar);
+            int scaledDEF = (int) (baseItem.getDefenseBonus() * floorScalar);
+            int scaledHP = (int) (baseItem.getHpBonus() * floorScalar);
+
+            return new Equipment.Builder(baseItem.getName(), baseItem.getType())
+                    .rarity(baseItem.getRarity())
+                    .attackBonus(scaledATK)
+                    .defenseBonus(scaledDEF)
+                    .hpBonus(scaledHP)
+                    .description(baseItem.getDescription())
+                    .build();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Generate multiple loot items in a batch.
+     * @param floorNumber the dungeon floor
+     * @param rarityThreshold the rarity threshold
+     * @param count number of roll attempts
+     * @return list of generated Equipment (may be empty)
+     */
+    public List&lt;Equipment&gt; generateLootBatch(int floorNumber, double rarityThreshold, int count) {
+        List&lt;Equipment&gt; loot = new ArrayList&lt;&gt;();
+        for (int i = 0; i &lt; count; i++) {
+            Equipment item = generateLoot(floorNumber, rarityThreshold);
+            if (item != null) {
+                loot.add(item);
+            }
+        }
+        return loot;
+    }
+
+    /**
+     * Select a rarity tier probabilistically based on configured weights.
+     * @return the selected Rarity, or null if selection fails
+     */
+    private Equipment.Rarity selectRarityByWeight() {
+        double totalWeight = rarityWeights.values().stream()
+                .mapToDouble(Double::doubleValue)
+                .sum();
+
+        if (totalWeight &lt;= 0) {
+            return Equipment.Rarity.COMMON;
+        }
+
+        double roll = random.nextDouble() * totalWeight;
+        double cumulative = 0;
+
+        for (Map.Entry&lt;Equipment.Rarity, Double&gt; entry : rarityWeights.entrySet()) {
+            cumulative += entry.getValue();
+            if (roll &lt;= cumulative) {
+                return entry.getKey();
+            }
+        }
+
+        return Equipment.Rarity.COMMON;
+    }
+
+    /**
+     * Add equipment to a rarity pool (for setup).
+     * Thread-safe but should only be called before active use.
+     */
+    public void addItemToPool(Equipment item) {
+        lock.writeLock().lock();
+        try {
+            poolsByRarity.computeIfAbsent(item.getRarity(), k -&gt; new ArrayList&lt;&gt;())
+                    .add(item);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Get the size of a rarity pool.
+     */
+    public int getPoolSize(Equipment.Rarity rarity) {
+        lock.readLock().lock();
+        try {
+            List&lt;Equipment&gt; pool = poolsByRarity.get(rarity);
+            return pool != null ? pool.size() : 0;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Get the weight for a rarity tier.
+     */
+    public double getRarityWeight(Equipment.Rarity rarity) {
+        lock.readLock().lock();
+        try {
+            return rarityWeights.getOrDefault(rarity, 0.0);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Builder for LootTable.
+     */
+    public static class Builder {
+        private final Map&lt;Equipment.Rarity, List&lt;Equipment&gt;&gt; poolsByRarity = new EnumMap&lt;&gt;(Equipment.Rarity.class);
+        private final Map&lt;Equipment.Rarity, Double&gt; rarityWeights = new EnumMap&lt;&gt;(Equipment.Rarity.class);
+
+        public Builder() {
+            // Initialize default weights
+            rarityWeights.put(Equipment.Rarity.COMMON, 1.0);
+            rarityWeights.put(Equipment.Rarity.UNCOMMON, 0.4);
+            rarityWeights.put(Equipment.Rarity.RARE, 0.15);
+            rarityWeights.put(Equipment.Rarity.LEGENDARY, 0.04);
+            rarityWeights.put(Equipment.Rarity.LEGENDARY, 0.01);
+
+            // Initialize empty pools
+            for (Equipment.Rarity rarity : Equipment.Rarity.values()) {
+                poolsByRarity.put(rarity, new ArrayList&lt;&gt;());
+            }
+        }
+
+        public Builder addItem(Equipment item) {
+            if (item != null) {
+                poolsByRarity.computeIfAbsent(item.getRarity(), k -&gt; new ArrayList&lt;&gt;())
+                        .add(item);
+            }
+            return this;
+        }
+
+        public Builder addItems(List&lt;Equipment&gt; items) {
+            if (items != null) {
+                for (Equipment item : items) {
+                    addItem(item);
+                }
+            }
+            return this;
+        }
+
+        public Builder healthBonus(int healthBonus) {
+            // Store health bonus (no specific field shown, stub for now)
+            return this;
+        }
+
+        public Builder setRarityWeight(Equipment.Rarity rarity, double weight) {
+            if (rarity != null) {
+                rarityWeights.put(rarity, Math.max(0, weight));
+            }
+            return this;
+        }
+
+        public LootTable build() {
+            return new LootTable(this);
+        }
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @Override
+    public String toString() {
+        lock.readLock().lock();
+        try {
+            int totalItems = poolsByRarity.values().stream()
+                    .mapToInt(List::size)
+                    .sum();
+            return String.format("LootTable{totalItems=%d, rarities=%d}", 
+                    totalItems, poolsByRarity.size());
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="mainactivity">
+    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">262 lines | 9225 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import java.io.Serializable;
+import java.util.List;
+
+/**
+ * Main activity for the Roguelike game.
+ * Manages game initialization, state restoration, and battle result handling.
+ */
+public class MainActivity extends AppCompatActivity implements GameView.GameListener {
+    private static final String TAG = "MainActivity";
+    private static final int BATTLE_REQUEST = 1;
+    private static final int DUNGEON_WIDTH = 50;
+    private static final int DUNGEON_HEIGHT = 50;
+    private static final int INITIAL_ENEMIES = 10;
+
+    private Game game;
+    private GameView gameView;
+    private SaveGameManager saveGameManager;
+    private Dungeon dungeon;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        gameView = findViewById(R.id.game_view);
+        if (gameView == null) {
+            Log.e(TAG, "GameView not found in layout");
+            finish();
+            return;
+        }
+
+        saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
+
+        game = new Game();
+        if (game == null) {
+            Log.e(TAG, "Failed to create Game instance");
+            finish();
+            return;
+        }
+
+        ensurePlayerSpawned();
+
+        // Attempt to restore saved game state
+        SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
+        if (saveData != null) {
+            restoreGameState(saveData);
+        }
+
+        dungeon = game.getDungeon();
+        gameView.setGame(game);
+        gameView.setGameListener(this);
+    }
+
+    private void ensurePlayerSpawned() {
+        if (game == null) {
+            return;
+        }
+
+        Player player = game.getPlayer();
+        Dungeon gameDungeon = game.getDungeon();
+
+        if (player == null || gameDungeon == null) {
+            Log.w(TAG, "Cannot spawn player: player or dungeon is null");
+            return;
+        }
+
+        int[] spawnPos = gameDungeon.findSpawnPosition();
+        if (spawnPos != null &amp;&amp; spawnPos.length &gt;= 2) {
+            player.setX(spawnPos[0]);
+            player.setY(spawnPos[1]);
+            Log.d(TAG, "Player spawned at (" + spawnPos[0] + ", " + spawnPos[1] + ")");
+        } else {
+            Log.w(TAG, "Could not find valid spawn position");
+        }
+    }
+
+    private void restoreGameState(SaveGameManager.SaveGameData saveData) {
+        if (saveData == null) {
+            return;
+        }
+
+        if (saveData.playerX &gt;= 0 &amp;&amp; saveData.playerY &gt;= 0) {
+            Player gamePlayer = game.getPlayer();
+            if (gamePlayer != null) {
+                gamePlayer.setX(saveData.playerX);
+                gamePlayer.setY(saveData.playerY);
+                Log.d(TAG, "Restored player position to (" + saveData.playerX + ", " + saveData.playerY + ")");
+            }
+        }
+
+        if (saveData.player != null) {
+            Player gamePlayer = game.getPlayer();
+            if (gamePlayer != null) {
+                int newHealth = Math.max(0, Math.min(saveData.player.getCurrentHealth(), 100));
+                gamePlayer.setCurrentHealth(newHealth);
+                gamePlayer.setExperience(Math.max(0, saveData.player.getExperience()));
+                gamePlayer.setGoldCollected(Math.max(0, saveData.player.getGoldCollected()));
+                Log.d(TAG, "Restored player stats");
+            }
+        }
+
+        if (saveData.enemies != null) {
+            List&lt;Enemy&gt; currentEnemies = game.getEnemies();
+            if (currentEnemies != null) {
+                currentEnemies.clear();
+                currentEnemies.addAll(saveData.enemies);
+                Log.d(TAG, "Restored " + saveData.enemies.size() + " enemies");
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode != BATTLE_REQUEST) {
+            return;
+        }
+
+        if (resultCode != RESULT_OK) {
+            Log.w(TAG, "onActivityResult: Battle activity returned non-OK result");
+            return;
+        }
+
+        if (data == null) {
+            Log.w(TAG, "onActivityResult: data is null");
+            return;
+        }
+
+        try {
+            boolean battleWon = data.getBooleanExtra("battleWon", false);
+
+            Serializable playerExtra = data.getSerializableExtra("updatedPlayer");
+            if (!(playerExtra instanceof Player)) {
+                Log.w(TAG, "onActivityResult: updatedPlayer is not a valid Player instance");
+                return;
+            }
+
+            Player updatedPlayer = (Player) playerExtra;
+            if (updatedPlayer == null) {
+                Log.w(TAG, "onActivityResult: updatedPlayer is null");
+                return;
+            }
+
+            if (game != null) {
+                Player gamePlayer = game.getPlayer();
+                if (gamePlayer != null) {
+                    int newHealth = Math.max(0, Math.min(updatedPlayer.getCurrentHealth(), 100));
+                    gamePlayer.setCurrentHealth(newHealth);
+                    gamePlayer.setExperience(Math.max(0, updatedPlayer.getExperience()));
+                    gamePlayer.setGoldCollected(Math.max(0, updatedPlayer.getGoldCollected()));
+                }
+            }
+
+            // Mark defeated enemy as dead
+            String defeatedEnemyId = data.getStringExtra("enemyId");
+            if (defeatedEnemyId != null &amp;&amp; game != null) {
+                List&lt;Enemy&gt; currentEnemies = game.getEnemies();
+                if (currentEnemies != null) {
+                    for (Enemy e : currentEnemies) {
+                        if (e != null &amp;&amp; e.getId().equals(defeatedEnemyId)) {
+                            if (e.isDefeated()) {
+                                currentEnemies.remove(e);
+                                Log.d(TAG, "Enemy " + defeatedEnemyId + " removed from active enemies");
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!battleWon &amp;&amp; game != null) {
+                Log.d(TAG, "Battle lost; game state set to LOST");
+            }
+
+            if (gameView != null) {
+                gameView.invalidate();
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error processing battle result", e);
+        }
+    }
+
+    @Override
+    public void onEncounter(Enemy enemy) {
+        if (enemy != null &amp;&amp; game != null) {
+            Intent battleIntent = new Intent(MainActivity.this, BattleActivity.class);
+            battleIntent.putExtra("player", game.getPlayer());
+            // FIX: Was "enemy_id" (String) but BattleActivity reads "enemy" (Serializable)
+            battleIntent.putExtra("enemy", enemy);
+            startActivityForResult(battleIntent, BATTLE_REQUEST);
+        }
+    }
+
+    @Override
+    public void onQuitRequested() {
+        new AlertDialog.Builder(this)
+                .setTitle("Quit Game")
+                .setMessage("Are you sure you want to quit? Your progress will be saved.")
+                .setPositiveButton("Quit", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        saveAndQuit();
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
+                .show();
+    }
+
+    @Override
+    public void onGameOver(Game.GameState state) {
+        Log.d(TAG, "Game over: " + state);
+    }
+
+    private void saveAndQuit() {
+        if (game != null &amp;&amp; saveGameManager != null) {
+            Player player = game.getPlayer();
+            List&lt;Enemy&gt; enemies = game.getEnemies();
+            Dungeon gameDungeon = game.getDungeon();
+
+            char[][] charGrid = gameDungeon.getGrid();
+            int[][] dungeonMap = null;
+
+            if (charGrid != null) {
+                dungeonMap = new int[charGrid.length][];
+                for (int y = 0; y &lt; charGrid.length; y++) {
+                    dungeonMap[y] = new int[charGrid[y].length];
+                    for (int x = 0; x &lt; charGrid[y].length; x++) {
+                        dungeonMap[y][x] = charGrid[y][x];
+                    }
+                }
+            }
+
+            SaveGameManager.SaveGameData data = new SaveGameManager.SaveGameData();
+            data.playerX = player.getX();
+            data.playerY = player.getY();
+            data.player = player;
+            data.enemies = enemies;
+            data.dungeonMap = dungeonMap;
+
+            saveGameManager.saveGame(data);
+            Log.d(TAG, "Game saved");
+        }
+
+        finish();
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="player">
+    <div class="file-header"><h2>Player.java</h2><span class="file-meta">125 lines | 2944 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import java.io.Serializable;
+
+public class Player extends Character implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private int level;
+    private int experience;
+    private int goldCollected;
+    private String name;
+
+    // Constructor with x, y parameters
+    public Player(int x, int y) {
+        super(x, y, 100, 10);
+        this.name = "Hero";
+        this.level = 1;
+        this.experience = 0;
+        this.goldCollected = 0;
+    }
+
+    // Constructor for deserialization
+    public Player() {
+        super(0, 0, 100, 10);
+        this.name = "Hero";
+        this.level = 1;
+        this.experience = 0;
+        this.goldCollected = 0;
+    }
+
+    // Constructor with name parameter (for compatibility)
+    public Player(String name) {
+        super(0, 0, 100, 10);
+        this.name = name;
+        this.level = 1;
+        this.experience = 0;
+        this.goldCollected = 0;
+    }
+
+    // Movement method
+    public void move(int dx, int dy) {
+        this.x += dx;
+        this.y += dy;
+    }
+
+    // Gold methods
+    public void addGold(int amount) {
+        this.goldCollected += amount;
+    }
+
+    public int getGoldCollected() {
+        return goldCollected;
+    }
+
+    public void setGoldCollected(int gold) {
+        this.goldCollected = gold;
+    }
+
+    // Health methods
+    public int getCurrentHealth() {
+        return currentHealth;
+    }
+
+    public void setCurrentHealth(int health) {
+        this.currentHealth = Math.max(0, Math.min(health, maxHealth));
+    }
+
+    // Experience and leveling
+    public void addExperience(int amount) {
+        this.experience += amount;
+        checkLevelUp();
+    }
+
+    public int getExperience() {
+        return experience;
+    }
+
+    public void setExperience(int exp) {
+        this.experience = exp;
+        checkLevelUp();
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    // FIXED: Added missing checkLevelUp() method
+    private void checkLevelUp() {
+        // Typical roguelike formula: 100 * level to level up
+        int xpThreshold = 100 * level;
+
+        if (experience &gt;= xpThreshold) {
+            // Increase level
+            level++;
+
+            // Carry over excess experience
+            experience -= xpThreshold;
+
+            // Stat boosts on level up
+            int maxHealthIncrease = 20;
+
+            // Update stats from Character parent class
+            this.currentHealth += maxHealthIncrease;
+            this.maxHealth += maxHealthIncrease;
+
+            // Heal back to full on level up
+            setCurrentHealth(maxHealth);
+        }
+    }
+
+    // Potion usage - returns boolean
+    public boolean usePotion() {
+        int healAmount = 50;
+        if (currentHealth &lt; maxHealth) {
+            heal(healAmount);
+            return true;
+        }
+        return false;
+    }
+
+    // Name getter
+    public String getName() {
+        return name;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="savegamemanager">
+    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">168 lines | 5818 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+import android.util.Log;
+import java.io.*;
+import java.util.*;
+
+public class SaveGameManager {
+    private static final String TAG = "SaveGameManager";
+    private static final String SAVE_DIR = "saves";
+    private String basePath;
+
+    public SaveGameManager(String basePath) {
+        this.basePath = basePath;
+        File saveDir = new File(basePath, SAVE_DIR);
+        if (!saveDir.exists()) {
+            saveDir.mkdirs();
+            Log.d(TAG, "Created save directory: " + saveDir.getAbsolutePath());
+        }
+    }
+
+    private String validateFilename(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            throw new IllegalArgumentException("Filename cannot be null or empty");
+        }
+        String sanitized = filename.replaceAll("[^a-zA-Z0-9._-]", "");
+        if (sanitized.isEmpty()) {
+            throw new IllegalArgumentException("Filename contains no valid characters");
+        }
+        if (sanitized.contains("..")) {
+            throw new IllegalArgumentException("Filename cannot contain path traversal sequences");
+        }
+        return sanitized;
+    }
+
+    private String getSavePath(String filename) {
+        String validated = validateFilename(filename);
+        return new File(new File(basePath, SAVE_DIR), validated).getAbsolutePath();
+    }
+
+    public void saveGame(SaveGameData data, String filename) {
+        if (data == null || data.player == null) {
+            Log.w(TAG, "Cannot save: SaveGameData or player is null");
+            return;
+        }
+        if (data.player.getHealth() &lt;= 0) {
+            Log.w(TAG, "Cannot save: player is dead");
+            return;
+        }
+
+        try {
+            String savePath = getSavePath(filename);
+            FileOutputStream fos = new FileOutputStream(savePath);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(data);
+            oos.close();
+            fos.close();
+            Log.d(TAG, "Game saved to: " + savePath);
+        } catch (IOException e) {
+            Log.e(TAG, "Error saving game", e);
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Invalid filename: " + filename, e);
+        }
+    }
+
+    public void saveGame(SaveGameData data) {
+        saveGame(data, "savegame_" + System.currentTimeMillis() + ".sav");
+    }
+
+    public SaveGameData loadGame(String filename) {
+        try {
+            String savePath = getSavePath(filename);
+            FileInputStream fis = new FileInputStream(savePath);
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            SaveGameData data = (SaveGameData) ois.readObject();
+            ois.close();
+            fis.close();
+            Log.d(TAG, "Game loaded from: " + savePath);
+            return data;
+        } catch (IOException | ClassNotFoundException e) {
+            Log.e(TAG, "Error loading game", e);
+            return null;
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Invalid filename: " + filename, e);
+            return null;
+        }
+    }
+
+    public SaveGameData loadLatestGame() {
+        try {
+            File saveDir = new File(basePath, SAVE_DIR);
+            if (!saveDir.exists()) {
+                return null;
+            }
+            File[] saves = saveDir.listFiles();
+            if (saves == null || saves.length == 0) {
+                return null;
+            }
+            Arrays.sort(saves, (a, b) -&gt; Long.compare(b.lastModified(), a.lastModified()));
+            FileInputStream fis = new FileInputStream(saves[0]);
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            SaveGameData data = (SaveGameData) ois.readObject();
+            ois.close();
+            fis.close();
+            Log.d(TAG, "Latest game loaded from: " + saves[0].getName());
+            return data;
+        } catch (IOException | ClassNotFoundException e) {
+            Log.e(TAG, "Error loading latest game", e);
+            return null;
+        }
+    }
+
+    public List&lt;String&gt; listSaveFiles() {
+        List&lt;String&gt; saveFiles = new ArrayList&lt;&gt;();
+        try {
+            File saveDir = new File(basePath, SAVE_DIR);
+            if (!saveDir.exists()) {
+                return saveFiles;
+            }
+            File[] files = saveDir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (f.isFile()) {
+                        saveFiles.add(f.getName());
+                    }
+                }
+                Collections.sort(saveFiles);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error listing save files", e);
+        }
+        return saveFiles;
+    }
+
+    public boolean deleteSaveFile(String filename) {
+        try {
+            String savePath = getSavePath(filename);
+            File file = new File(savePath);
+            if (file.exists() &amp;&amp; file.delete()) {
+                Log.d(TAG, "Save file deleted: " + filename);
+                return true;
+            }
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Error deleting save file " + filename, e);
+        }
+        return false;
+    }
+
+    public static class SaveGameData implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        public Player player;
+        public List&lt;Enemy&gt; enemies;
+        public int[][] dungeonMap;
+        public int playerX;
+        public int playerY;
+
+        public SaveGameData(Player player, List&lt;Enemy&gt; enemies, int[][] dungeonMap, int playerX, int playerY) {
+            this.player = player;
+            this.enemies = enemies;
+            this.dungeonMap = dungeonMap;
+            this.playerX = playerX;
+            this.playerY = playerY;
+        }
+
+        public SaveGameData() {
+        }
+    }
+}</code></pre>
+</div>
+</div>
+<footer>Auto-generated by KnightLight Documentation Pipeline</footer>
+<script>
+document.querySelectorAll('nav a').forEach(function(a){
+    a.addEventListener('click',function(e){
+        e.preventDefault();
+        var t=document.querySelector(this.getAttribute('href'));
+        window.scrollTo({top:t.offsetTop-85,behavior:'smooth'});
+    });
+});
+</script>
+</body>
+</html>

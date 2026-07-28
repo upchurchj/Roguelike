@@ -14,6 +14,8 @@
         code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
+        .combined-link { display: inline-block; margin-top: 20px; margin-left: 10px; padding: 10px 15px; background: #6d4aff; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .combined-link:hover { background: #5a3aea; }
     </style>
 </head>
 <body>
@@ -53,7 +55,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize UI components
         gameView = findViewById(R.id.game_view);
         if (gameView == null) {
             Log.e(TAG, "GameView not found in layout");
@@ -63,7 +64,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
 
-        // Create fresh game (no arguments)
         game = new Game();
         if (game == null) {
             Log.e(TAG, "Failed to create Game instance");
@@ -71,7 +71,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             return;
         }
 
-        // Ensure player spawns in a valid walkable position
         ensurePlayerSpawned();
 
         // Attempt to restore saved game state
@@ -80,17 +79,11 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             restoreGameState(saveData);
         }
 
-        // Get dungeon reference
         dungeon = game.getDungeon();
-
-        // Bind game to view
         gameView.setGame(game);
         gameView.setGameListener(this);
     }
 
-    /**
-     * Ensures the player is spawned at a valid walkable position in the dungeon.
-     */
     private void ensurePlayerSpawned() {
         if (game == null) {
             return;
@@ -104,7 +97,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             return;
         }
 
-        // Find a valid spawn position
         int[] spawnPos = gameDungeon.findSpawnPosition();
         if (spawnPos != null &amp;&amp; spawnPos.length >gt;= 2) {
             player.setX(spawnPos[0]);
@@ -115,15 +107,11 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
     }
 
-    /**
-     * Restores game state from saved data with full validation.
-     */
     private void restoreGameState(SaveGameManager.SaveGameData saveData) {
         if (saveData == null) {
             return;
         }
 
-        // Restore player position
         if (saveData.playerX >gt;= 0 &amp;&amp; saveData.playerY >gt;= 0) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
@@ -133,7 +121,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             }
         }
 
-        // Restore player stats with bounds checking
         if (saveData.player != null) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
@@ -145,7 +132,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             }
         }
 
-        // Restore enemies
         if (saveData.enemies != null) {
             List<lt;Enemy>gt; currentEnemies = game.getEnemies();
             if (currentEnemies != null) {
@@ -160,28 +146,23 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // Validate request code
         if (requestCode != BATTLE_REQUEST) {
             return;
         }
 
-        // Validate result code
         if (resultCode != RESULT_OK) {
             Log.w(TAG, "onActivityResult: Battle activity returned non-OK result");
             return;
         }
 
-        // Validate intent data
         if (data == null) {
             Log.w(TAG, "onActivityResult: data is null");
             return;
         }
 
         try {
-            // Extract battle result
             boolean battleWon = data.getBooleanExtra("battleWon", false);
 
-            // Extract and validate updated player
             Serializable playerExtra = data.getSerializableExtra("updatedPlayer");
             if (!(playerExtra instanceof Player)) {
                 Log.w(TAG, "onActivityResult: updatedPlayer is not a valid Player instance");
@@ -194,7 +175,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 return;
             }
 
-            // Safely update game player
             if (game != null) {
                 Player gamePlayer = game.getPlayer();
                 if (gamePlayer != null) {
@@ -222,12 +202,10 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 }
             }
 
-            // Update game state if battle was lost
             if (!battleWon &amp;&amp; game != null) {
                 Log.d(TAG, "Battle lost; game state set to LOST");
             }
 
-            // Refresh UI
             if (gameView != null) {
                 gameView.invalidate();
             }
@@ -242,14 +220,14 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         if (enemy != null &amp;&amp; game != null) {
             Intent battleIntent = new Intent(MainActivity.this, BattleActivity.class);
             battleIntent.putExtra("player", game.getPlayer());
-            battleIntent.putExtra("enemy_id", enemy.getId());
+            // FIX: Was "enemy_id" (String) but BattleActivity reads "enemy" (Serializable)
+            battleIntent.putExtra("enemy", enemy);
             startActivityForResult(battleIntent, BATTLE_REQUEST);
         }
     }
 
     @Override
     public void onQuitRequested() {
-        // Show confirmation dialog before quitting
         new AlertDialog.Builder(this)
                 .setTitle("Quit Game")
                 .setMessage("Are you sure you want to quit? Your progress will be saved.")
@@ -273,16 +251,12 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         Log.d(TAG, "Game over: " + state);
     }
 
-    /**
-     * Saves the current game state and closes the activity.
-     */
     private void saveAndQuit() {
         if (game != null &amp;&amp; saveGameManager != null) {
             Player player = game.getPlayer();
             List<lt;Enemy>gt; enemies = game.getEnemies();
             Dungeon gameDungeon = game.getDungeon();
 
-            // Get char grid from dungeon and convert to int[][]
             char[][] charGrid = gameDungeon.getGrid();
             int[][] dungeonMap = null;
 
@@ -311,6 +285,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>
+        <a href="ALL_SOURCE.html" class="combined-link">View All Source</a>
     </div>
 </body>
 </html>

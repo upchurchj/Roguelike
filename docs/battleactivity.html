@@ -14,6 +14,8 @@
         code { font-family: "Courier New", monospace; font-size: 0.95em; display: block; }
         .back-link { display: inline-block; margin-top: 20px; padding: 10px 15px; background: #2a5298; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
         .back-link:hover { background: #1e3c72; }
+        .combined-link { display: inline-block; margin-top: 20px; margin-left: 10px; padding: 10px 15px; background: #6d4aff; color: white; text-decoration: none; border-radius: 5px; transition: background 0.3s; }
+        .combined-link:hover { background: #5a3aea; }
     </style>
 </head>
 <body>
@@ -73,6 +75,11 @@ public class BattleActivity extends AppCompatActivity {
         if (player != null &amp;&amp; enemy != null) {
             battle = new Battle(player, enemy);
             battleView.setBattle(battle);
+        } else {
+            Log.e(TAG, "Missing player or enemy - finishing battle activity");
+            setResult(RESULT_CANCELED);
+            finish();
+            return;
         }
 
         // Wire up buttons
@@ -109,6 +116,13 @@ public class BattleActivity extends AppCompatActivity {
         Log.d(TAG, "Player action: " + action);
         battle.playerAction(action);
         battleView.invalidate();
+
+        // Check if battle ended after player action (victory/fled)
+        if (isBattleOver()) {
+            handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
+            return;
+        }
+
         // Schedule enemy turn after player animation
         handler.postDelayed(this::processTurn, TURN_DELAY_MS);
     }
@@ -141,13 +155,12 @@ public class BattleActivity extends AppCompatActivity {
 
     /**
      * Shows battle result and returns to MainActivity.
-     * Only passes enemy ID (int) and updated player (Serializable), never the Enemy object itself.
+     * FIX: Rewards already handled by CombatSystem.endCombat() - no duplication here.
      */
     private void showBattleResult() {
         Log.d(TAG, "Showing battle result");
         if (isDestroyed) return;
 
-        // Validate state
         if (battle == null || player == null || enemy == null) {
             Log.e(TAG, "showBattleResult: null state detected");
             setResult(RESULT_CANCELED);
@@ -157,30 +170,22 @@ public class BattleActivity extends AppCompatActivity {
 
         boolean battleWon = battle.getState() == Battle.State.VICTORY;
 
-        // Apply rewards only on victory
-        if (battleWon) {
-            int goldReward = enemy.getGoldReward();
-            int xpReward = enemy.getExperienceReward();
-            player.addGold(goldReward);
-            player.addExperience(xpReward);
-            Log.d(TAG, "Victory: +" + goldReward + " gold, +" + xpReward + " XP");
-        } else {
+        // FIX: Removed duplicate reward logic - CombatSystem.endCombat() already handles XP/gold
+        if (!battleWon) {
             Log.d(TAG, "Defeat: Battle lost");
         }
 
-        // Build result intent with ONLY safe types
+        // Build result intent with safe types
         Intent resultIntent = new Intent();
-        // Pass only enemy ID (int) - never the Enemy object itself
         resultIntent.putExtra("enemyId", enemy.getId());
-        // Pass updated player (Serializable)
         resultIntent.putExtra("updatedPlayer", player);
-        // Pass battle result
         resultIntent.putExtra("battleWon", battleWon);
         setResult(RESULT_OK, resultIntent);
         finish();
     }
 }
         <a href="index.html" class="back-link">Back to Index</a>
+        <a href="ALL_SOURCE.html" class="combined-link">View All Source</a>
     </div>
 </body>
 </html>
