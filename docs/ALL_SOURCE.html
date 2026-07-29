@@ -24,7 +24,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">23 files | 3790 lines | 2026-07-29 11:11</div>
+<div class="stats">23 files | 3752 lines | 2026-07-29 13:41</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> </nav>
 <div id="files">
@@ -1899,21 +1899,14 @@ public class ExperienceSystem implements Serializable {
 </div>
 
 <div class="file" id="game">
-    <div class="file-header"><h2>Game.java</h2><span class="file-meta">137 lines | 3805 bytes</span></div>
+    <div class="file-header"><h2>Game.java</h2><span class="file-meta">122 lines | 3942 bytes</span></div>
     <pre><code>package com.knightlight.game;
-
 import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * FIX: Removed duplicate boss spawn logic - consolidated to MainActivity.
- * This class only handles initial enemy generation.
- */
 public class Game {
-    public enum GameState {
-        PLAYING, WON, LOST
-    }
+    public enum GameState { PLAYING, WON, LOST }
 
     private static final int ENEMY_HEALTH = 20;
     private static final int ENEMY_ATTACK_POWER = 5;
@@ -1939,19 +1932,13 @@ public class Game {
         generateInitialEnemies();
     }
 
-    /**
-     * FIX: Renamed from generateEnemies() - this only spawns initial enemies.
-     * Boss spawn is handled entirely by MainActivity.checkBossSpawn()
-     */
     private void generateInitialEnemies() {
         int enemiesSpawned = 0;
         int maxAttempts = 100;
         int attempts = 0;
-
         while (enemiesSpawned &lt; 5 &amp;&amp; attempts &lt; maxAttempts) {
             int x = (int)(Math.random() * dungeon.getWidth());
             int y = (int)(Math.random() * dungeon.getHeight());
-
             if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
                 Enemy enemy = new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon, "Goblin", ENEMY_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
                 enemies.add(enemy);
@@ -1959,7 +1946,6 @@ public class Game {
             }
             attempts++;
         }
-        
         Log.d("Game", "Generated " + enemiesSpawned + " initial enemies");
     }
 
@@ -1967,14 +1953,11 @@ public class Game {
         if (player == null || dungeon == null) {
             return false;
         }
-
         int newX = player.getX() + dx;
         int newY = player.getY() + dy;
-
         if (!dungeon.isWalkable(newX, newY)) {
             return false;
         }
-
         player.move(dx, dy);
         turnCount++;
 
@@ -1982,6 +1965,7 @@ public class Game {
         if (tile == Dungeon.TILE_GOLD) {
             player.addGold(10);
             dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+            Log.d("Game", "Collected gold! Total: " + player.getGoldCollected());
         }
 
         for (Enemy enemy : enemies) {
@@ -1991,51 +1975,52 @@ public class Game {
                 return true;
             }
         }
-
+        encounteredEnemy = null;
         return false;
     }
 
     public void resolveEncounter(Enemy enemy, boolean playerWins) {
         if (playerWins) {
-            // Rewards handled by CombatSystem - don't duplicate
             enemy.takeDamage(9999);
+            if (enemies.remove(enemy)) {
+                Log.d("Game", "✓ Removed defeated enemy from list. Remaining: " + enemies.size());
+            }
         } else {
             player.takeDamage(enemy.getAttack());
             if (!player.isAlive()) {
                 state = GameState.LOST;
             }
         }
-
         if (enemy.isBoss() &amp;&amp; !enemy.isAlive()) {
             state = GameState.WON;
         }
     }
 
-    public Player getPlayer() {
-        return player;
-    }
-
-    public Dungeon getDungeon() {
-        return dungeon;
-    }
+    public Player getPlayer() { return player; }
+    public Dungeon getDungeon() { return dungeon; }
 
     public List&lt;Enemy&gt; getEnemies() {
-        return enemies;
+        List&lt;Enemy&gt; living = new ArrayList&lt;&gt;();
+        if (enemies != null) {
+            for (Enemy e : enemies) {
+                if (e != null &amp;&amp; !e.isDead()) {
+                    living.add(e);
+                }
+            }
+        }
+        return living;
     }
 
-    public GameState getState() {
-        return state;
-    }
-
-    public int getTurnCount() {
-        return turnCount;
-    }
+    public GameState getState() { return state; }
+    public int getTurnCount() { return turnCount; }
 
     public Enemy getAndClearEncounteredEnemy() {
         Enemy temp = encounteredEnemy;
         encounteredEnemy = null;
         return temp;
     }
+
+    public boolean isPlaying() { return state == GameState.PLAYING; }
 }</code></pre>
 </div>
 
@@ -2093,9 +2078,8 @@ public class GameBalance {
 </div>
 
 <div class="file" id="gameview">
-    <div class="file-header"><h2>GameView.java</h2><span class="file-meta">336 lines | 12340 bytes</span></div>
+    <div class="file-header"><h2>GameView.java</h2><span class="file-meta">319 lines | 12709 bytes</span></div>
     <pre><code>package com.knightlight.game;
-
 import android.util.Log;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -2115,7 +2099,6 @@ public class GameView extends View {
     private GameListener listener;
     private Rect btnUp, btnDown, btnLeft, btnRight, btnQuit;
     private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, emojiPaint;
-
     private final Object buttonLock = new Object();
     private boolean btnUpPressed = false, btnDownPressed = false, btnLeftPressed = false, btnRightPressed = false;
 
@@ -2142,47 +2125,46 @@ public class GameView extends View {
         tileWallPaint = new Paint();
         tileWallPaint.setColor(Color.parseColor("#1a1a1a"));
         tileWallPaint.setStyle(Paint.Style.FILL);
-
+        
         tileFloorPaint = new Paint();
         tileFloorPaint.setColor(Color.parseColor("#333333"));
         tileFloorPaint.setStyle(Paint.Style.FILL);
-
+        
         tileGoldPaint = new Paint();
         tileGoldPaint.setColor(Color.parseColor("#FFD700"));
         tileGoldPaint.setStyle(Paint.Style.FILL);
-
+        
         playerPaint = new Paint();
         playerPaint.setColor(Color.parseColor("#00FF00"));
         playerPaint.setStyle(Paint.Style.FILL);
-
+        
         enemyPaint = new Paint();
         enemyPaint.setColor(Color.parseColor("#FF0000"));
         enemyPaint.setStyle(Paint.Style.FILL);
-
+        
         textPaint = new Paint();
         textPaint.setTextSize(40);
         textPaint.setColor(Color.WHITE);
-
+        
         emojiPaint = new Paint();
-        emojiPaint.setTextSize(tileSize * 0.8f);
         emojiPaint.setTextAlign(Paint.Align.CENTER);
-
+        
         buttonPaint = new Paint();
         buttonPaint.setColor(Color.parseColor("#00FF00"));
         buttonPaint.setStyle(Paint.Style.FILL);
-
+        
         buttonPressPaint = new Paint();
         buttonPressPaint.setColor(Color.parseColor("#00AA00"));
         buttonPressPaint.setStyle(Paint.Style.FILL);
-
+        
         overlayPaint = new Paint();
         overlayPaint.setColor(Color.argb(200, 0, 0, 0));
-
+        
         gameOverTextPaint = new Paint();
         gameOverTextPaint.setColor(Color.WHITE);
         gameOverTextPaint.setTextSize(64);
         gameOverTextPaint.setTextAlign(Paint.Align.CENTER);
-
+        
         buttonLabelPaint = new Paint();
         buttonLabelPaint.setColor(Color.BLACK);
         buttonLabelPaint.setTextSize(20);
@@ -2197,13 +2179,8 @@ public class GameView extends View {
         btnQuit = new Rect();
     }
 
-    public void setGame(Game game) {
-        this.game = game;
-    }
-
-    public void setGameListener(GameListener listener) {
-        this.listener = listener;
-    }
+    public void setGame(Game game) { this.game = game; }
+    public void setGameListener(GameListener listener) { this.listener = listener; }
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -2212,24 +2189,26 @@ public class GameView extends View {
             Log.w("GameView", "Game is null in onDraw");
             return;
         }
-
+        
         int width = getWidth(), height = getHeight();
         int gameAreaHeight = (int) (height * 0.75);
         int buttonAreaHeight = height - gameAreaHeight;
-
+        
         Dungeon dungeon = game.getDungeon();
         if (dungeon == null) {
             Log.w("GameView", "Dungeon is null in onDraw");
             return;
         }
-
+        
         tileSize = (float) width / dungeon.getWidth();
+        emojiPaint.setTextSize(tileSize * 0.8f);
+        
         drawDungeon(canvas, dungeon);
         drawPlayer(canvas);
         drawEnemies(canvas);
         drawStatus(canvas, gameAreaHeight);
         drawButtons(canvas, gameAreaHeight, buttonAreaHeight);
-
+        
         Game.GameState state = game.getState();
         if (state != Game.GameState.PLAYING) {
             drawGameOverOverlay(canvas, width, gameAreaHeight);
@@ -2241,8 +2220,8 @@ public class GameView extends View {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
                 float xPos = x * tileSize;
                 float yPos = y * tileSize;
-
                 char tile = dungeon.getTile(x, y);
+                
                 if (tile == Dungeon.TILE_WALL) {
                     canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileWallPaint);
                 } else if (tile == Dungeon.TILE_FLOOR) {
@@ -2250,6 +2229,11 @@ public class GameView extends View {
                 } else if (tile == Dungeon.TILE_GOLD) {
                     canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
                     canvas.drawCircle(xPos + tileSize / 2, yPos + tileSize / 2, tileSize * 0.3f, tileGoldPaint);
+                } else if (tile == 'B') {
+                    canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
+                    Paint bossPaint = new Paint();
+                    bossPaint.setColor(Color.parseColor("#8B0000"));
+                    canvas.drawCircle(xPos + tileSize / 2, yPos + tileSize / 2, tileSize * 0.4f, bossPaint);
                 }
             }
         }
@@ -2261,7 +2245,6 @@ public class GameView extends View {
             Log.w("GameView", "Player is null in drawPlayer");
             return;
         }
-
         float x = player.getX() * tileSize + tileSize / 2;
         float y = player.getY() * tileSize + tileSize / 2;
         canvas.drawCircle(x, y, tileSize * 0.4f, playerPaint);
@@ -2273,13 +2256,12 @@ public class GameView extends View {
             Log.w("GameView", "Enemies list is null in drawEnemies");
             return;
         }
-
+        
         for (Enemy enemy : enemies) {
             if (enemy == null) continue;
-
             float x = enemy.getX() * tileSize + tileSize / 2;
             float y = enemy.getY() * tileSize + tileSize / 2;
-
+            
             if (enemy.isBoss()) {
                 if (!enemy.isDead()) {
                     float dragonSize = tileSize * 4;
@@ -2317,11 +2299,10 @@ public class GameView extends View {
             Log.w("GameView", "Player is null in drawStatus");
             return;
         }
-
         String status = String.format("LVL: %d (XP: %d) | HP: %d/%d | Gold: %d | Turn: %d",
-                player.getLevel(), player.getExperience(),
-                player.getCurrentHealth(), player.getMaxHealth(),
-                player.getGoldCollected(), game.getTurnCount());
+            player.getLevel(), player.getExperience(),
+            player.getCurrentHealth(), player.getMaxHealth(),
+            player.getGoldCollected(), game.getTurnCount());
         canvas.drawText(status, 10, gameAreaHeight - 10, textPaint);
     }
 
@@ -2329,18 +2310,18 @@ public class GameView extends View {
         int buttonWidth = getWidth() / 5;
         int buttonHeight = buttonAreaHeight / 2;
         int startY = gameAreaHeight;
-
+        
         btnUp.set(0, startY, buttonWidth, startY + buttonHeight);
         btnDown.set(buttonWidth, startY, 2 * buttonWidth, startY + buttonHeight);
         btnLeft.set(2 * buttonWidth, startY, 3 * buttonWidth, startY + buttonHeight);
         btnRight.set(3 * buttonWidth, startY, 4 * buttonWidth, startY + buttonHeight);
         btnQuit.set(4 * buttonWidth, startY, 5 * buttonWidth, startY + buttonHeight);
-
+        
         synchronized (buttonLock) {
-            drawButton(canvas, btnUp, "UP", btnUpPressed);
-            drawButton(canvas, btnDown, "DOWN", btnDownPressed);
-            drawButton(canvas, btnLeft, "LEFT", btnLeftPressed);
-            drawButton(canvas, btnRight, "RIGHT", btnRightPressed);
+            drawButton(canvas, btnUp, "↑", btnUpPressed);
+            drawButton(canvas, btnDown, "↓", btnDownPressed);
+            drawButton(canvas, btnLeft, "←", btnLeftPressed);
+            drawButton(canvas, btnRight, "→", btnRightPressed);
         }
         drawButton(canvas, btnQuit, "QUIT", false);
     }
@@ -2361,7 +2342,7 @@ public class GameView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getAction();
         float x = event.getX(), y = event.getY();
-
+        
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 handleButtonPress(x, y);
@@ -2379,42 +2360,29 @@ public class GameView extends View {
             Log.w("GameView", "Game is null in handleButtonPress");
             return;
         }
-
         boolean encounterOccurred = false;
-
+        
         if (btnUp != null &amp;&amp; btnUp.contains((int) x, (int) y)) {
-            synchronized (buttonLock) {
-                btnUpPressed = true;
-            }
+            synchronized (buttonLock) { btnUpPressed = true; }
             encounterOccurred = game.playerMove(0, -1);
         } else if (btnDown != null &amp;&amp; btnDown.contains((int) x, (int) y)) {
-            synchronized (buttonLock) {
-                btnDownPressed = true;
-            }
+            synchronized (buttonLock) { btnDownPressed = true; }
             encounterOccurred = game.playerMove(0, 1);
         } else if (btnLeft != null &amp;&amp; btnLeft.contains((int) x, (int) y)) {
-            synchronized (buttonLock) {
-                btnLeftPressed = true;
-            }
+            synchronized (buttonLock) { btnLeftPressed = true; }
             encounterOccurred = game.playerMove(-1, 0);
         } else if (btnRight != null &amp;&amp; btnRight.contains((int) x, (int) y)) {
-            synchronized (buttonLock) {
-                btnRightPressed = true;
-            }
+            synchronized (buttonLock) { btnRightPressed = true; }
             encounterOccurred = game.playerMove(1, 0);
         } else if (btnQuit != null &amp;&amp; btnQuit.contains((int) x, (int) y)) {
-            if (listener != null) {
-                listener.onQuitRequested();
-            }
+            if (listener != null) { listener.onQuitRequested(); }
         }
-
+        
         if (encounterOccurred &amp;&amp; listener != null) {
             Enemy enemy = game.getAndClearEncounteredEnemy();
-            if (enemy != null) {
-                listener.onEncounter(enemy);
-            }
+            if (enemy != null) { listener.onEncounter(enemy); }
         }
-
+        
         Game.GameState state = game.getState();
         if (state != Game.GameState.PLAYING &amp;&amp; listener != null) {
             listener.onGameOver(state);
@@ -3165,12 +3133,14 @@ public class LootTable {
 </div>
 
 <div class="file" id="mainactivity">
-    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">344 lines | 12667 bytes</span></div>
+    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">345 lines | 13302 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -3181,17 +3151,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Main activity for the Roguelike game.
- * FIXED: Consolidated boss spawn logic - single source of truth.
- * FIXED: Tracks enemy defeats and gold for boss trigger.
+ * FIXED: Boss triggers at 10 kills or 100 gold (lower for testing).
+ * FIXED: Gold collection now tracked for boss trigger.
+ * FIXED: Boss spawn only happens once per run.
  */
 public class MainActivity extends AppCompatActivity implements GameView.GameListener {
+
     private static final String TAG = "MainActivity";
     private static final int BATTLE_REQUEST = 1;
 
-    // BOSS SPAWN TRIGGERS - SINGLE SOURCE OF TRUTH
-    private static final int BOSS_TRIGGER_KILLS = 50;
-    private static final int BOSS_TRIGGER_GOLD = 500;
+    // BOSS SPAWN TRIGGERS - LOWERED FOR TESTING (change back to 50/500 when done)
+    private static final int BOSS_TRIGGER_KILLS = 10;
+    private static final int BOSS_TRIGGER_GOLD = 100;
+
     private int totalEnemiesDefeated = 0;
     private boolean bossSpawned = false;
 
@@ -3199,6 +3171,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     private GameView gameView;
     private SaveGameManager saveGameManager;
     private Dungeon dungeon;
+    private Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -3213,8 +3186,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
 
         saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
-
         game = new Game();
+
         if (game == null) {
             Log.e(TAG, "Failed to create Game instance");
             finish();
@@ -3226,26 +3199,26 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
         if (saveData != null) {
             restoreGameState(saveData);
+            if (saveData.totalEnemiesDefeated &gt; 0) {
+                totalEnemiesDefeated = saveData.totalEnemiesDefeated;
+            }
         }
 
         dungeon = game.getDungeon();
         gameView.setGame(game);
         gameView.setGameListener(this);
-        
+
         Log.d(TAG, "MainActivity initialized - Boss trigger: " + BOSS_TRIGGER_KILLS + " kills OR " + BOSS_TRIGGER_GOLD + " gold");
     }
 
     private void ensurePlayerSpawned() {
         if (game == null) return;
-
         Player player = game.getPlayer();
         Dungeon gameDungeon = game.getDungeon();
-
         if (player == null || gameDungeon == null) {
             Log.w(TAG, "Cannot spawn player: player or dungeon is null");
             return;
         }
-
         int[] spawnPos = gameDungeon.findSpawnPosition();
         if (spawnPos != null &amp;&amp; spawnPos.length &gt;= 2) {
             player.setX(spawnPos[0]);
@@ -3282,8 +3255,12 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             List&lt;Enemy&gt; currentEnemies = game.getEnemies();
             if (currentEnemies != null) {
                 currentEnemies.clear();
-                currentEnemies.addAll(saveData.enemies);
-                Log.d(TAG, "Restored " + saveData.enemies.size() + " enemies");
+                for (Enemy e : saveData.enemies) {
+                    if (e != null &amp;&amp; !e.isDead()) {
+                        currentEnemies.add(e);
+                    }
+                }
+                Log.d(TAG, "Restored " + currentEnemies.size() + " living enemies");
             }
         }
     }
@@ -3304,8 +3281,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         try {
             boolean battleWon = data.getBooleanExtra("battleWon", false);
-
             Serializable playerExtra = data.getSerializableExtra("updatedPlayer");
+
             if (!(playerExtra instanceof Player)) {
                 Log.w(TAG, "onActivityResult: updatedPlayer is not a valid Player instance");
                 return;
@@ -3325,32 +3302,30 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     gamePlayer.setExperience(updatedPlayer.getExperience());
                     gamePlayer.setGoldCollected(updatedPlayer.getGoldCollected());
                     gamePlayer.setLevel(updatedPlayer.getLevel());
+
+                    if (updatedPlayer.getLevel() &gt; gamePlayer.getLevel()) {
+                        Toast.makeText(this, "⬆️ LEVEL UP! You are now level " + updatedPlayer.getLevel(), Toast.LENGTH_LONG).show();
+                    }
                 }
             }
 
-            // FIX: Track enemy defeat count - CONSOLIDATED LOGIC
             if (battleWon) {
                 totalEnemiesDefeated++;
-                Log.d(TAG, "Victory! Total enemies defeated: " + totalEnemiesDefeated + 
-                               ", Player gold: " + updatedPlayer.getGoldCollected());
+                Log.d(TAG, "✓ Victory! Total enemies defeated: " + totalEnemiesDefeated);
+                if (!bossSpawned) {
+                    checkBossSpawn();
+                }
             }
 
-            // FIX: Check boss spawn - ONLY PLACE WHERE BOSS IS SPAWNED
-            if (!bossSpawned &amp;&amp; game != null &amp;&amp; battleWon) {
-                checkBossSpawn();
-            }
-
-            // Mark defeated enemy as dead
             String defeatedEnemyId = data.getStringExtra("enemyId");
             if (defeatedEnemyId != null &amp;&amp; game != null) {
                 List&lt;Enemy&gt; currentEnemies = game.getEnemies();
                 if (currentEnemies != null) {
                     for (Enemy e : currentEnemies) {
                         if (e != null &amp;&amp; e.getId().equals(defeatedEnemyId)) {
-                            if (e.isDefeated()) {
-                                currentEnemies.remove(e);
-                                Log.d(TAG, "Enemy " + defeatedEnemyId + " removed from active enemies");
-                            }
+                            e.takeDamage(9999);
+                            currentEnemies.remove(e);
+                            Log.d(TAG, "Removed enemy " + defeatedEnemyId + " from active list");
                             break;
                         }
                     }
@@ -3364,16 +3339,11 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             if (gameView != null) {
                 gameView.invalidate();
             }
-
         } catch (Exception e) {
             Log.e(TAG, "Error processing battle result", e);
         }
     }
 
-    /**
-     * FIX: SINGLE SOURCE FOR BOSS SPAWN CHECKING
-     * All boss spawn logic consolidated here - no duplicates elsewhere
-     */
     private void checkBossSpawn() {
         if (bossSpawned) {
             Log.d(TAG, "Boss already spawned this run");
@@ -3382,25 +3352,22 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         Player player = game.getPlayer();
         int currentGold = (player != null) ? player.getGoldCollected() : 0;
-
         boolean killTrigger = totalEnemiesDefeated &gt;= BOSS_TRIGGER_KILLS;
         boolean goldTrigger = currentGold &gt;= BOSS_TRIGGER_GOLD;
 
         if (killTrigger) {
-            Log.d(TAG, "BOSS TRIGGER: " + totalEnemiesDefeated + " enemies defeated (threshold: " + BOSS_TRIGGER_KILLS + ")");
+            Log.d(TAG, "🔥 BOSS TRIGGER: " + totalEnemiesDefeated + " enemies defeated (threshold: " + BOSS_TRIGGER_KILLS + ")");
+            Toast.makeText(this, "⚠️ WARNING: A POWERFUL BOSS AWAKENS!", Toast.LENGTH_LONG).show();
             spawnBoss();
         } else if (goldTrigger) {
-            Log.d(TAG, "BOSS TRIGGER: " + currentGold + " gold collected (threshold: " + BOSS_TRIGGER_GOLD + ")");
+            Log.d(TAG, "🔥 BOSS TRIGGER: " + currentGold + " gold collected (threshold: " + BOSS_TRIGGER_GOLD + ")");
+            Toast.makeText(this, "⚠️ WARNING: YOUR WEALTH HAS ATTRACTED ATTENTION!", Toast.LENGTH_LONG).show();
             spawnBoss();
         } else {
-            Log.d(TAG, "Boss check: " + totalEnemiesDefeated + "/" + BOSS_TRIGGER_KILLS + " kills, " + 
-                           currentGold + "/" + BOSS_TRIGGER_GOLD + " gold - not triggered yet");
+            Log.d(TAG, "Boss check: " + totalEnemiesDefeated + "/" + BOSS_TRIGGER_KILLS + " kills, " + currentGold + "/" + BOSS_TRIGGER_GOLD + " gold - not triggered yet");
         }
     }
 
-    /**
-     * FIX: Boss spawning - ensures minimum distance from player
-     */
     private void spawnBoss() {
         if (game == null || dungeon == null) {
             Log.e(TAG, "Cannot spawn boss: game or dungeon is null");
@@ -3412,13 +3379,13 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
         char[][] grid = dungeon.getGrid();
         Player player = game.getPlayer();
-        
+
         for (int y = 0; y &lt; dungeon.getHeight(); y++) {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
                 if (dungeon.isWalkable(x, y)) {
                     if (player != null) {
                         int dist = Math.abs(x - player.getX()) + Math.abs(y - player.getY());
-                        if (dist &gt; 10) {
+                        if (dist &gt; 15) {
                             floorTiles.add(new int[]{x, y});
                         }
                     } else {
@@ -3437,24 +3404,22 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         int bossX = bossPos[0];
         int bossY = bossPos[1];
 
-        // Scaler boss stats with player level
-        int bossMaxHealth = 200 + (player != null ? player.getLevel() * 20 : 0);
-        int bossAttack = 25 + (player != null ? player.getLevel() * 3 : 0);
-        int bossArmor = 10;
+        int bossMaxHealth = 200 + (player != null ? player.getLevel() * 25 : 0);
+        int bossAttack = 25 + (player != null ? player.getLevel() * 4 : 0);
+        int bossArmor = 10 + (player != null ? player.getLevel() : 0);
 
-        Enemy boss = new Enemy(bossX, bossY, bossMaxHealth, bossAttack, dungeon, "BOSS", bossArmor, 15, 25);
+        Enemy boss = new Enemy(bossX, bossY, bossMaxHealth, bossAttack, dungeon, "DRAGON BOSS", bossArmor, 20, 35);
         boss.setBoss(true);
 
         game.getEnemies().add(boss);
         dungeon.setTile(bossX, bossY, 'B');
 
-        Log.d(TAG, "BOSS SPAWNED at (" + bossX + "," + bossY + ") - HP:" + bossMaxHealth + " ATK:" + bossAttack);
-        Toast.makeText(this, "WARNING: BOSS APPROACHING!", Toast.LENGTH_LONG).show();
+        Log.d(TAG, "🐉 BOSS SPAWNED at (" + bossX + "," + bossY + ") - HP:" + bossMaxHealth + " ATK:" + bossAttack);
     }
 
     @Override
     public void onEncounter(Enemy enemy) {
-        if (enemy != null &amp;&amp; game != null) {
+        if (enemy != null &amp;&amp; game != null &amp;&amp; game.isPlaying()) {
             Intent battleIntent = new Intent(MainActivity.this, BattleActivity.class);
             battleIntent.putExtra("player", game.getPlayer());
             battleIntent.putExtra("enemy", enemy);
@@ -3465,16 +3430,21 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     @Override
     public void onQuitRequested() {
         new AlertDialog.Builder(this)
-                .setTitle("Quit Game")
-                .setMessage("Are you sure you want to quit? Your progress will be saved.")
-                .setPositiveButton("Quit", (dialog, which) -&gt; saveAndQuit())
-                .setNegativeButton("Cancel", (dialog, which) -&gt; dialog.dismiss())
-                .show();
+            .setTitle("Quit Game")
+            .setMessage("Are you sure you want to quit? Your progress will be saved.")
+            .setPositiveButton("Quit", (dialog, which) -&gt; saveAndQuit())
+            .setNegativeButton("Cancel", (dialog, which) -&gt; dialog.dismiss())
+            .show();
     }
 
     @Override
     public void onGameOver(Game.GameState state) {
         Log.d(TAG, "Game over: " + state);
+        if (state == Game.GameState.WON) {
+            Toast.makeText(this, "🏆 YOU DEFEATED THE DRAGON! YOU WIN!", Toast.LENGTH_LONG).show();
+        } else if (state == Game.GameState.LOST) {
+            Toast.makeText(this, "💀 You have been defeated...", Toast.LENGTH_LONG).show();
+        }
     }
 
     private void saveAndQuit() {
@@ -3482,10 +3452,9 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Player player = game.getPlayer();
             List&lt;Enemy&gt; enemies = game.getEnemies();
             Dungeon gameDungeon = game.getDungeon();
-
             char[][] charGrid = gameDungeon.getGrid();
-            int[][] dungeonMap = null;
 
+            int[][] dungeonMap = null;
             if (charGrid != null) {
                 dungeonMap = new int[charGrid.length][];
                 for (int y = 0; y &lt; charGrid.length; y++) {
@@ -3502,36 +3471,28 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             data.player = player;
             data.enemies = enemies;
             data.dungeonMap = dungeonMap;
-
+            data.totalEnemiesDefeated = totalEnemiesDefeated;
+            data.bossSpawned = bossSpawned;
             saveGameManager.saveGame(data);
             Log.d(TAG, "Game saved");
         }
-
         finish();
     }
 }</code></pre>
 </div>
 
 <div class="file" id="player">
-    <div class="file-header"><h2>Player.java</h2><span class="file-meta">155 lines | 4155 bytes</span></div>
+    <div class="file-header"><h2>Player.java</h2><span class="file-meta">148 lines | 3969 bytes</span></div>
     <pre><code>package com.knightlight.game;
-
 import java.io.Serializable;
 
-/**
- * Player character with experience, leveling, and inventory management.
- * FIXED: Removed standalone addExperience() - delegates to ExperienceSystem.
- * FIXED: Unified level-up formula with ExperienceSystem.
- */
 public class Player extends Character implements Serializable {
     private static final long serialVersionUID = 1L;
-
     private int level;
     private int experience;
     private int goldCollected;
     private String name;
 
-    // ========== CONSTRUCTORS ==========
     public Player(int x, int y) {
         super(x, y, 100, 15);
         this.name = "Hero";
@@ -3556,13 +3517,11 @@ public class Player extends Character implements Serializable {
         this.goldCollected = 0;
     }
 
-    // ========== MOVEMENT ==========
     public void move(int dx, int dy) {
         this.x += dx;
         this.y += dy;
     }
 
-    // ========== GOLD MANAGEMENT ==========
     public void addGold(int amount) {
         this.goldCollected += amount;
     }
@@ -3575,27 +3534,33 @@ public class Player extends Character implements Serializable {
         this.goldCollected = gold;
     }
 
-    // ========== EXPERIENCE AND LEVELING (FIXED) ==========
-    /**
-     * FIX: Delegates to ExperienceSystem for unified leveling logic.
-     * REMOVED: Old standalone addExperience() that used different formula
-     */
     public int addExperience(int amount) {
-        // Use ExperienceSystem's exponential formula for consistency
+        if (amount &lt; 0) return 0;
+        int oldLevel = this.level;
+        int oldHP = this.maxHealth;
+        int oldATK = this.attack;
+
         ExperienceSystem expSys = new ExperienceSystem();
         expSys.setCurrentLevel(this.level);
         expSys.setCurrentExperience(this.experience);
         int levelsGained = expSys.addExperience(amount);
-        
-        // Sync back to player
+
         this.level = expSys.getCurrentLevel();
         this.experience = (int) expSys.getCurrentExperience();
-        
-        // Apply stat gains on level up
+
         if (levelsGained &gt; 0) {
             applyLevelUpStats(levelsGained);
+
+            android.util.Log.d("PLAYER", String.format(
+                "⬆️ LEVEL UP! Gained %d level(s). HP +%d → %d/%d, ATK +%d → %d",
+                levelsGained,
+                this.maxHealth - oldHP,
+                this.currentHealth,
+                this.maxHealth,
+                this.attack - oldATK,
+                this.attack
+            ));
         }
-        
         return levelsGained;
     }
 
@@ -3616,51 +3581,48 @@ public class Player extends Character implements Serializable {
         this.level = level;
     }
 
-    /**
-     * Internal level check using EXPONENTIAL formula (matches ExperienceSystem).
-     * FIXED: Changed from linear (100*level) to exponential (100*1.5^(level-1))
-     */
     private void checkLevelUpInternal() {
         long xpThreshold = calculateXpThreshold(level);
-        
         if (experience &gt;= xpThreshold) {
+            int oldLevel = this.level;
             level++;
             experience -= (int)xpThreshold;
-            applyLevelUpStats(1);
+            applyLevelUpStats(level - oldLevel);
+            android.util.Log.d("PLAYER", "⬆️ AUTO LEVEL UP! Now LVL " + level);
         }
     }
 
-    /**
-     * Calculate XP needed for next level using exponential scaling.
-     * FIXED: Matches ExperienceSystem formula
-     */
     private long calculateXpThreshold(int lvl) {
         return Math.round(100L * Math.pow(1.5, lvl - 1));
     }
 
-    /**
-     * Apply stat increases on level up.
-     */
     private void applyLevelUpStats(int levels) {
         int maxHealthIncrease = 5 * levels;
         int attackIncrease = 2 * levels;
-        
+
         this.maxHealth += maxHealthIncrease;
         this.currentHealth = Math.min(maxHealth, currentHealth + maxHealthIncrease);
         this.attack += attackIncrease;
+
+        android.util.Log.d("PLAYER", String.format(
+            "Stats applied: HP +%d/%d, ATK +%d → now %d",
+            maxHealthIncrease,
+            this.maxHealth,
+            attackIncrease,
+            this.attack
+        ));
     }
 
-    // ========== POTION USAGE ==========
     public boolean usePotion() {
         int healAmount = 25;
         if (currentHealth &lt; maxHealth) {
             heal(healAmount);
+            android.util.Log.d("PLAYER", "Used potion. Healed " + healAmount + " HP. Now " + currentHealth + "/" + maxHealth);
             return true;
         }
         return false;
     }
 
-    // ========== NAME ==========
     public String getName() {
         return name;
     }
@@ -3672,26 +3634,20 @@ public class Player extends Character implements Serializable {
 </div>
 
 <div class="file" id="savegamemanager">
-    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">203 lines | 8486 bytes</span></div>
+    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">203 lines | 8924 bytes</span></div>
     <pre><code>package com.knightlight.game;
-
 import android.util.Log;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
 
-/**
- * Save/load manager with integrity verification.
- * FIXED: Improved serialization format with versioning for forward compatibility.
- */
 public class SaveGameManager {
     private static final String TAG = "SaveGameManager";
     private static final String SAVE_DIR = "saves";
     private static final String CHECKSUM_EXT = ".sha256";
     private static final String SAVE_PREFIX = "save_";
     private static final int CURRENT_VERSION = 1;
-
     private final String basePath;
 
     public SaveGameManager(String basePath) {
@@ -3699,7 +3655,6 @@ public class SaveGameManager {
             throw new IllegalArgumentException("Base path cannot be null or empty");
         }
         this.basePath = basePath;
-
         File saveDir = new File(basePath, SAVE_DIR);
         try {
             if (!saveDir.exists() &amp;&amp; !saveDir.mkdirs()) {
@@ -3778,6 +3733,9 @@ public class SaveGameManager {
         sb.append("version=").append(CURRENT_VERSION).append("\n");
         sb.append("playerX=").append(data.playerX).append("\n");
         sb.append("playerY=").append(data.playerY).append("\n");
+        sb.append("totalKills=").append(data.totalEnemiesDefeated).append("\n");
+        sb.append("bossSpawned=").append(data.bossSpawned ? "1" : "0").append("\n");
+        
         if (data.player != null) {
             sb.append("level=").append(data.player.getLevel()).append("\n");
             sb.append("xp=").append(data.player.getExperience()).append("\n");
@@ -3786,23 +3744,25 @@ public class SaveGameManager {
             sb.append("maxHp=").append(data.player.getMaxHealth()).append("\n");
             sb.append("attack=").append(data.player.getAttack()).append("\n");
         }
+        
         if (data.enemies != null) {
             sb.append("enemyCount=").append(data.enemies.size()).append("\n");
         }
+        
         return saveGame(filename, sb.toString());
     }
 
     public SaveGameData loadLatestGame() {
         File saveDir = new File(basePath, SAVE_DIR);
-        File[] saves = saveDir.listFiles((dir, name) -&gt;
+        File[] saves = saveDir.listFiles((dir, name) -&gt; 
             name.startsWith(SAVE_PREFIX) &amp;&amp; !name.endsWith(CHECKSUM_EXT));
-
+        
         if (saves == null || saves.length == 0) {
             return null;
         }
-
+        
         Arrays.sort(saves, (a, b) -&gt; Long.compare(b.lastModified(), a.lastModified()));
-
+        
         for (File saveFile : saves) {
             try (BufferedReader reader = new BufferedReader(new FileReader(saveFile))) {
                 StringBuilder sb = new StringBuilder();
@@ -3812,14 +3772,17 @@ public class SaveGameManager {
                     sb.append(line);
                 }
                 String data = sb.toString();
-
+                
                 if (!verifyHash(saveFile, data)) {
                     Log.w(TAG, "Skipping corrupted save: " + saveFile.getName());
                     continue;
                 }
-
+                
                 SaveGameData result = new SaveGameData();
                 result.version = CURRENT_VERSION;
+                result.totalEnemiesDefeated = 0;
+                result.bossSpawned = false;
+                
                 for (String row : data.split("\n")) {
                     String[] kv = row.split("=", 2);
                     if (kv.length == 2) {
@@ -3828,36 +3791,33 @@ public class SaveGameManager {
                         switch (key) {
                             case "playerX": result.playerX = Integer.parseInt(val); break;
                             case "playerY": result.playerY = Integer.parseInt(val); break;
+                            case "totalKills": result.totalEnemiesDefeated = Integer.parseInt(val); break;
+                            case "bossSpawned": result.bossSpawned = "1".equals(val); break;
                             case "level":
                                 if (result.player == null) result.player = new Player();
-                                result.player.setLevel(Integer.parseInt(val));
-                                break;
+                                result.player.setLevel(Integer.parseInt(val)); break;
                             case "xp":
                                 if (result.player == null) result.player = new Player();
-                                result.player.setExperience(Integer.parseInt(val));
-                                break;
+                                result.player.setExperience(Integer.parseInt(val)); break;
                             case "gold":
                                 if (result.player == null) result.player = new Player();
-                                result.player.setGoldCollected(Integer.parseInt(val));
-                                break;
+                                result.player.setGoldCollected(Integer.parseInt(val)); break;
                             case "hp":
                                 if (result.player == null) result.player = new Player();
-                                result.player.setCurrentHealth(Integer.parseInt(val));
-                                break;
+                                result.player.setCurrentHealth(Integer.parseInt(val)); break;
                             case "maxHp":
                                 if (result.player == null) result.player = new Player();
-                                result.player.maxHealth = Integer.parseInt(val);
-                                break;
+                                result.player.maxHealth = Integer.parseInt(val); break;
                             case "attack":
                                 if (result.player == null) result.player = new Player();
-                                result.player.setAttack(Integer.parseInt(val));
-                                break;
+                                result.player.setAttack(Integer.parseInt(val)); break;
                         }
                     }
                 }
-                Log.d(TAG, "Loaded save: " + saveFile.getName());
+                
+                Log.d(TAG, "Loaded save: " + saveFile.getName() + " | Kills: " + 
+                    result.totalEnemiesDefeated + " | Boss: " + result.bossSpawned);
                 return result;
-
             } catch (Exception e) {
                 Log.e(TAG, "Error reading save: " + e.getMessage());
             }
@@ -3872,7 +3832,9 @@ public class SaveGameManager {
         public Player player;
         public List&lt;Enemy&gt; enemies;
         public int[][] dungeonMap;
-
+        public int totalEnemiesDefeated = 0;
+        public boolean bossSpawned = false;
+        
         public SaveGameData() {}
     }
 }</code></pre>
