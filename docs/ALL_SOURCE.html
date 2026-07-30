@@ -24,7 +24,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">25 files | 3979 lines | 2026-07-30 12:33</div>
+<div class="stats">25 files | 4097 lines | 2026-07-30 14:35</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -229,7 +229,7 @@ public class Battle implements Serializable {
 </div>
 
 <div class="file" id="battleactivity">
-    <div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">156 lines | 5305 bytes</span></div>
+    <div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">159 lines | 5543 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -241,10 +241,6 @@ import android.os.Looper;
 import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
 
-/**
- * Battle activity that manages combat encounters.
- * FIXED: Single source of reward logic - calls CombatSystem.awardRewards() only once.
- */
 public class BattleActivity extends AppCompatActivity {
     private static final String EXTRA_PLAYER = "player";
     private static final String EXTRA_ENEMY = "enemy";
@@ -260,6 +256,7 @@ public class BattleActivity extends AppCompatActivity {
     private boolean isDestroyed = false;
     private Button btnAttack, btnDefend, btnFlee;
     private CombatSystem combatSystem;
+    private LootTable lootTable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -285,6 +282,16 @@ public class BattleActivity extends AppCompatActivity {
             battle = new Battle(player, enemy);
             battleView.setBattle(battle);
             combatSystem = battle.getCombatSystem();
+
+            // ✓ FIXED: Use static LootTable from MainActivity instead of Application
+            if (MainActivity.getLootTableInstance() != null) {
+                lootTable = MainActivity.getLootTableInstance();
+                combatSystem.setLootTable(lootTable);
+                Log.d(TAG, "LootTable connected to CombatSystem");
+            } else {
+                Log.w(TAG, "No LootTable available, loot drops disabled");
+            }
+
             Log.d(TAG, "Battle started: " + enemy.getName());
         } else {
             Log.e(TAG, "Missing player or enemy - finishing battle activity");
@@ -351,10 +358,6 @@ public class BattleActivity extends AppCompatActivity {
         return state == Battle.State.VICTORY || state == Battle.State.DEFEAT || state == Battle.State.FLED;
     }
 
-    /**
-     * Shows battle result and returns to MainActivity.
-     * FIXED: Single call to awardRewards() - no duplication.
-     */
     private void showBattleResult() {
         Log.d(TAG, "Showing battle result");
         if (isDestroyed) return;
@@ -368,10 +371,10 @@ public class BattleActivity extends AppCompatActivity {
 
         boolean battleWon = battle.getState() == Battle.State.VICTORY;
 
-        // FIX: Award rewards exactly ONCE if battle was won
         if (battleWon &amp;&amp; combatSystem != null) {
             Log.d(TAG, "Victory! Awarding rewards...");
-            combatSystem.awardRewards(player);
+            int estimatedFloor = Math.min(10, (enemy.getGoldReward() / 10) + 1);
+            combatSystem.awardRewards(player, estimatedFloor);
             Log.d(TAG, "Rewards granted: XP=" + player.getExperience() + 
                        ", Level=" + player.getLevel() + ", Gold=" + player.getGoldCollected());
         } else if (!battleWon) {
@@ -715,28 +718,28 @@ public class CombatResult {
 </div>
 
 <div class="file" id="combatsystem">
-    <div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">167 lines | 5345 bytes</span></div>
+    <div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">183 lines | 5902 bytes</span></div>
     <pre><code>package com.knightlight.game;
-
 import android.util.Log;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * Thread-safe combat resolution system.
- * FIXED: Uses Character public getters instead of fragile reflection.
- * FIXED: Central reward logic - single source of truth for XP/gold awards.
- */
 public class CombatSystem {
     private static final String TAG = "CombatSystem";
     private Player player;
     private Enemy enemy;
     private final List&lt;String&gt; combatLog;
     private volatile String lastLogEntry;
+    private LootTable lootTable;
 
     public CombatSystem(Player player, Enemy enemy) {
+        this(player, enemy, null);
+    }
+
+    public CombatSystem(Player player, Enemy enemy, LootTable lootTable) {
         if (player == null) {
             throw new IllegalArgumentException("Player cannot be null");
         }
@@ -745,9 +748,14 @@ public class CombatSystem {
         }
         this.player = player;
         this.enemy = enemy;
+        this.lootTable = lootTable;
         this.combatLog = new CopyOnWriteArrayList&lt;&gt;();
         this.lastLogEntry = "";
         Log.d(TAG, "CombatSystem initialized: " + player.getName() + " vs " + enemy.getName());
+    }
+
+    public void setLootTable(LootTable lootTable) {
+        this.lootTable = lootTable;
     }
 
     public String getLastLogEntry() {
@@ -768,7 +776,6 @@ public class CombatSystem {
         lastLogEntry = message;
     }
 
-    // ========== FIX: Use public getters instead of reflection ==========
     private int getAttack(Character c) {
         return c.getAttack();
     }
@@ -809,7 +816,7 @@ public class CombatSystem {
         setCurrentHealth(enemy, getCurrentHealth(enemy) - damage);
 
         if (getCurrentHealth(enemy) &lt;= 0) {
-            enemy.takeDamage(9999); // Force defeat state
+            enemy.takeDamage(9999);
             appendLog(enemy.getName() + " has been defeated!");
         }
     }
@@ -850,34 +857,46 @@ public class CombatSystem {
         return Math.max(1, total);
     }
 
-    /**
-     * FIX: Single source of truth for awarding XP and gold.
-     * This is the ONLY place that should award rewards.
-     * Called from BattleActivity after victory.
-     */
     public void awardRewards(Player player) {
-        if (enemy == null) {
-            Log.w(TAG, "awardRewards called with null enemy");
+        awardRewards(player, 1);
+    }
+
+    public void awardRewards(Player player, int floorNumber) {
+        if (player == null || enemy == null) {
+            Log.w(TAG, "awardRewards called with null player or enemy");
             return;
         }
-        
+
         int xp = enemy.getExperienceReward();
         int gold = enemy.getGoldReward();
-        
+
         Log.d(TAG, "Awarding rewards: XP=" + xp + ", Gold=" + gold);
-        
-        // Delegate to Player which uses ExperienceSystem
+
         player.addExperience(xp);
         player.addGold(gold);
-        
+
         appendLog("+" + xp + " XP, +" + gold + " gold");
-        Log.d(TAG, "Player now has XP=" + player.getExperience() + 
+
+        // Loot drop with proper null checks
+        if (lootTable != null) {
+            if (ThreadLocalRandom.current().nextDouble() &lt; 0.30) {
+                Equipment item = lootTable.generateLoot(floorNumber, 0.5);
+                if (item != null) {
+                    InventorySystem inv = player.getInventory();
+                    if (inv != null &amp;&amp; inv.addEquipment(item)) {
+                        appendLog("💎 Found " + item.getName() + " (" + item.getRarity() + ")!");
+                        Log.d(TAG, "Loot dropped: " + item.getName());
+                    } else {
+                        Log.w(TAG, "Loot dropped but inventory full or null");
+                    }
+                }
+            }
+        }
+
+        Log.d(TAG, "Player now has XP=" + player.getExperience() +
                     ", Level=" + player.getLevel() + ", Gold=" + player.getGoldCollected());
     }
 
-    /**
-     * Check if this battle resulted in victory.
-     */
     public boolean isVictory() {
         if (enemy == null) return false;
         return (getCurrentHealth(enemy) &lt;= 0) || !enemy.isAlive();
@@ -1572,7 +1591,7 @@ public class DungeonManager {
 </div>
 
 <div class="file" id="enemy">
-    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">67 lines | 2779 bytes</span></div>
+    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">75 lines | 3084 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -1584,6 +1603,7 @@ public class Enemy extends Character implements Serializable {
     private int goldReward;
     private int experienceReward;
     private boolean isBoss;
+    private boolean isDefeated; // NEW: Track defeated state separately
     private EnemyType enemyType;
 
     public Enemy(int x, int y, Dungeon dungeon, EnemyType type, String name) {
@@ -1598,6 +1618,7 @@ public class Enemy extends Character implements Serializable {
         this.goldReward = 5 + (int)(Math.random() * 10) + (type.ordinal() * 3);
         this.experienceReward = type.getXpReward();
         this.isBoss = false;
+        this.isDefeated = false;
     }
 
     public Enemy(int x, int y, int maxHealth, int attack,
@@ -1616,6 +1637,7 @@ public class Enemy extends Character implements Serializable {
                         + (EnemyType.OGRE.ordinal() * 3);
         this.experienceReward = EnemyType.OGRE.getXpReward();
         this.isBoss = false;
+        this.isDefeated = false;
     }
 
     public void moveToward(Character target) {
@@ -1629,12 +1651,17 @@ public class Enemy extends Character implements Serializable {
         else if (y &lt; targetY &amp;&amp; dungeon.isWalkable(x, y + 1)) y++;
     }
 
+    // ✓ ADDED: Set defeated state explicitly
+    public void setDefeated(boolean defeated) {
+        this.isDefeated = defeated;
+    }
+
     public String getName()              { return name; }
     public String getId()                { return id; }
     public int getGoldReward()           { return goldReward; }
     public int getExperienceReward()     { return experienceReward; }
-    public boolean isDefeated()          { return !isAlive(); }
-    public boolean isDead()              { return !isAlive(); }
+    public boolean isDefeated()          { return isDefeated || !isAlive(); }
+    public boolean isDead()              { return isDefeated || !isAlive(); }
     public boolean isBoss()              { return isBoss; }
     public String getEmoji()             { return enemyType != null ? enemyType.getEmoji() : "👹"; }
     public EnemyType getType()           { return enemyType; }
@@ -1972,9 +1999,10 @@ public class ExperienceSystem implements Serializable {
 </div>
 
 <div class="file" id="game">
-    <div class="file-header"><h2>Game.java</h2><span class="file-meta">132 lines | 4221 bytes</span></div>
+    <div class="file-header"><h2>Game.java</h2><span class="file-meta">145 lines | 4984 bytes</span></div>
     <pre><code>package com.knightlight.game;
 import android.util.Log;
+import java.util.Random;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -1993,6 +2021,14 @@ public class Game {
     private GameState state;
     private int turnCount;
     private Enemy encounteredEnemy;
+    private static final Random RANDOM = new Random();
+
+    // ✓ FIXED: Regular monster types for random spawning
+    private static final EnemyType[] REGULAR_MONSTERS = {
+        EnemyType.SKELETON, EnemyType.CLOWN, EnemyType.OGRE, EnemyType.GHOST,
+        EnemyType.ZOMBIE_M, EnemyType.WOLF, EnemyType.FOX, EnemyType.BEAR,
+        EnemyType.SPIDER, EnemyType.BAT, EnemyType.MONSTER, EnemyType.ALIEN
+    };
 
     public Game() {
         this.dungeon = new Dungeon(50, 50);
@@ -2013,13 +2049,16 @@ public class Game {
             int x = (int)(Math.random() * dungeon.getWidth());
             int y = (int)(Math.random() * dungeon.getHeight());
             if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
-                Enemy enemy = new Enemy(x, y, ENEMY_HEALTH, ENEMY_ATTACK_POWER, dungeon, "Goblin", ENEMY_ARMOR, ENEMY_DODGE, ENEMY_CRIT);
+                // ✓ FIXED: Random enemy type selection
+                EnemyType type = REGULAR_MONSTERS[RANDOM.nextInt(REGULAR_MONSTERS.length)];
+                Enemy enemy = new Enemy(x, y, dungeon, type, null);
                 enemies.add(enemy);
                 enemiesSpawned++;
+                Log.d("Game", "Spawned " + type.getEmoji() + " " + type.name() + " at (" + x + "," + y + ")");
             }
             attempts++;
         }
-        Log.d("Game", "Generated " + enemiesSpawned + " initial enemies");
+        Log.d("Game", "Generated " + enemiesSpawned + " initial enemies with random types");
     }
 
     public boolean playerMove(int dx, int dy) {
@@ -2042,9 +2081,9 @@ public class Game {
         }
 
         for (Enemy enemy : enemies) {
-            if (enemy != null &amp;&amp; !enemy.isDead() &amp;&amp;
-                enemy.getX() == newX &amp;&amp; enemy.getY() == newY) {
+            if (enemy != null &amp;&amp; !enemy.isDead() &amp;&amp; enemy.getX() == newX &amp;&amp; enemy.getY() == newY) {
                 encounteredEnemy = enemy;
+                Log.d("Game", "Encounter initiated with " + enemy.getName());
                 return true;
             }
         }
@@ -2055,6 +2094,7 @@ public class Game {
     public void resolveEncounter(Enemy enemy, boolean playerWins) {
         if (playerWins) {
             enemy.takeDamage(9999);
+            enemy.setDefeated(true); // Mark as defeated
             if (enemies.remove(enemy)) {
                 Log.d("Game", "✓ Removed defeated enemy from list. Remaining: " + enemies.size());
             }
@@ -3273,7 +3313,7 @@ public class LootTable {
 </div>
 
 <div class="file" id="mainactivity">
-    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">345 lines | 13294 bytes</span></div>
+    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">377 lines | 15123 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -3294,48 +3334,65 @@ import java.util.List;
  * FIXED: Boss triggers at 10 kills or 100 gold (lower for testing).
  * FIXED: Gold collection now tracked for boss trigger.
  * FIXED: Boss spawn only happens once per run.
+ * FIXED: Added lootTableInstance for BattleActivity access.
  */
 public class MainActivity extends AppCompatActivity implements GameView.GameListener {
-
     private static final String TAG = "MainActivity";
     private static final int BATTLE_REQUEST = 1;
-
+    
     // BOSS SPAWN TRIGGERS - LOWERED FOR TESTING (change back to 50/500 when done)
     private static final int BOSS_TRIGGER_KILLS = 10;
     private static final int BOSS_TRIGGER_GOLD = 100;
-
+    
+    // =========================================================================
+    // ADDED: Static LootTable instance for BattleActivity access
+    // =========================================================================
+    private static LootTable lootTableInstance;
+    
     private int totalEnemiesDefeated = 0;
     private boolean bossSpawned = false;
-
+    
     private Game game;
     private GameView gameView;
     private SaveGameManager saveGameManager;
     private Dungeon dungeon;
     private Handler handler = new Handler(Looper.getMainLooper());
 
+    // =========================================================================
+    // ADDED: Getter for LootTable instance
+    // =========================================================================
+    public static LootTable getLootTableInstance() {
+        return lootTableInstance;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        
         gameView = findViewById(R.id.game_view);
         if (gameView == null) {
             Log.e(TAG, "GameView not found in layout");
             finish();
             return;
         }
-
+        
         saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
         game = new Game();
-
+        
         if (game == null) {
             Log.e(TAG, "Failed to create Game instance");
             finish();
             return;
         }
-
+        
+        // =========================================================================
+        // ADDED: Initialize LootTable early in lifecycle
+        // =========================================================================
+        initializeLootTable();
+        
         ensurePlayerSpawned();
-
+        
         SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
         if (saveData != null) {
             restoreGameState(saveData);
@@ -3343,12 +3400,25 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 totalEnemiesDefeated = saveData.totalEnemiesDefeated;
             }
         }
-
+        
         dungeon = game.getDungeon();
         gameView.setGame(game);
         gameView.setGameListener(this);
-
+        
         Log.d(TAG, "MainActivity initialized - Boss trigger: " + BOSS_TRIGGER_KILLS + " kills OR " + BOSS_TRIGGER_GOLD + " gold");
+    }
+
+    // =========================================================================
+    // ADDED: Initialize LootTable method
+    // =========================================================================
+    private void initializeLootTable() {
+        try {
+            lootTableInstance = new LootTable.Builder().build();
+            Log.d(TAG, "LootTable initialized successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize LootTable", e);
+            lootTableInstance = null;  // Ensure it's null on failure
+        }
     }
 
     private void ensurePlayerSpawned() {
@@ -3369,7 +3439,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
     private void restoreGameState(SaveGameManager.SaveGameData saveData) {
         if (saveData == null) return;
-
+        
         if (saveData.playerX &gt;= 0 &amp;&amp; saveData.playerY &gt;= 0) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
@@ -3378,7 +3448,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 Log.d(TAG, "Restored player position to (" + saveData.playerX + ", " + saveData.playerY + ")");
             }
         }
-
+        
         if (saveData.player != null) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
@@ -3390,7 +3460,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 Log.d(TAG, "Restored player stats: Lvl " + gamePlayer.getLevel());
             }
         }
-
+        
         if (saveData.enemies != null) {
             List&lt;Enemy&gt; currentEnemies = game.getEnemies();
             if (currentEnemies != null) {
@@ -3408,7 +3478,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
+        
         if (requestCode != BATTLE_REQUEST) return;
         if (resultCode != RESULT_OK) {
             Log.w(TAG, "onActivityResult: Battle activity returned non-OK result");
@@ -3418,37 +3488,39 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Log.w(TAG, "onActivityResult: data is null");
             return;
         }
-
+        
         try {
             boolean battleWon = data.getBooleanExtra("battleWon", false);
             Serializable playerExtra = data.getSerializableExtra("updatedPlayer");
-
+            
             if (!(playerExtra instanceof Player)) {
                 Log.w(TAG, "onActivityResult: updatedPlayer is not a valid Player instance");
                 return;
             }
-
+            
             Player updatedPlayer = (Player) playerExtra;
+            
             if (updatedPlayer == null) {
                 Log.w(TAG, "onActivityResult: updatedPlayer is null");
                 return;
             }
-
+            
             if (game != null) {
                 Player gamePlayer = game.getPlayer();
+                
                 if (gamePlayer != null) {
                     int newHealth = Math.max(0, Math.min(updatedPlayer.getCurrentHealth(), gamePlayer.getMaxHealth()));
                     gamePlayer.setCurrentHealth(newHealth);
                     gamePlayer.setExperience(updatedPlayer.getExperience());
                     gamePlayer.setGoldCollected(updatedPlayer.getGoldCollected());
                     gamePlayer.setLevel(updatedPlayer.getLevel());
-
+                    
                     if (updatedPlayer.getLevel() &gt; gamePlayer.getLevel()) {
                         Toast.makeText(this, "⬆️ LEVEL UP! You are now level " + updatedPlayer.getLevel(), Toast.LENGTH_LONG).show();
                     }
                 }
             }
-
+            
             if (battleWon) {
                 totalEnemiesDefeated++;
                 Log.d(TAG, "✓ Victory! Total enemies defeated: " + totalEnemiesDefeated);
@@ -3456,7 +3528,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     checkBossSpawn();
                 }
             }
-
+            
             String defeatedEnemyId = data.getStringExtra("enemyId");
             if (defeatedEnemyId != null &amp;&amp; game != null) {
                 List&lt;Enemy&gt; currentEnemies = game.getEnemies();
@@ -3471,11 +3543,11 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     }
                 }
             }
-
+            
             if (!battleWon &amp;&amp; game != null) {
                 Log.d(TAG, "Battle lost; game state set to LOST");
             }
-
+            
             if (gameView != null) {
                 gameView.invalidate();
             }
@@ -3489,12 +3561,12 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Log.d(TAG, "Boss already spawned this run");
             return;
         }
-
+        
         Player player = game.getPlayer();
         int currentGold = (player != null) ? player.getGoldCollected() : 0;
         boolean killTrigger = totalEnemiesDefeated &gt;= BOSS_TRIGGER_KILLS;
         boolean goldTrigger = currentGold &gt;= BOSS_TRIGGER_GOLD;
-
+        
         if (killTrigger) {
             Log.d(TAG, "🔥 BOSS TRIGGER: " + totalEnemiesDefeated + " enemies defeated (threshold: " + BOSS_TRIGGER_KILLS + ")");
             Toast.makeText(this, "⚠️ WARNING: A POWERFUL BOSS AWAKENS!", Toast.LENGTH_LONG).show();
@@ -3513,13 +3585,13 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Log.e(TAG, "Cannot spawn boss: game or dungeon is null");
             return;
         }
-
+        
         bossSpawned = true;
-
+        
         List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
         char[][] grid = dungeon.getGrid();
         Player player = game.getPlayer();
-
+        
         for (int y = 0; y &lt; dungeon.getHeight(); y++) {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
                 if (dungeon.isWalkable(x, y)) {
@@ -3534,26 +3606,26 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 }
             }
         }
-
+        
         if (floorTiles.isEmpty()) {
             Log.w(TAG, "No valid floor tiles for boss spawn");
             return;
         }
-
+        
         int[] bossPos = floorTiles.get((int)(Math.random() * floorTiles.size()));
         int bossX = bossPos[0];
         int bossY = bossPos[1];
-
+        
         int bossMaxHealth = 200 + (player != null ? player.getLevel() * 25 : 0);
         int bossAttack = 25 + (player != null ? player.getLevel() * 4 : 0);
         int bossArmor = 10 + (player != null ? player.getLevel() : 0);
-
+        
         Enemy boss = new Enemy(bossX, bossY, bossMaxHealth, bossAttack, dungeon, "DRAGON BOSS", bossArmor, 20, 35);
         boss.setBoss(true);
-
+        
         game.addEnemy(boss);
         dungeon.setTile(bossX, bossY, 'B');
-
+        
         Log.d(TAG, "🐉 BOSS SPAWNED at (" + bossX + "," + bossY + ") - HP:" + bossMaxHealth + " ATK:" + bossAttack);
     }
 
@@ -3593,7 +3665,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             List&lt;Enemy&gt; enemies = game.getEnemies();
             Dungeon gameDungeon = game.getDungeon();
             char[][] charGrid = gameDungeon.getGrid();
-
+            
             int[][] dungeonMap = null;
             if (charGrid != null) {
                 dungeonMap = new int[charGrid.length][];
@@ -3604,7 +3676,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     }
                 }
             }
-
+            
             SaveGameManager.SaveGameData data = new SaveGameManager.SaveGameData();
             data.playerX = player.getX();
             data.playerY = player.getY();
@@ -3622,7 +3694,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 </div>
 
 <div class="file" id="player">
-    <div class="file-header"><h2>Player.java</h2><span class="file-meta">148 lines | 3969 bytes</span></div>
+    <div class="file-header"><h2>Player.java</h2><span class="file-meta">159 lines | 4500 bytes</span></div>
     <pre><code>package com.knightlight.game;
 import java.io.Serializable;
 
@@ -3632,6 +3704,7 @@ public class Player extends Character implements Serializable {
     private int experience;
     private int goldCollected;
     private String name;
+    private InventorySystem inventory; // ✓ ADDED: Inventory system
 
     public Player(int x, int y) {
         super(x, y, 100, 15);
@@ -3639,6 +3712,7 @@ public class Player extends Character implements Serializable {
         this.level = 1;
         this.experience = 0;
         this.goldCollected = 0;
+        this.inventory = new InventorySystem(); // Initialize inventory
     }
 
     public Player() {
@@ -3647,6 +3721,7 @@ public class Player extends Character implements Serializable {
         this.level = 1;
         this.experience = 0;
         this.goldCollected = 0;
+        this.inventory = new InventorySystem();
     }
 
     public Player(String name) {
@@ -3655,6 +3730,7 @@ public class Player extends Character implements Serializable {
         this.level = 1;
         this.experience = 0;
         this.goldCollected = 0;
+        this.inventory = new InventorySystem();
     }
 
     public void move(int dx, int dy) {
@@ -3672,6 +3748,11 @@ public class Player extends Character implements Serializable {
 
     public void setGoldCollected(int gold) {
         this.goldCollected = gold;
+    }
+
+    // ✓ ADDED: Get inventory accessor
+    public InventorySystem getInventory() {
+        return inventory;
     }
 
     public int addExperience(int amount) {
@@ -3692,7 +3773,7 @@ public class Player extends Character implements Serializable {
             applyLevelUpStats(levelsGained);
 
             android.util.Log.d("PLAYER", String.format(
-                "⬆️ LEVEL UP! Gained %d level(s). HP +%d → %d/%d, ATK +%d → %d",
+                "⬆️ LEVEL UP! Gained %d level(s). HP +%d → %d/%d (FULL RESTORE), ATK +%d → %d",
                 levelsGained,
                 this.maxHealth - oldHP,
                 this.currentHealth,
@@ -3741,24 +3822,26 @@ public class Player extends Character implements Serializable {
         int attackIncrease = 2 * levels;
 
         this.maxHealth += maxHealthIncrease;
-        this.currentHealth = Math.min(maxHealth, currentHealth + maxHealthIncrease);
+        this.currentHealth = this.maxHealth; // Full health restoration
         this.attack += attackIncrease;
 
         android.util.Log.d("PLAYER", String.format(
-            "Stats applied: HP +%d/%d, ATK +%d → now %d",
-            maxHealthIncrease,
-            this.maxHealth,
-            attackIncrease,
-            this.attack
+            "Stats applied: HP +%d → %d/%d (FULL HEAL), ATK +%d → now %d",
+            maxHealthIncrease, this.currentHealth, this.maxHealth,
+            attackIncrease, this.attack
         ));
     }
 
     public boolean usePotion() {
-        int healAmount = 25;
-        if (currentHealth &lt; maxHealth) {
-            heal(healAmount);
-            android.util.Log.d("PLAYER", "Used potion. Healed " + healAmount + " HP. Now " + currentHealth + "/" + maxHealth);
-            return true;
+        if (inventory != null &amp;&amp; inventory.getHealthPotions() &gt; 0) {
+            if (currentHealth &lt; maxHealth) {
+                boolean used = inventory.usePotion();
+                if (used) {
+                    heal(25);
+                    android.util.Log.d("PLAYER", "Used potion. Healed 25 HP. Now " + currentHealth + "/" + maxHealth);
+                    return true;
+                }
+            }
         }
         return false;
     }
@@ -3774,7 +3857,7 @@ public class Player extends Character implements Serializable {
 </div>
 
 <div class="file" id="savegamemanager">
-    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">203 lines | 8924 bytes</span></div>
+    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">238 lines | 10977 bytes</span></div>
     <pre><code>package com.knightlight.game;
 import android.util.Log;
 import java.io.*;
@@ -3875,7 +3958,7 @@ public class SaveGameManager {
         sb.append("playerY=").append(data.playerY).append("\n");
         sb.append("totalKills=").append(data.totalEnemiesDefeated).append("\n");
         sb.append("bossSpawned=").append(data.bossSpawned ? "1" : "0").append("\n");
-        
+
         if (data.player != null) {
             sb.append("level=").append(data.player.getLevel()).append("\n");
             sb.append("xp=").append(data.player.getExperience()).append("\n");
@@ -3884,25 +3967,40 @@ public class SaveGameManager {
             sb.append("maxHp=").append(data.player.getMaxHealth()).append("\n");
             sb.append("attack=").append(data.player.getAttack()).append("\n");
         }
-        
+
+        // ✓ FIXED: Serialize inventory/equipment
+        if (data.inventory != null) {
+            List&lt;Equipment&gt; allEquip = data.inventory.getAllEquipment();
+            sb.append("equipCount=").append(allEquip.size()).append("\n");
+            for (Equipment eq : allEquip) {
+                sb.append("equip=").append(eq.getName()).append("|")
+                  .append(eq.getType().name()).append("|")
+                  .append(eq.getRarity().name()).append("|")
+                  .append(eq.getAttackBonus()).append("|")
+                  .append(eq.getDefenseBonus()).append("|")
+                  .append(eq.getHpBonus()).append("|")
+                  .append(eq.getSetID() != null ? eq.getSetID().name() : "NONE").append("\n");
+            }
+        }
+
         if (data.enemies != null) {
             sb.append("enemyCount=").append(data.enemies.size()).append("\n");
         }
-        
+
         return saveGame(filename, sb.toString());
     }
 
     public SaveGameData loadLatestGame() {
         File saveDir = new File(basePath, SAVE_DIR);
-        File[] saves = saveDir.listFiles((dir, name) -&gt; 
+        File[] saves = saveDir.listFiles((dir, name) -&gt;
             name.startsWith(SAVE_PREFIX) &amp;&amp; !name.endsWith(CHECKSUM_EXT));
-        
+
         if (saves == null || saves.length == 0) {
             return null;
         }
-        
+
         Arrays.sort(saves, (a, b) -&gt; Long.compare(b.lastModified(), a.lastModified()));
-        
+
         for (File saveFile : saves) {
             try (BufferedReader reader = new BufferedReader(new FileReader(saveFile))) {
                 StringBuilder sb = new StringBuilder();
@@ -3912,17 +4010,18 @@ public class SaveGameManager {
                     sb.append(line);
                 }
                 String data = sb.toString();
-                
+
                 if (!verifyHash(saveFile, data)) {
                     Log.w(TAG, "Skipping corrupted save: " + saveFile.getName());
                     continue;
                 }
-                
+
                 SaveGameData result = new SaveGameData();
                 result.version = CURRENT_VERSION;
                 result.totalEnemiesDefeated = 0;
                 result.bossSpawned = false;
-                
+                result.inventory = new InventorySystem(); // Initialize inventory
+
                 for (String row : data.split("\n")) {
                     String[] kv = row.split("=", 2);
                     if (kv.length == 2) {
@@ -3951,12 +4050,30 @@ public class SaveGameManager {
                             case "attack":
                                 if (result.player == null) result.player = new Player();
                                 result.player.setAttack(Integer.parseInt(val)); break;
+                            // ✓ FIXED: Deserialize inventory
+                            case "equip":
+                                String[] parts = val.split("\\|");
+                                if (parts.length &gt;= 7) {
+                                    Equipment.Rarity rarity = Equipment.Rarity.valueOf(parts[2]);
+                                    Equipment.Type type = Equipment.Type.valueOf(parts[1]);
+                                    Equipment.SetID setID = parts[6].equals("NONE") ? null : Equipment.SetID.valueOf(parts[6]);
+                                    Equipment eq = new Equipment.Builder(parts[0], type)
+                                        .rarity(rarity)
+                                        .attackBonus(Integer.parseInt(parts[3]))
+                                        .defenseBonus(Integer.parseInt(parts[4]))
+                                        .hpBonus(Integer.parseInt(parts[5]))
+                                        .setID(setID)
+                                        .build();
+                                    result.inventory.addEquipment(eq);
+                                }
+                                break;
                         }
                     }
                 }
-                
-                Log.d(TAG, "Loaded save: " + saveFile.getName() + " | Kills: " + 
-                    result.totalEnemiesDefeated + " | Boss: " + result.bossSpawned);
+
+                Log.d(TAG, "Loaded save: " + saveFile.getName() + " | Kills: " +
+                    result.totalEnemiesDefeated + " | Boss: " + result.bossSpawned +
+                    " | Inventory: " + result.inventory);
                 return result;
             } catch (Exception e) {
                 Log.e(TAG, "Error reading save: " + e.getMessage());
@@ -3974,7 +4091,8 @@ public class SaveGameManager {
         public int[][] dungeonMap;
         public int totalEnemiesDefeated = 0;
         public boolean bossSpawned = false;
-        
+        public InventorySystem inventory = null; // ✓ FIXED: Include inventory in save
+
         public SaveGameData() {}
     }
 }</code></pre>
