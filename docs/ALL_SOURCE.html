@@ -24,7 +24,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">23 files | 3752 lines | 2026-07-29 13:41</div>
+<div class="stats">23 files | 3819 lines | 2026-07-30 09:42</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> </nav>
 <div id="files">
@@ -1899,7 +1899,7 @@ public class ExperienceSystem implements Serializable {
 </div>
 
 <div class="file" id="game">
-    <div class="file-header"><h2>Game.java</h2><span class="file-meta">122 lines | 3942 bytes</span></div>
+    <div class="file-header"><h2>Game.java</h2><span class="file-meta">132 lines | 4221 bytes</span></div>
     <pre><code>package com.knightlight.game;
 import android.util.Log;
 import java.util.ArrayList;
@@ -2011,6 +2011,16 @@ public class Game {
         return living;
     }
 
+    /**
+     * Add an enemy directly to the game. Used for boss spawns.
+     */
+    public void addEnemy(Enemy enemy) {
+        if (enemy != null &amp;&amp; enemies != null) {
+            enemies.add(enemy);
+            Log.d("Game", "Added enemy: " + enemy.getName());
+        }
+    }
+
     public GameState getState() { return state; }
     public int getTurnCount() { return turnCount; }
 
@@ -2078,8 +2088,9 @@ public class GameBalance {
 </div>
 
 <div class="file" id="gameview">
-    <div class="file-header"><h2>GameView.java</h2><span class="file-meta">319 lines | 12709 bytes</span></div>
+    <div class="file-header"><h2>GameView.java</h2><span class="file-meta">376 lines | 14919 bytes</span></div>
     <pre><code>package com.knightlight.game;
+
 import android.util.Log;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -2089,18 +2100,24 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+
 import java.util.List;
 
 public class GameView extends View {
+
     private static final float ENEMY_RADIUS = 0.4f;
+
     private Game game;
     private Paint tileWallPaint, tileFloorPaint, tileGoldPaint, playerPaint, enemyPaint, textPaint, buttonPaint, buttonPressPaint;
     private float tileSize;
     private GameListener listener;
+
     private Rect btnUp, btnDown, btnLeft, btnRight, btnQuit;
-    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, emojiPaint;
+
+    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, buttonLabelPaintRed, emojiPaint;
     private final Object buttonLock = new Object();
-    private boolean btnUpPressed = false, btnDownPressed = false, btnLeftPressed = false, btnRightPressed = false;
+
+    private boolean btnUpPressed = false, btnDownPressed = false, btnLeftPressed = false, btnRightPressed = false, btnQuitPressed = false;
 
     public interface GameListener {
         void onGameOver(Game.GameState state);
@@ -2125,50 +2142,56 @@ public class GameView extends View {
         tileWallPaint = new Paint();
         tileWallPaint.setColor(Color.parseColor("#1a1a1a"));
         tileWallPaint.setStyle(Paint.Style.FILL);
-        
+
         tileFloorPaint = new Paint();
         tileFloorPaint.setColor(Color.parseColor("#333333"));
         tileFloorPaint.setStyle(Paint.Style.FILL);
-        
+
         tileGoldPaint = new Paint();
         tileGoldPaint.setColor(Color.parseColor("#FFD700"));
         tileGoldPaint.setStyle(Paint.Style.FILL);
-        
+
         playerPaint = new Paint();
         playerPaint.setColor(Color.parseColor("#00FF00"));
         playerPaint.setStyle(Paint.Style.FILL);
-        
+
         enemyPaint = new Paint();
         enemyPaint.setColor(Color.parseColor("#FF0000"));
         enemyPaint.setStyle(Paint.Style.FILL);
-        
+
         textPaint = new Paint();
         textPaint.setTextSize(40);
         textPaint.setColor(Color.WHITE);
-        
+
         emojiPaint = new Paint();
         emojiPaint.setTextAlign(Paint.Align.CENTER);
-        
+
+        // --- BUTTON PAINTS (FIXED) ---
         buttonPaint = new Paint();
-        buttonPaint.setColor(Color.parseColor("#00FF00"));
+        buttonPaint.setColor(Color.parseColor("#00AA00"));  // darker green base
         buttonPaint.setStyle(Paint.Style.FILL);
-        
+
         buttonPressPaint = new Paint();
-        buttonPressPaint.setColor(Color.parseColor("#00AA00"));
+        buttonPressPaint.setColor(Color.parseColor("#008800"));  // darker when pressed
         buttonPressPaint.setStyle(Paint.Style.FILL);
-        
+
+        buttonLabelPaint = new Paint();
+        buttonLabelPaint.setColor(Color.WHITE);           // was BLACK — invisible on green
+        buttonLabelPaint.setTextSize(36);                 // was 20 — too small
+        buttonLabelPaint.setTextAlign(Paint.Align.CENTER);
+        buttonLabelPaint.setFakeBoldText(true);
+
+        buttonLabelPaintRed = new Paint(buttonLabelPaint);
+        buttonLabelPaintRed.setColor(Color.RED);
+        buttonLabelPaintRed.setTextSize(28);
+
         overlayPaint = new Paint();
         overlayPaint.setColor(Color.argb(200, 0, 0, 0));
-        
+
         gameOverTextPaint = new Paint();
         gameOverTextPaint.setColor(Color.WHITE);
         gameOverTextPaint.setTextSize(64);
         gameOverTextPaint.setTextAlign(Paint.Align.CENTER);
-        
-        buttonLabelPaint = new Paint();
-        buttonLabelPaint.setColor(Color.BLACK);
-        buttonLabelPaint.setTextSize(20);
-        buttonLabelPaint.setTextAlign(Paint.Align.CENTER);
     }
 
     private void initButtons() {
@@ -2180,35 +2203,37 @@ public class GameView extends View {
     }
 
     public void setGame(Game game) { this.game = game; }
+
     public void setGameListener(GameListener listener) { this.listener = listener; }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+
         if (game == null) {
             Log.w("GameView", "Game is null in onDraw");
             return;
         }
-        
+
         int width = getWidth(), height = getHeight();
         int gameAreaHeight = (int) (height * 0.75);
         int buttonAreaHeight = height - gameAreaHeight;
-        
+
         Dungeon dungeon = game.getDungeon();
         if (dungeon == null) {
             Log.w("GameView", "Dungeon is null in onDraw");
             return;
         }
-        
+
         tileSize = (float) width / dungeon.getWidth();
         emojiPaint.setTextSize(tileSize * 0.8f);
-        
+
         drawDungeon(canvas, dungeon);
         drawPlayer(canvas);
         drawEnemies(canvas);
         drawStatus(canvas, gameAreaHeight);
         drawButtons(canvas, gameAreaHeight, buttonAreaHeight);
-        
+
         Game.GameState state = game.getState();
         if (state != Game.GameState.PLAYING) {
             drawGameOverOverlay(canvas, width, gameAreaHeight);
@@ -2221,7 +2246,7 @@ public class GameView extends View {
                 float xPos = x * tileSize;
                 float yPos = y * tileSize;
                 char tile = dungeon.getTile(x, y);
-                
+
                 if (tile == Dungeon.TILE_WALL) {
                     canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileWallPaint);
                 } else if (tile == Dungeon.TILE_FLOOR) {
@@ -2256,38 +2281,49 @@ public class GameView extends View {
             Log.w("GameView", "Enemies list is null in drawEnemies");
             return;
         }
-        
+
         for (Enemy enemy : enemies) {
             if (enemy == null) continue;
+
+            if (enemy.isDead()) {
+                float x = enemy.getX() * tileSize + tileSize / 2;
+                float y = enemy.getY() * tileSize + tileSize / 2;
+                Rect bounds = new Rect();
+                emojiPaint.getTextBounds("\u2620\uFE0F", 0, 1, bounds);
+                float emojiY = y + (tileSize - bounds.height()) / 2;
+                canvas.drawText("\u2620\uFE0F", x, emojiY, emojiPaint);
+                continue;
+            }
+
             float x = enemy.getX() * tileSize + tileSize / 2;
             float y = enemy.getY() * tileSize + tileSize / 2;
-            
+
             if (enemy.isBoss()) {
                 if (!enemy.isDead()) {
                     float dragonSize = tileSize * 4;
                     Paint dragonPaint = new Paint(emojiPaint);
                     dragonPaint.setTextSize(dragonSize);
                     Rect bounds = new Rect();
-                    dragonPaint.getTextBounds("🐉", 0, 1, bounds);
+                    dragonPaint.getTextBounds("\uD83D\uDC09", 0, 1, bounds);
                     float dragonY = y + (dragonSize - bounds.height()) / 2;
-                    canvas.drawText("🐉", x, dragonY, dragonPaint);
+                    canvas.drawText("\uD83D\uDC09", x, dragonY, dragonPaint);
                 } else {
                     float dragonSize = tileSize * 4;
                     Paint skullPaint = new Paint(emojiPaint);
                     skullPaint.setTextSize(dragonSize);
                     Rect bounds = new Rect();
-                    skullPaint.getTextBounds("☠️", 0, 1, bounds);
+                    skullPaint.getTextBounds("\u2620\uFE0F", 0, 1, bounds);
                     float skullY = y + (dragonSize - bounds.height()) / 2;
-                    canvas.drawText("☠️", x, skullY, skullPaint);
+                    canvas.drawText("\u2620\uFE0F", x, skullY, skullPaint);
                 }
             } else {
                 if (!enemy.isDead()) {
                     canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
                 } else {
                     Rect bounds = new Rect();
-                    emojiPaint.getTextBounds("☠️", 0, 1, bounds);
+                    emojiPaint.getTextBounds("\u2620\uFE0F", 0, 1, bounds);
                     float emojiY = y + (tileSize - bounds.height()) / 2;
-                    canvas.drawText("☠️", x, emojiY, emojiPaint);
+                    canvas.drawText("\u2620\uFE0F", x, emojiY, emojiPaint);
                 }
             }
         }
@@ -2300,36 +2336,64 @@ public class GameView extends View {
             return;
         }
         String status = String.format("LVL: %d (XP: %d) | HP: %d/%d | Gold: %d | Turn: %d",
-            player.getLevel(), player.getExperience(),
-            player.getCurrentHealth(), player.getMaxHealth(),
-            player.getGoldCollected(), game.getTurnCount());
+                player.getLevel(), player.getExperience(),
+                player.getCurrentHealth(), player.getMaxHealth(),
+                player.getGoldCollected(), game.getTurnCount());
         canvas.drawText(status, 10, gameAreaHeight - 10, textPaint);
     }
 
     private void drawButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
         int buttonWidth = getWidth() / 5;
-        int buttonHeight = buttonAreaHeight / 2;
+        int buttonHeight = buttonAreaHeight;  // use full height, not halved
         int startY = gameAreaHeight;
-        
+
         btnUp.set(0, startY, buttonWidth, startY + buttonHeight);
         btnDown.set(buttonWidth, startY, 2 * buttonWidth, startY + buttonHeight);
         btnLeft.set(2 * buttonWidth, startY, 3 * buttonWidth, startY + buttonHeight);
         btnRight.set(3 * buttonWidth, startY, 4 * buttonWidth, startY + buttonHeight);
         btnQuit.set(4 * buttonWidth, startY, 5 * buttonWidth, startY + buttonHeight);
-        
+
         synchronized (buttonLock) {
-            drawButton(canvas, btnUp, "↑", btnUpPressed);
-            drawButton(canvas, btnDown, "↓", btnDownPressed);
-            drawButton(canvas, btnLeft, "←", btnLeftPressed);
-            drawButton(canvas, btnRight, "→", btnRightPressed);
+            drawButton(canvas, btnUp, "\u2191", btnUpPressed, buttonLabelPaint, buttonPaint, buttonPressPaint);
+            drawButton(canvas, btnDown, "\u2193", btnDownPressed, buttonLabelPaint, buttonPaint, buttonPressPaint);
+            drawButton(canvas, btnLeft, "\u2190", btnLeftPressed, buttonLabelPaint, buttonPaint, buttonPressPaint);
+            drawButton(canvas, btnRight, "\u2192", btnRightPressed, buttonLabelPaint, buttonPaint, buttonPressPaint);
         }
-        drawButton(canvas, btnQuit, "QUIT", false);
+
+        // QUIT button — distinct red border + red text
+        Paint quitBg = btnQuitPressed ? buttonPressPaint : buttonPaint;
+        canvas.drawRect(btnQuit, quitBg);
+
+        Paint quitBorder = new Paint();
+        quitBorder.setColor(Color.RED);
+        quitBorder.setStrokeWidth(4);
+        quitBorder.setStyle(Paint.Style.STROKE);
+        canvas.drawRect(btnQuit, quitBorder);
+
+        Paint.FontMetrics qfm = buttonLabelPaintRed.getFontMetrics();
+        float quitCenterY = btnQuit.centerY() + (qfm.descent - qfm.ascent) / 2;
+        canvas.drawText("QUIT", btnQuit.centerX(), quitCenterY, buttonLabelPaintRed);
     }
 
-    private void drawButton(Canvas canvas, Rect rect, String label, boolean pressed) {
-        Paint paint = pressed ? buttonPressPaint : buttonPaint;
+    /**
+     * Draws a button: filled background, dark-green border, centred label.
+     */
+    private void drawButton(Canvas canvas, Rect rect, String label, boolean pressed,
+                            Paint labelPaint, Paint bgPaint, Paint pressedPaint) {
+        Paint paint = pressed ? pressedPaint : bgPaint;
         canvas.drawRect(rect, paint);
-        canvas.drawText(label, rect.centerX(), rect.centerY() + 10, buttonLabelPaint);
+
+        // dark-green border for visibility
+        Paint border = new Paint();
+        border.setColor(Color.parseColor("#006600"));
+        border.setStrokeWidth(3);
+        border.setStyle(Paint.Style.STROKE);
+        canvas.drawRect(rect, border);
+
+        // vertically-centred label
+        Paint.FontMetrics fm = labelPaint.getFontMetrics();
+        float centerY = rect.centerY() + (fm.descent - fm.ascent) / 2;
+        canvas.drawText(label, rect.centerX(), centerY, labelPaint);
     }
 
     private void drawGameOverOverlay(Canvas canvas, int width, int gameAreaHeight) {
@@ -2342,7 +2406,7 @@ public class GameView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getAction();
         float x = event.getX(), y = event.getY();
-        
+
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 handleButtonPress(x, y);
@@ -2360,8 +2424,9 @@ public class GameView extends View {
             Log.w("GameView", "Game is null in handleButtonPress");
             return;
         }
+
         boolean encounterOccurred = false;
-        
+
         if (btnUp != null &amp;&amp; btnUp.contains((int) x, (int) y)) {
             synchronized (buttonLock) { btnUpPressed = true; }
             encounterOccurred = game.playerMove(0, -1);
@@ -2375,14 +2440,15 @@ public class GameView extends View {
             synchronized (buttonLock) { btnRightPressed = true; }
             encounterOccurred = game.playerMove(1, 0);
         } else if (btnQuit != null &amp;&amp; btnQuit.contains((int) x, (int) y)) {
+            synchronized (buttonLock) { btnQuitPressed = true; }
             if (listener != null) { listener.onQuitRequested(); }
         }
-        
+
         if (encounterOccurred &amp;&amp; listener != null) {
             Enemy enemy = game.getAndClearEncounteredEnemy();
             if (enemy != null) { listener.onEncounter(enemy); }
         }
-        
+
         Game.GameState state = game.getState();
         if (state != Game.GameState.PLAYING &amp;&amp; listener != null) {
             listener.onGameOver(state);
@@ -2395,6 +2461,7 @@ public class GameView extends View {
             btnDownPressed = false;
             btnLeftPressed = false;
             btnRightPressed = false;
+            btnQuitPressed = false;
         }
     }
 }</code></pre>
@@ -3133,7 +3200,7 @@ public class LootTable {
 </div>
 
 <div class="file" id="mainactivity">
-    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">345 lines | 13302 bytes</span></div>
+    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">345 lines | 13294 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -3411,7 +3478,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         Enemy boss = new Enemy(bossX, bossY, bossMaxHealth, bossAttack, dungeon, "DRAGON BOSS", bossArmor, 20, 35);
         boss.setBoss(true);
 
-        game.getEnemies().add(boss);
+        game.addEnemy(boss);
         dungeon.setTile(bossX, bossY, 'B');
 
         Log.d(TAG, "🐉 BOSS SPAWNED at (" + bossX + "," + bossY + ") - HP:" + bossMaxHealth + " ATK:" + bossAttack);
