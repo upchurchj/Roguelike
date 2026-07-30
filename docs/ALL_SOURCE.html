@@ -24,9 +24,9 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">23 files | 3819 lines | 2026-07-30 09:42</div>
+<div class="stats">25 files | 3979 lines | 2026-07-30 12:33</div>
 </header>
-<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> </nav>
+<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
 
 <div class="file" id="battle">
@@ -886,7 +886,7 @@ public class CombatSystem {
 </div>
 
 <div class="file" id="dungeon">
-    <div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">248 lines | 7315 bytes</span></div>
+    <div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">248 lines | 7330 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -1048,7 +1048,7 @@ public class Dungeon {
             return false;
         }
         char tile = tiles[y][x];
-        return tile == TILE_FLOOR || tile == TILE_GOLD;
+        return tile == TILE_FLOOR || tile == TILE_GOLD || tile == 'B';
     }
 
     public char getTile(int x, int y) {
@@ -1572,7 +1572,7 @@ public class DungeonManager {
 </div>
 
 <div class="file" id="enemy">
-    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">70 lines | 1741 bytes</span></div>
+    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">67 lines | 2779 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -1584,147 +1584,245 @@ public class Enemy extends Character implements Serializable {
     private int goldReward;
     private int experienceReward;
     private boolean isBoss;
+    private EnemyType enemyType;
 
-    public Enemy(int x, int y, int maxHealth, int attack, Dungeon dungeon, String name, int armor, int dodge, int critChance) {
-        super(x, y, maxHealth, attack);
+    public Enemy(int x, int y, Dungeon dungeon, EnemyType type, String name) {
+        super(x, y, type.getBaseHealth(), type.getBaseAttack());
         this.dungeon = dungeon;
-        this.name = name;
-        this.id = name + "_" + System.nanoTime();
+        this.enemyType = type;
+        this.name = name != null ? name : type.getEmoji();
+        this.id = this.name + "_" + System.nanoTime();
+        this.armor = type.getBaseArmor();
+        this.dodgeChance = type.getBaseDodge();
+        this.criticalChance = 5;
+        this.goldReward = 5 + (int)(Math.random() * 10) + (type.ordinal() * 3);
+        this.experienceReward = type.getXpReward();
+        this.isBoss = false;
+    }
+
+    public Enemy(int x, int y, int maxHealth, int attack,
+                 Dungeon dungeon, String name,
+                 int armor, int dodge, int critChance) {
+        super(x, y, maxHealth, attack);
+
+        this.dungeon = dungeon;
+        this.enemyType = EnemyType.OGRE;
+        this.name = name != null ? name : EnemyType.OGRE.getEmoji();
+        this.id = this.name + "_" + System.nanoTime();
         this.armor = armor;
         this.dodgeChance = dodge;
         this.criticalChance = critChance;
-        this.goldReward = 5 + (int)(Math.random() * 10);
-        this.experienceReward = 10 + (int)(Math.random() * 20);
+        this.goldReward = 5 + (int)(Math.random() * 10)
+                        + (EnemyType.OGRE.ordinal() * 3);
+        this.experienceReward = EnemyType.OGRE.getXpReward();
         this.isBoss = false;
     }
 
     public void moveToward(Character target) {
-        if (target == null || dungeon == null) {
-            return;
-        }
+        if (target == null || dungeon == null) return;
         int targetX = target.getX();
         int targetY = target.getY();
-        if (x &gt; targetX &amp;&amp; dungeon.isWalkable(x - 1, y)) {
-            x--;
-        } else if (y &gt; targetY &amp;&amp; dungeon.isWalkable(x, y - 1)) {
-            y--;
-        }
+
+        if (x &gt; targetX &amp;&amp; dungeon.isWalkable(x - 1, y)) x--;
+        else if (y &gt; targetY &amp;&amp; dungeon.isWalkable(x, y - 1)) y--;
+        else if (x &lt; targetX &amp;&amp; dungeon.isWalkable(x + 1, y)) x++;
+        else if (y &lt; targetY &amp;&amp; dungeon.isWalkable(x, y + 1)) y++;
     }
 
-    public String getName() {
-        return name;
+    public String getName()              { return name; }
+    public String getId()                { return id; }
+    public int getGoldReward()           { return goldReward; }
+    public int getExperienceReward()     { return experienceReward; }
+    public boolean isDefeated()          { return !isAlive(); }
+    public boolean isDead()              { return !isAlive(); }
+    public boolean isBoss()              { return isBoss; }
+    public String getEmoji()             { return enemyType != null ? enemyType.getEmoji() : "👹"; }
+    public EnemyType getType()           { return enemyType; }
+    public void setBoss(boolean boss)    { this.isBoss = boss; }
+}</code></pre>
+</div>
+
+<div class="file" id="enemytype">
+    <div class="file-header"><h2>EnemyType.java</h2><span class="file-meta">105 lines | 3210 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+public enum EnemyType {
+    // REGULAR MONSTERS
+    SKELETON("💀", 30, 5, 2, 10, 15),
+    CLOWN("🤡", 35, 6, 2, 12, 20),
+    OGRE("👹", 40, 8, 3, 10, 25),
+    GHOST("👻", 38, 9, 1, 15, 28),
+    ALIEN("👽", 42, 10, 4, 14, 32),
+    MONSTER("👾", 36, 7, 3, 12, 22),
+    ROBOT("🤖", 45, 11, 5, 8, 35),
+    ZOMBIE_M("🧟‍♂️", 50, 12, 4, 6, 40),
+    ZOMBIE_F("🧟‍♀️", 48, 11, 4, 7, 38),
+    BAT("🦇", 28, 10, 1, 20, 18),
+    WOLF("🐺", 45, 13, 3, 12, 30),
+    FOX("🦊", 32, 8, 2, 18, 22),
+    BOAR("🐗", 55, 14, 6, 5, 45),
+    BUNNY("🐇", 25, 6, 1, 25, 12),
+    SQUIRREL("🐿️", 22, 5, 1, 22, 10),
+    HEDGEHOG("🦔", 30, 7, 5, 10, 18),
+    BEAR("🐻", 60, 15, 7, 6, 50),
+    PANDA("🐼", 65, 14, 8, 7, 55),
+    SLOTH("🦥", 35, 4, 4, 30, 20),
+    PENGUIN("🐧", 38, 9, 3, 16, 25),
+    EAGLE("🦅", 40, 12, 2, 22, 28),
+    OWL("🦉", 36, 10, 2, 18, 26),
+    TURTLE("🐢", 50, 8, 10, 5, 35),
+    SNAKE("🐍", 35, 14, 2, 15, 28),
+    LION("🦁", 70, 18, 5, 8, 60),
+    BUG("🐛", 20, 4, 1, 10, 8),
+    ANT("🐜", 18, 5, 2, 15, 10),
+    BEE("🐝", 22, 6, 1, 20, 12),
+    SPIDER("🕷️", 32, 11, 2, 18, 24),
+    SCORPION("🦂", 38, 13, 4, 12, 30),
+    MOSQUITO("🦟", 20, 7, 1, 25, 14),
+    BACTERIA("🦠", 25, 8, 3, 12, 16),
+
+    // REGULAR BOSSES
+    DEMON("😈", 100, 22, 6, 10, 150),
+    RHINO("🦏", 150, 25, 12, 5, 200),
+    APE("🦍", 140, 28, 10, 7, 220),
+    TIGER("🐯", 120, 24, 7, 12, 180),
+    CROCODILE("🐊", 160, 23, 14, 6, 210),
+    LIZARD("🦎", 90, 20, 5, 15, 140),
+    HYDRA("🐲", 180, 30, 12, 8, 280),
+    DRAGON("🐉", 200, 32, 15, 6, 350),
+    DINO("🦕", 220, 25, 18, 4, 300),
+    T_REX("🦖", 250, 35, 14, 5, 400),
+    PUFFERFISH("🐡", 110, 22, 10, 18, 170),
+    KRAKEN("🐙", 130, 26, 8, 14, 200),
+    SHARK("🦈", 170, 30, 9, 16, 250),
+
+    // ELEMENTAL TITANS
+    ICE_TITAN("☃️", 300, 40, 20, 5, 500),
+    METEOR("☄️", 350, 45, 18, 4, 600),
+    FIRE_TITAN("🔥", 320, 48, 15, 3, 550),
+    WATER_TITAN("🌊", 400, 38, 22, 6, 650),
+    LIGHTNING_TITAN("⚡", 280, 52, 12, 8, 700),
+    TORNADO("🌪️", 300, 44, 16, 7, 580),
+    STORM_CLOUD("⛈️", 330, 46, 17, 6, 620),
+
+    // TREASURE MONSTER
+    TREASURE_UNICORN("🦄", 800, 60, 25, 2, 10000);
+
+    private final String emoji;
+    private final int baseHealth;
+    private final int baseAttack;
+    private final int baseArmor;
+    private final int baseDodge;
+    private final int xpReward;
+
+    EnemyType(String emoji, int baseHealth, int baseAttack, 
+              int baseArmor, int baseDodge, int xpReward) {
+        this.emoji = emoji;
+        this.baseHealth = baseHealth;
+        this.baseAttack = baseAttack;
+        this.baseArmor = baseArmor;
+        this.baseDodge = baseDodge;
+        this.xpReward = xpReward;
     }
 
-    public String getId() {
-        return id;
+    public String getEmoji() {
+        return emoji;
     }
 
-    public int getGoldReward() {
-        return goldReward;
+    public int getBaseHealth() {
+        return baseHealth;
     }
 
-    public int getExperienceReward() {
-        return experienceReward;
+    public int getBaseAttack() {
+        return baseAttack;
     }
 
-    public boolean isDefeated() {
-        return !isAlive();
+    public int getBaseArmor() {
+        return baseArmor;
     }
 
-    public boolean isDead() {
-        return !isAlive();
+    public int getBaseDodge() {
+        return baseDodge;
     }
 
-    public boolean isBoss() {
-        return isBoss;
-    }
-
-    public void setBoss(boolean boss) {
-        this.isBoss = boss;
+    public int getXpReward() {
+        return xpReward;
     }
 }</code></pre>
 </div>
 
 <div class="file" id="equipment">
-    <div class="file-header"><h2>Equipment.java</h2><span class="file-meta">129 lines | 3721 bytes</span></div>
+    <div class="file-header"><h2>Equipment.java</h2><span class="file-meta">96 lines | 3932 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
-/**
- * Immutable Equipment item with rarity, stats, and type classification.
- * Uses Builder pattern for safe, flexible construction.
- */
 public class Equipment implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    public enum Type {
-        WEAPON, ARMOR, RING
+    public enum Type { WEAPON, ARMOR, RING }
+
+    public enum Rarity {
+        COMMON("#CCCCCC"), UNCOMMON("#4CAF50"), RARE("#2196F3"), EPIC("#9C27B0"), LEGENDARY("#FFD700");
+        private final String hexColor;
+        Rarity(String hexColor) { this.hexColor = hexColor; }
+        public String getHexColor() { return hexColor; }
     }
 
-    /**
-     * FIXED: Added EPIC rarity tier (was missing but referenced in LootTable)
-     */
-    public enum Rarity {
-        COMMON("#CCCCCC"),           // Light gray
-        UNCOMMON("#4CAF50"),         // Green
-        RARE("#2196F3"),             // Blue
-        EPIC("#9C27B0"),             // Purple (NEW)
-        LEGENDARY("#FFD700");        // Gold
+    public enum SetID {
+        OGRE_SET("Ogre Berserker", "👹"), GHOST_SET("Spectral Wanderer", "👻"),
+        ALIEN_SET("Cosmic Traveler", "👽"), MONSTER_SET("Void Hunter", "👾"),
+        ROBOT_SET("Cyber Guardian", "🤖"), CLOWN_SET("Harlequin Trickster", "🤡"),
+        SKELETON_SET("Death Knight", "💀"), ZOMBIE_SET("Undead Survivor", "🧟");
 
-        private final String hexColor;
-
-        Rarity(String hexColor) {
-            this.hexColor = hexColor;
-        }
-
-        public String getHexColor() {
-            return hexColor;
-        }
+        private final String setName;
+        private final String emoji;
+        SetID(String name, String emoji) { this.setName = name; this.emoji = emoji; }
+        public String getSetName() { return setName; }
+        public String getEmoji() { return emoji; }
     }
 
     private final String name;
     private final Type type;
     private final Rarity rarity;
+    private final SetID setID;
     private int floorFound;
     private final int attackBonus;
     private final int defenseBonus;
     private final int hpBonus;
     private final String description;
 
-    /**
-     * Private constructor. Use Builder to instantiate.
-     */
     private Equipment(Builder builder) {
         this.name = builder.name;
         this.type = builder.type;
         this.rarity = builder.rarity;
+        this.setID = builder.setID;
         this.attackBonus = builder.attackBonus;
         this.defenseBonus = builder.defenseBonus;
         this.hpBonus = builder.hpBonus;
         this.description = builder.description;
     }
 
-    // Getters
     public String getName() { return name; }
     public Type getType() { return type; }
-    public int getFloorFound() { return floorFound; }
-
     public Rarity getRarity() { return rarity; }
     public int getAttackBonus() { return attackBonus; }
     public int getDefenseBonus() { return defenseBonus; }
     public int getHpBonus() { return hpBonus; }
     public String getDescription() { return description; }
+    public SetID getSetID() { return setID; }
+    public int getFloorFound() { return floorFound; }
 
     @Override
     public String toString() {
+        if (setID != null) {
+            return String.format("[%s] %s (%s) ‣ %s Set | ATK+%d DEF+%d HP+%d",
+                    rarity, name, type, setID.getSetName(), attackBonus, defenseBonus, hpBonus);
+        }
         return String.format("[%s] %s (%s) | ATK+%d DEF+%d HP+%d",
                 rarity, name, type, attackBonus, defenseBonus, hpBonus);
     }
 
-    /**
-     * Builder class for Equipment construction.
-     */
     public static class Builder {
         private final String name;
         private final Type type;
@@ -1734,44 +1832,19 @@ public class Equipment implements Serializable {
         private int defenseBonus = 0;
         private int hpBonus = 0;
         private String description = "";
+        private SetID setID = null;
 
-        public Builder(String name, Type type) {
-            this.name = name;
-            this.type = type;
-        }
-
-        public Builder rarity(Rarity rarity) {
-            this.rarity = rarity;
-            return this;
-        }
-
-        public Builder attackBonus(int bonus) {
-            this.attackBonus = bonus;
-            return this;
-        }
-
-        public Builder defenseBonus(int bonus) {
-            this.defenseBonus = bonus;
-            return this;
-        }
-
-        public Builder hpBonus(int bonus) {
-            this.hpBonus = bonus;
-            return this;
-        }
-
-        public Builder description(String desc) {
-            this.description = desc;
-            return this;
-        }
-
+        public Builder(String name, Type type) { this.name = name; this.type = type; }
+        public Builder rarity(Rarity rarity) { this.rarity = rarity; return this; }
+        public Builder attackBonus(int bonus) { this.attackBonus = bonus; return this; }
+        public Builder defenseBonus(int bonus) { this.defenseBonus = bonus; return this; }
+        public Builder hpBonus(int bonus) { this.hpBonus = bonus; return this; }
+        public Builder description(String desc) { this.description = desc; return this; }
+        public Builder setID(SetID setID) { this.setID = setID; return this; }
+        
         public Equipment build() {
-            if (name == null || name.isEmpty()) {
-                throw new IllegalArgumentException("Equipment name cannot be null or empty");
-            }
-            if (type == null) {
-                throw new IllegalArgumentException("Equipment type cannot be null");
-            }
+            if (name == null || name.isEmpty()) throw new IllegalArgumentException("Name required");
+            if (type == null) throw new IllegalArgumentException("Type required");
             return new Equipment(this);
         }
     }
@@ -3933,6 +4006,101 @@ public class SecureRandomUtil {
 
     public static boolean nextBoolean() {
         return SECURE_RANDOM.nextBoolean();
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="setbonusmanager">
+    <div class="file-header"><h2>SetBonusManager.java</h2><span class="file-meta">91 lines | 4776 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+public class SetBonusManager {
+    private static final int TWO_PIECE = 2;
+    private static final int FOUR_PIECE = 4;
+
+    public static SetBonus calculateSetBonuses(Equipment.SetID setID, int equippedCount) {
+        if (setID == null || equippedCount &lt; TWO_PIECE) return new SetBonus(0, 0, 0, 0, "");
+
+        int bonusATK = 0, bonusDEF = 0, bonusHP = 0, bonusCrit = 0;
+        String bonusDesc = "";
+
+        switch (setID) {
+            case OGRE_SET:
+                if (equippedCount &gt;= TWO_PIECE) { bonusATK += 5; bonusDesc += "2pc: +5 ATK "; }
+                if (equippedCount &gt;= FOUR_PIECE) { bonusATK += 10; bonusHP += 15; bonusDesc += "4pc: +10 ATK, +15 HP"; }
+                break;
+            case GHOST_SET:
+                if (equippedCount &gt;= TWO_PIECE) { bonusCrit += 5; bonusDesc += "2pc: +5% Crit "; }
+                if (equippedCount &gt;= FOUR_PIECE) { bonusCrit += 10; bonusDesc += "4pc: +10% Crit"; }
+                break;
+            case ALIEN_SET:
+                if (equippedCount &gt;= TWO_PIECE) { bonusATK += 3; bonusDEF += 3; bonusDesc += "2pc: +3 ATK/DEF "; }
+                if (equippedCount &gt;= FOUR_PIECE) { bonusATK += 5; bonusDEF += 5; bonusHP += 10; bonusDesc += "4pc: +5 ATK/DEF, +10 HP"; }
+                break;
+            case MONSTER_SET:
+                if (equippedCount &gt;= TWO_PIECE) { bonusCrit += 8; bonusDesc += "2pc: +8% Crit "; }
+                if (equippedCount &gt;= FOUR_PIECE) { bonusATK += 8; bonusCrit += 5; bonusDesc += "4pc: +8 ATK, +5% Crit"; }
+                break;
+            case ROBOT_SET:
+                if (equippedCount &gt;= TWO_PIECE) { bonusDEF += 8; bonusDesc += "2pc: +8 DEF "; }
+                if (equippedCount &gt;= FOUR_PIECE) { bonusDEF += 12; bonusHP += 25; bonusDesc += "4pc: +12 DEF, +25 HP"; }
+                break;
+            case CLOWN_SET:
+                if (equippedCount &gt;= TWO_PIECE) { bonusCrit += 10; bonusDesc += "2pc: +10% Crit "; }
+                if (equippedCount &gt;= FOUR_PIECE) { bonusATK += 6; bonusCrit += 8; bonusDesc += "4pc: +6 ATK, +8% Crit"; }
+                break;
+            case SKELETON_SET:
+                if (equippedCount &gt;= TWO_PIECE) { bonusHP += 10; bonusATK += 4; bonusDesc += "2pc: +10 HP, +4 ATK "; }
+                if (equippedCount &gt;= FOUR_PIECE) { bonusHP += 20; bonusATK += 8; bonusDesc += "4pc: +20 HP, +8 ATK"; }
+                break;
+            case ZOMBIE_SET:
+                if (equippedCount &gt;= TWO_PIECE) { bonusHP += 15; bonusDesc += "2pc: +15 HP "; }
+                if (equippedCount &gt;= FOUR_PIECE) { bonusHP += 30; bonusDEF += 5; bonusDesc += "4pc: +30 HP, +5 DEF"; }
+                break;
+        }
+        return new SetBonus(bonusATK, bonusDEF, bonusHP, bonusCrit, bonusDesc.trim());
+    }
+
+    public static int countEquippedSetPieces(InventorySystem inventory, Equipment.SetID setID) {
+        if (inventory == null || setID == null) return 0;
+        int count = 0;
+        Equipment w = inventory.getEquippedWeapon();
+        Equipment a = inventory.getEquippedArmor();
+        Equipment r = inventory.getEquippedRing();
+        if (w != null &amp;&amp; setID.equals(w.getSetID())) count++;
+        if (a != null &amp;&amp; setID.equals(a.getSetID())) count++;
+        if (r != null &amp;&amp; setID.equals(r.getSetID())) count++;
+        return count;
+    }
+
+    public static String getAllActiveBonuses(InventorySystem inventory) {
+        StringBuilder sb = new StringBuilder();
+        for (Equipment.SetID setId : Equipment.SetID.values()) {
+            int equipped = countEquippedSetPieces(inventory, setId);
+            if (equipped &gt;= TWO_PIECE) {
+                SetBonus bonus = calculateSetBonuses(setId, equipped);
+                if (!bonus.getDescription().isEmpty()) {
+                    sb.append(setId.getEmoji()).append(" ").append(setId.getSetName())
+                      .append(": ").append(bonus.getDescription()).append("\n");
+                }
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    public static class SetBonus {
+        private final int bonusATK, bonusDEF, bonusHP, bonusCritChance;
+        private final String description;
+        public SetBonus(int atk, int def, int hp, int crit, String desc) {
+            this.bonusATK = atk; this.bonusDEF = def; this.bonusHP = hp;
+            this.bonusCritChance = crit; this.description = desc;
+        }
+        public int getBonusATK() { return bonusATK; }
+        public int getBonusDEF() { return bonusDEF; }
+        public int getBonusHP() { return bonusHP; }
+        public int getBonusCritChance() { return bonusCritChance; }
+        public String getDescription() { return description; }
+        public boolean isActive() { return bonusATK &gt; 0 || bonusDEF &gt; 0 || bonusHP &gt; 0 || bonusCritChance &gt; 0; }
     }
 }</code></pre>
 </div>
