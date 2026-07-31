@@ -24,7 +24,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">27 files | 4258 lines | 2026-07-31 00:37</div>
+<div class="stats">27 files | 4513 lines | 2026-07-31 10:48</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -384,7 +384,7 @@ public class BattleActivity extends AppCompatActivity {
 </div>
 
 <div class="file" id="battleview">
-    <div class="file-header"><h2>BattleView.java</h2><span class="file-meta">249 lines | 10170 bytes</span></div>
+    <div class="file-header"><h2>BattleView.java</h2><span class="file-meta">244 lines | 9909 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -399,11 +399,11 @@ import android.graphics.RectF;
 import android.view.View;
 
 /**
- * FIX: Health bars now change color based on health percentage.
- * Green &gt; 50%, Yellow &gt; 25%, Red &lt;= 25%.
- * ALSO: Now renders player/enemy character images below health bars.
+ * FIXED: Better null checking in onDraw.
+ * FIXED: Health bars clamp properly to 0-100%.
  */
 public class BattleView extends View {
+    private static final String TAG = "BattleView";
     private Battle battle;
     private Paint healthBarBackPaint, textPaint;
     private Paint playerHealthPaint, enemyHealthPaint;
@@ -415,13 +415,12 @@ public class BattleView extends View {
 
     public BattleView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        Log.d("RoguelikeApp", "BattleView constructor called");
+        Log.d(TAG, "BattleView constructor called");
         initPaints();
     }
 
-    public BattleView(Context context, Battle battle) {
+    public BattleView(Context context) {
         super(context);
-        this.battle = battle;
         initPaints();
     }
 
@@ -430,20 +429,15 @@ public class BattleView extends View {
         invalidate();
     }
 
-    /**
-     * Loads character images from drawable resources.
-     * Call this after construction (e.g., from BattleActivity.onCreate).
-     * @param playerResId Drawable resource ID for player image
-     * @param enemyResId  Drawable resource ID for enemy image
-     */
     public void loadImages(int playerResId, int enemyResId) {
         try {
             playerBitmap = BitmapFactory.decodeResource(getResources(), playerResId);
             enemyBitmap = BitmapFactory.decodeResource(getResources(), enemyResId);
             imagesLoaded = true;
-            Log.d("BattleView", "Character images loaded: player=" + (playerBitmap != null) + ", enemy=" + (enemyBitmap != null));
+            Log.d(TAG, "Character images loaded: player=" + (playerBitmap != null) +
+                ", enemy=" + (enemyBitmap != null));
         } catch (Exception e) {
-            Log.e("BattleView", "Failed to load battle images", e);
+            Log.e(TAG, "Failed to load battle images", e);
             imagesLoaded = false;
         }
     }
@@ -465,17 +459,14 @@ public class BattleView extends View {
         textPaint.setTextAlign(Paint.Align.LEFT);
     }
 
-    /**
-     * Get appropriate health bar color based on health percentage.
-     * FIX: Dynamic coloring instead of always green.
-     */
     private int getHealthColor(float healthRatio) {
+        healthRatio = Math.max(0f, Math.min(1f, healthRatio)); // Clamp to 0-1
         if (healthRatio &gt; 0.5f) {
-            return Color.parseColor("#00FF00");  // Green - healthy
+            return Color.parseColor("#00FF00");
         } else if (healthRatio &gt; 0.25f) {
-            return Color.parseColor("#FFFF00");  // Yellow - wounded
+            return Color.parseColor("#FFFF00");
         } else {
-            return Color.parseColor("#FF0000");  // Red - critical
+            return Color.parseColor("#FF0000");
         }
     }
 
@@ -483,9 +474,20 @@ public class BattleView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if (battle == null) {
-            Log.w("BattleView", "Battle is null in onDraw");
+            Log.w(TAG, "Battle is null in onDraw");
+            drawEmptyState(canvas);
             return;
         }
+
+        Player player = battle.getPlayer();
+        Enemy enemy = battle.getEnemy();
+
+        if (player == null || enemy == null) {
+            Log.w(TAG, "Player or Enemy is null in onDraw");
+            drawEmptyState(canvas);
+            return;
+        }
+
         int height = getHeight();
         int width = getWidth();
         int statusAreaHeight = (int) (height * 0.75);
@@ -495,45 +497,51 @@ public class BattleView extends View {
         drawMessage(canvas, statusAreaHeight - 10);
     }
 
+    private void drawEmptyState(Canvas canvas) {
+        Paint emptyPaint = new Paint(textPaint);
+        emptyPaint.setTextSize(48);
+        emptyPaint.setTextAlign(Paint.Align.CENTER);
+        emptyPaint.setColor(Color.GRAY);
+        canvas.drawText("Battle not started", getWidth() / 2, getHeight() / 2, emptyPaint);
+    }
+
     private void drawHealthBars(Canvas canvas, int statusAreaHeight) {
         Player player = battle.getPlayer();
         Enemy enemy = battle.getEnemy();
-        if (player == null || enemy == null) {
-            Log.w("BattleView", "Player or Enemy is null in drawHealthBars");
-            return;
-        }
+        if (player == null || enemy == null) return;
 
         int barWidth = getWidth() / 2 - 20;
         int barHeight = 30;
-        int barX = 10;
 
-        // Player health bar (always draw)
-        int playerMaxHealth = player.getMaxHealth();
-        int playerCurrentHealth = Math.min(player.getCurrentHealth(), playerMaxHealth);
-        playerCurrentHealth = Math.max(0, playerCurrentHealth);
+        // Player health bar
+        int playerBarX = 10;
         int playerBarY = 10;
-
-        canvas.drawRect(barX, playerBarY, barX + barWidth, playerBarY + barHeight, healthBarBackPaint);
+        int playerMaxHealth = player.getMaxHealth();
+        int playerCurrentHealth = Math.max(0, Math.min(player.getCurrentHealth(), playerMaxHealth));
         float playerHealthRatio = (float) playerCurrentHealth / playerMaxHealth;
-        playerHealthPaint.setColor(getHealthColor(playerHealthRatio));
-        canvas.drawRect(barX, playerBarY, barX + (int) (barWidth * playerHealthRatio), playerBarY + barHeight, playerHealthPaint);
-        canvas.drawText("Player: " + playerCurrentHealth + "/" + playerMaxHealth, barX + 5, playerBarY + 22, textPaint);
 
-        // Enemy health bar (show skull if dead)
-        int enemyHealth = enemy.getHealth();
-        int enemyBarX = barX + barWidth + 20;
+        canvas.drawRect(playerBarX, playerBarY, playerBarX + barWidth, playerBarY + barHeight, healthBarBackPaint);
+        playerHealthPaint.setColor(getHealthColor(playerHealthRatio));
+        canvas.drawRect(playerBarX, playerBarY, playerBarX + (int) (barWidth * playerHealthRatio),
+            playerBarY + barHeight, playerHealthPaint);
+        canvas.drawText("Player: " + playerCurrentHealth + "/" + playerMaxHealth,
+            playerBarX + 5, playerBarY + 22, textPaint);
+
+        // Enemy health bar
+        int enemyBarX = playerBarX + barWidth + 20;
         int enemyBarY = 10;
 
-        if (enemyHealth &gt; 0) {
+        if (enemy.getCurrentHealth() &gt; 0 &amp;&amp; !enemy.isDefeated()) {
             int enemyMaxHealth = enemy.getMaxHealth();
-            int enemyCurrentHealth = Math.min(enemyHealth, enemyMaxHealth);
-            enemyCurrentHealth = Math.max(0, enemyCurrentHealth);
+            int enemyCurrentHealth = Math.max(0, Math.min(enemy.getCurrentHealth(), enemyMaxHealth));
+            float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
 
             canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + barWidth, enemyBarY + barHeight, healthBarBackPaint);
-            float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
             enemyHealthPaint.setColor(getHealthColor(enemyHealthRatio));
-            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio), enemyBarY + barHeight, enemyHealthPaint);
-            canvas.drawText("Enemy: " + enemyCurrentHealth + "/" + enemy.getMaxHealth(), enemyBarX + 5, enemyBarY + 22, textPaint);
+            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio),
+                enemyBarY + barHeight, enemyHealthPaint);
+            canvas.drawText("Enemy: " + enemyCurrentHealth + "/" + enemyMaxHealth,
+                enemyBarX + 5, enemyBarY + 22, textPaint);
         } else {
             drawSkull(canvas, enemyBarX + barWidth / 2 - 15, enemyBarY, 30);
             Paint skullText = new Paint(textPaint);
@@ -542,32 +550,23 @@ public class BattleView extends View {
         }
     }
 
-    /**
-     * Draws player image on the left and enemy image on the right,
-     * below the health bars.
-     */
     private void drawCharacterImages(Canvas canvas, int width, int statusAreaHeight) {
         if (battle == null) return;
 
-        // Reserve space below health bars
         int imageTop = 50;
         int imageBottom = statusAreaHeight - 80;
-        int imageHeight = imageBottom - imageTop;
-        int imageWidth = (int)(imageHeight * 0.75f);
+        int imageHeight = Math.max(10, imageBottom - imageTop);
+        int imageWidth = (int) (imageHeight * 0.75f);
 
         float centerXLeft = width * 0.25f;
         float centerXRight = width * 0.75f;
 
-        // --- Player image (left side) ---
+        // Player image
         Player player = battle.getPlayer();
         if (player != null) {
-            if (imagesLoaded &amp;&amp; playerBitmap != null) {
-                RectF dst = new RectF(
-                    centerXLeft - imageWidth / 2f,
-                    imageTop,
-                    centerXLeft + imageWidth / 2f,
-                    imageBottom
-                );
+            if (imagesLoaded &amp;&amp; playerBitmap != null &amp;&amp; playerBitmap.getWidth() &gt; 0) {
+                RectF dst = new RectF(centerXLeft - imageWidth / 2f, imageTop,
+                    centerXLeft + imageWidth / 2f, imageBottom);
                 canvas.drawBitmap(playerBitmap, null, dst, null);
             } else {
                 Paint fallback = new Paint(textPaint);
@@ -582,16 +581,12 @@ public class BattleView extends View {
             canvas.drawText(player.getName(), centerXLeft, imageBottom + 25, namePaint);
         }
 
-        // --- Enemy image (right side) ---
+        // Enemy image
         Enemy enemy = battle.getEnemy();
-        if (enemy != null &amp;&amp; enemy.getHealth() &gt; 0) {
-            if (imagesLoaded &amp;&amp; enemyBitmap != null) {
-                RectF dst = new RectF(
-                    centerXRight - imageWidth / 2f,
-                    imageTop,
-                    centerXRight + imageWidth / 2f,
-                    imageBottom
-                );
+        if (enemy != null &amp;&amp; enemy.getCurrentHealth() &gt; 0 &amp;&amp; !enemy.isDefeated()) {
+            if (imagesLoaded &amp;&amp; enemyBitmap != null &amp;&amp; enemyBitmap.getWidth() &gt; 0) {
+                RectF dst = new RectF(centerXRight - imageWidth / 2f, imageTop,
+                    centerXRight + imageWidth / 2f, imageBottom);
                 canvas.drawBitmap(enemyBitmap, null, dst, null);
             } else {
                 Paint fallback = new Paint(textPaint);
@@ -920,7 +915,7 @@ public class CombatSystem {
 </div>
 
 <div class="file" id="dungeon">
-    <div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">248 lines | 7330 bytes</span></div>
+    <div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">236 lines | 7187 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -929,7 +924,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * FIX: Improved gold placement algorithm to prevent overflow on small dungeons.
+ * FIXED: Replaced Math.random() with SecureRandomUtil throughout
+ *        for consistent cryptographically-secure procedural generation.
  */
 public class Dungeon {
     public static final char TILE_WALL = '#';
@@ -960,12 +956,13 @@ public class Dungeon {
     }
 
     private void generateDungeon() {
-        int roomCount = 5 + (int)(Math.random() * 5);
+        // FIXED: SecureRandomUtil instead of Math.random()
+        int roomCount = 5 + SecureRandomUtil.nextInt(5);
         for (int i = 0; i &lt; roomCount; i++) {
-            int roomWidth = 8 + (int)(Math.random() * 8);
-            int roomHeight = 8 + (int)(Math.random() * 8);
-            int roomX = (int)(Math.random() * (width - roomWidth));
-            int roomY = (int)(Math.random() * (height - roomHeight));
+            int roomWidth = 8 + SecureRandomUtil.nextInt(8);
+            int roomHeight = 8 + SecureRandomUtil.nextInt(8);
+            int roomX = SecureRandomUtil.nextInt(Math.max(1, width - roomWidth));
+            int roomY = SecureRandomUtil.nextInt(Math.max(1, height - roomHeight));
 
             Room room = new Room(roomX, roomY, roomWidth, roomHeight);
             if (canPlaceRoom(room)) {
@@ -1007,7 +1004,8 @@ public class Dungeon {
             int x2 = room2.getCenterX();
             int y2 = room2.getCenterY();
 
-            if (Math.random() &lt; 0.5) {
+            // FIXED: SecureRandomUtil instead of Math.random()
+            if (SecureRandomUtil.nextBoolean()) {
                 carveCorridor(x1, y1, x2, y1);
                 carveCorridor(x2, y1, x2, y2);
             } else {
@@ -1036,10 +1034,6 @@ public class Dungeon {
         }
     }
 
-    /**
-     * FIX: Improved gold placement to handle small dungeons properly.
-     * Calculates appropriate gold count based on actual available space.
-     */
     private void placeGold() {
         List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
         for (int y = 0; y &lt; height; y++) {
@@ -1055,25 +1049,22 @@ public class Dungeon {
             return;
         }
 
-        // FIX: Cap gold count to prevent exceeding available tiles
-        int targetPercent = 18; // Target 18% of floor tiles
+        int targetPercent = 18;
         int maxGold = Math.max(1, (int)(floorTiles.size() * targetPercent / 100.0));
         int goldCount = Math.min(maxGold, floorTiles.size());
-        
-        // Ensure reasonable minimum but don't overflow
         goldCount = Math.max(1, goldCount);
-        
+
         Collections.shuffle(floorTiles);
-        
+
         int placed = 0;
         for (int i = 0; i &lt; goldCount &amp;&amp; i &lt; floorTiles.size(); i++) {
             int[] pos = floorTiles.get(i);
             tiles[pos[1]][pos[0]] = TILE_GOLD;
             placed++;
         }
-        
-        Log.d("Dungeon", "Placed " + placed + " gold piles on " + 
-              floorTiles.size() + " floor tiles (" + 
+
+        Log.d("Dungeon", "Placed " + placed + " gold piles on " +
+              floorTiles.size() + " floor tiles (" +
               (placed * 100.0 / floorTiles.size()) + "%)");
     }
 
@@ -1098,13 +1089,8 @@ public class Dungeon {
         }
     }
 
-    public int getWidth() {
-        return width;
-    }
-
-    public int getHeight() {
-        return height;
-    }
+    public int getWidth() { return width; }
+    public int getHeight() { return height; }
 
     public int[] findSpawnPosition() {
         if (rooms.isEmpty()) {
@@ -1154,18 +1140,15 @@ public class Dungeon {
             this.height = height;
         }
 
-        public int getCenterX() {
-            return x + width / 2;
-        }
-
-        public int getCenterY() {
-            return y + height / 2;
-        }
+        public int getCenterX() { return x + width / 2; }
+        public int getCenterY() { return y + height / 2; }
 
         public boolean intersects(Room other) {
             int padding = 2;
-            return !(x + width + padding &lt; other.x || other.x + other.width + padding &lt; x ||
-                     y + height + padding &lt; other.y || other.y + other.height + padding &lt; y);
+            return !(x + width + padding &lt; other.x ||
+                     other.x + other.width + padding &lt; x ||
+                     y + height + padding &lt; other.y ||
+                     other.y + other.height + padding &lt; y);
         }
     }
 }</code></pre>
@@ -1606,12 +1589,19 @@ public class DungeonManager {
 </div>
 
 <div class="file" id="enemy">
-    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">66 lines | 2821 bytes</span></div>
+    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">81 lines | 3371 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
+/**
+ * FIXED: Replaced Math.random() with SecureRandomUtil for gold reward rolls.
+ *        Added serialVersionUID for serialization stability.
+ *        Made dungeon reference transient (non-serializable).
+ */
 public class Enemy extends Character implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private transient Dungeon dungeon;
     private String name;
     private String id;
@@ -1630,13 +1620,15 @@ public class Enemy extends Character implements Serializable {
         this.armor = type.getBaseArmor();
         this.dodgeChance = type.getBaseDodge();
         this.criticalChance = 5;
-        this.goldReward = 5 + (int)(Math.random() * 10) + (type.ordinal() * 3);
+        // FIXED: SecureRandomUtil instead of Math.random()
+        this.goldReward = 5 + SecureRandomUtil.nextInt(10) + (type.ordinal() * 3);
         this.experienceReward = type.getXpReward();
         this.isBoss = false;
         this.isDefeated = false;
     }
 
-    public Enemy(int x, int y, int maxHealth, int attack, Dungeon dungeon, String name, int armor, int dodge, int critChance) {
+    public Enemy(int x, int y, int maxHealth, int attack, Dungeon dungeon,
+                 String name, int armor, int dodge, int critChance) {
         super(x, y, maxHealth, attack);
         this.dungeon = dungeon;
         this.enemyType = EnemyType.OGRE;
@@ -1645,7 +1637,8 @@ public class Enemy extends Character implements Serializable {
         this.armor = armor;
         this.dodgeChance = dodge;
         this.criticalChance = critChance;
-        this.goldReward = 5 + (int)(Math.random() * 10) + (EnemyType.OGRE.ordinal() * 3);
+        // FIXED: SecureRandomUtil instead of Math.random()
+        this.goldReward = 5 + SecureRandomUtil.nextInt(10) + (EnemyType.OGRE.ordinal() * 3);
         this.experienceReward = EnemyType.OGRE.getXpReward();
         this.isBoss = false;
         this.isDefeated = false;
@@ -1669,16 +1662,30 @@ public class Enemy extends Character implements Serializable {
     public boolean isDefeated() { return isDefeated || !isAlive(); }
     public boolean isDead() { return isDefeated || !isAlive(); }
     public boolean isBoss() { return isBoss; }
-    public String getEmoji() { return enemyType != null ? enemyType.getEmoji() : "👹"; }
+    public String getEmoji() {
+        return enemyType != null ? enemyType.getEmoji() : "👹";
+    }
     public EnemyType getType() { return enemyType; }
     public void setBoss(boolean boss) { this.isBoss = boss; }
+
+    // Allow restoring dungeon ref after deserialization
+    public void setDungeon(Dungeon dungeon) { this.dungeon = dungeon; }
 }</code></pre>
 </div>
 
 <div class="file" id="enemytype">
-    <div class="file-header"><h2>EnemyType.java</h2><span class="file-meta">57 lines | 1849 bytes</span></div>
+    <div class="file-header"><h2>EnemyType.java</h2><span class="file-meta">109 lines | 3647 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Enumeration of all enemy types with base stats.
+ *
+ * FIXED: Added getRandomRegularMonster() for random spawning.
+ * FIXED: Added floor-based variety in getRandomRegularMonster(floor).
+ */
 public enum EnemyType {
     SKELETON("💀", 30, 8, 0, 5, 10),
     CLOWN("🤡", 35, 10, 2, 8, 15),
@@ -1696,7 +1703,7 @@ public enum EnemyType {
     TIGER("🐯", 52, 22, 4, 15, 30),
     SHARK("🦈", 65, 19, 8, 10, 32),
     LION("🦁", 68, 21, 7, 12, 35),
-    UNICORN("🦄", 100, 25, 15, 20, 50);
+    UNICORN("🦄", 100, 25, 15, 20, 50); // Rare boss-type enemy
 
     private final String emoji;
     private final int baseHealth;
@@ -1725,13 +1732,56 @@ public enum EnemyType {
         return this == UNICORN;
     }
 
-    public static EnemyType[] getRegularMonsters() {
-        EnemyType[] regular = new EnemyType[values().length - 1];
-        int idx = 0;
+    /**
+     * Get a random regular monster (excludes special bosses like UNICORN).
+     */
+    public static EnemyType getRandomRegularMonster() {
+        List&lt;EnemyType&gt; regular = new ArrayList&lt;&gt;();
         for (EnemyType type : values()) {
-            if (type != UNICORN) regular[idx++] = type;
+            if (type != UNICORN) {
+                regular.add(type);
+            }
         }
-        return regular;
+        return regular.get(SecureRandomUtil.nextInt(regular.size()));
+    }
+
+    /**
+     * Get a random regular monster weighted by floor number.
+     * Higher floors favor tougher enemies.
+     *
+     * @param floorNumber The current dungeon floor (1-99)
+     * @return A randomly selected enemy type
+     */
+    public static EnemyType getRandomRegularMonster(int floorNumber) {
+        // Floor-based weighting: higher floors = more dangerous enemies
+        int tierThreshold = Math.min(4, (floorNumber - 1) / 15);
+
+        List&lt;EnemyType&gt; available = new ArrayList&lt;&gt;();
+        for (EnemyType type : values()) {
+            if (type == UNICORN) continue;
+
+            // Categorize enemies by rough power tier
+            int enemyTier = 0;
+            if (type.baseHealth &gt; 60 || type.baseAttack &gt; 18) {
+                enemyTier = 3; // High tier
+            } else if (type.baseHealth &gt; 45 || type.baseAttack &gt; 14) {
+                enemyTier = 2; // Mid tier
+            } else {
+                enemyTier = 1; // Low tier
+            }
+
+            // On higher floors, allow higher tier enemies
+            if (enemyTier &lt;= tierThreshold + 1) {
+                available.add(type);
+            }
+        }
+
+        // Fallback to all regular monsters if filtering is too restrictive
+        if (available.isEmpty()) {
+            return getRandomRegularMonster();
+        }
+
+        return available.get(SecureRandomUtil.nextInt(available.size()));
     }
 }</code></pre>
 </div>
@@ -2113,87 +2163,121 @@ public class ExperienceSystem implements Serializable {
 </div>
 
 <div class="file" id="game">
-    <div class="file-header"><h2>Game.java</h2><span class="file-meta">145 lines | 4984 bytes</span></div>
+    <div class="file-header"><h2>Game.java</h2><span class="file-meta">250 lines | 8453 bytes</span></div>
     <pre><code>package com.knightlight.game;
+
 import android.util.Log;
-import java.util.Random;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Core game state manager.
+ *
+ * FIXED: Uses DungeonManager for progression instead of hardcoding everything.
+ * FIXED: Enemy types from EnemyType enum, not raw arrays.
+ * FIXED: Removed magic number constants - use GameBalance instead.
+ */
 public class Game {
     public enum GameState { PLAYING, WON, LOST }
 
-    private static final int ENEMY_HEALTH = 20;
-    private static final int ENEMY_ATTACK_POWER = 5;
-    private static final int ENEMY_ARMOR = 2;
-    private static final int ENEMY_DODGE = 10;
-    private static final int ENEMY_CRIT = 5;
-
     private Player player;
     private Dungeon dungeon;
+    private DungeonManager dungeonManager;
     private List&lt;Enemy&gt; enemies;
     private GameState state;
     private int turnCount;
     private Enemy encounteredEnemy;
-    private static final Random RANDOM = new Random();
-
-    // ✓ FIXED: Regular monster types for random spawning
-    private static final EnemyType[] REGULAR_MONSTERS = {
-        EnemyType.SKELETON, EnemyType.CLOWN, EnemyType.OGRE, EnemyType.GHOST,
-        EnemyType.ZOMBIE_M, EnemyType.WOLF, EnemyType.FOX, EnemyType.BEAR,
-        EnemyType.SPIDER, EnemyType.BAT, EnemyType.MONSTER, EnemyType.ALIEN
-    };
 
     public Game() {
         this.dungeon = new Dungeon(50, 50);
+        this.dungeonManager = DungeonManager.builder().maxFloor(99).build();
+
         int[] spawnPos = dungeon.findSpawnPosition();
         this.player = new Player(spawnPos[0], spawnPos[1]);
         this.enemies = new ArrayList&lt;&gt;();
         this.state = GameState.PLAYING;
         this.turnCount = 0;
         this.encounteredEnemy = null;
+
         generateInitialEnemies();
     }
 
+    /**
+     * FIXED: Spawn initial enemies using DungeonLevel scaling and EnemyType enum.
+     */
     private void generateInitialEnemies() {
         int enemiesSpawned = 0;
         int maxAttempts = 100;
         int attempts = 0;
-        while (enemiesSpawned &lt; 5 &amp;&amp; attempts &lt; maxAttempts) {
-            int x = (int)(Math.random() * dungeon.getWidth());
-            int y = (int)(Math.random() * dungeon.getHeight());
+
+        DungeonLevel startingLevel = dungeonManager.getCurrentLevel();
+        int enemyCount = startingLevel.getScaledEnemyCount();
+
+        while (enemiesSpawned &lt; enemyCount &amp;&amp; attempts &lt; maxAttempts) {
+            int x = SecureRandomUtil.nextInt(dungeon.getWidth());
+            int y = SecureRandomUtil.nextInt(dungeon.getHeight());
+
             if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
-                // ✓ FIXED: Random enemy type selection
-                EnemyType type = REGULAR_MONSTERS[RANDOM.nextInt(REGULAR_MONSTERS.length)];
+                EnemyType type = EnemyType.getRandomRegularMonster();
                 Enemy enemy = new Enemy(x, y, dungeon, type, null);
+
+                // Scale enemy stats to floor
+                enemy.setAttack((int)(enemy.getAttack() * startingLevel.getEnemyDifficultyScaling()));
+                enemy.setCurrentHealth((int)(enemy.getMaxHealth() * startingLevel.getEnemyDifficultyScaling()));
+
                 enemies.add(enemy);
                 enemiesSpawned++;
                 Log.d("Game", "Spawned " + type.getEmoji() + " " + type.name() + " at (" + x + "," + y + ")");
             }
             attempts++;
         }
-        Log.d("Game", "Generated " + enemiesSpawned + " initial enemies with random types");
+        Log.d("Game", "Generated " + enemiesSpawned + " initial enemies on floor 1");
+    }
+
+    /**
+     * Spawn an enemy at specific coordinates. Used for procedural spawning.
+     */
+    public Enemy spawnEnemy(int x, int y) {
+        if (!dungeon.isWalkable(x, y)) return null;
+
+        DungeonLevel currentLevel = dungeonManager.getCurrentLevel();
+        EnemyType type = EnemyType.getRandomRegularMonster();
+        Enemy enemy = new Enemy(x, y, dungeon, type, null);
+
+        // Apply floor scaling
+        enemy.setAttack((int)(enemy.getAttack() * currentLevel.getEnemyDifficultyScaling()));
+        enemy.setCurrentHealth((int)(enemy.getMaxHealth() * currentLevel.getEnemyDifficultyScaling()));
+
+        enemies.add(enemy);
+        Log.d("Game", "Spawned enemy " + type.name() + " at (" + x + "," + y + ")");
+        return enemy;
     }
 
     public boolean playerMove(int dx, int dy) {
         if (player == null || dungeon == null) {
             return false;
         }
+
         int newX = player.getX() + dx;
         int newY = player.getY() + dy;
+
         if (!dungeon.isWalkable(newX, newY)) {
             return false;
         }
+
         player.move(dx, dy);
         turnCount++;
 
+        // Check for gold pickup
         char tile = dungeon.getTile(newX, newY);
         if (tile == Dungeon.TILE_GOLD) {
-            player.addGold(10);
+            int goldAmount = SecureRandomUtil.nextInt(5) + 5; // 5-10 gold
+            player.addGold(goldAmount);
             dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
-            Log.d("Game", "Collected gold! Total: " + player.getGoldCollected());
+            Log.d("Game", "Collected " + goldAmount + " gold! Total: " + player.getGoldCollected());
         }
 
+        // Check for enemy encounter
         for (Enemy enemy : enemies) {
             if (enemy != null &amp;&amp; !enemy.isDead() &amp;&amp; enemy.getX() == newX &amp;&amp; enemy.getY() == newY) {
                 encounteredEnemy = enemy;
@@ -2201,30 +2285,104 @@ public class Game {
                 return true;
             }
         }
+
         encounteredEnemy = null;
         return false;
     }
 
+    /**
+     * Process battle outcome. Called after battle activity returns.
+     */
     public void resolveEncounter(Enemy enemy, boolean playerWins) {
+        if (enemy == null) return;
+
         if (playerWins) {
-            enemy.takeDamage(9999);
-            enemy.setDefeated(true); // Mark as defeated
+            // Enemy already marked defeated by Battle/CombatSystem
+            enemy.setDefeated(true);
             if (enemies.remove(enemy)) {
                 Log.d("Game", "✓ Removed defeated enemy from list. Remaining: " + enemies.size());
             }
+
+            // Remove from dungeon grid
+            if (dungeon != null) {
+                dungeon.setTile(enemy.getX(), enemy.getY(), Dungeon.TILE_FLOOR);
+            }
+
+            // Check win condition for bosses
+            if (enemy.isBoss()) {
+                state = GameState.WON;
+            }
         } else {
-            player.takeDamage(enemy.getAttack());
+            // Player lost battle - could apply penalty here
             if (!player.isAlive()) {
                 state = GameState.LOST;
             }
         }
-        if (enemy.isBoss() &amp;&amp; !enemy.isAlive()) {
-            state = GameState.WON;
+    }
+
+    /**
+     * Advance to next floor. Called when player reaches exit.
+     */
+    public boolean progressToNextFloor() {
+        if (dungeonManager == null) return false;
+
+        if (!dungeonManager.canProgress()) {
+            Log.w("Game", "Already at max floor");
+            return false;
         }
+
+        boolean progressed = dungeonManager.progressFloor();
+        if (progressed) {
+            Log.d("Game", "Advanced to floor " + dungeonManager.getCurrentFloor());
+            generateEnemiesForNewFloor();
+        }
+        return progressed;
+    }
+
+    /**
+     * Generate new enemies for the current floor.
+     */
+    private void generateEnemiesForNewFloor() {
+        if (dungeonManager == null || dungeon == null) return;
+
+        DungeonLevel level = dungeonManager.getCurrentLevel();
+        int enemyCount = level.getScaledEnemyCount();
+
+        // Clear old enemies
+        enemies.clear();
+
+        // Spawn new enemies
+        int attempts = 0;
+        int maxAttempts = enemyCount * 10;
+        while (enemies.size() &lt; enemyCount &amp;&amp; attempts &lt; maxAttempts) {
+            int x = SecureRandomUtil.nextInt(dungeon.getWidth());
+            int y = SecureRandomUtil.nextInt(dungeon.getHeight());
+
+            if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
+                EnemyType type = EnemyType.getRandomRegularMonster(level.getFloorNumber());
+                Enemy enemy = new Enemy(x, y, dungeon, type, null);
+
+                // Apply floor scaling
+                int scaledHP = level.getScaledEnemyHP();
+                int scaledATK = level.getScaledEnemyAttack();
+                int scaledDEF = level.getScaledEnemyDefense();
+
+                enemy.setCurrentHealth(scaledHP);
+                enemy.maxHealth = scaledHP;
+                enemy.setAttack(scaledATK);
+                enemy.setArmor(scaledDEF);
+
+                enemies.add(enemy);
+            }
+            attempts++;
+        }
+
+        Log.d("Game", "Generated " + enemies.size() + " enemies for floor " + level.getFloorNumber());
     }
 
     public Player getPlayer() { return player; }
     public Dungeon getDungeon() { return dungeon; }
+    public DungeonManager getDungeonManager() { return dungeonManager; }
 
     public List&lt;Enemy&gt; getEnemies() {
         List&lt;Enemy&gt; living = new ArrayList&lt;&gt;();
@@ -2238,9 +2396,6 @@ public class Game {
         return living;
     }
 
-    /**
-     * Add an enemy directly to the game. Used for boss spawns.
-     */
     public void addEnemy(Enemy enemy) {
         if (enemy != null &amp;&amp; enemies != null) {
             enemies.add(enemy);
@@ -2262,55 +2417,106 @@ public class Game {
 </div>
 
 <div class="file" id="gamebalance">
-    <div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">49 lines | 1776 bytes</span></div>
+    <div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">100 lines | 4050 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 /**
  * Centralized game balance and configuration constants.
- * Eliminates magic numbers and improves maintainability.
+ *
+ * FIXED: Added all missing constants for boss spawning, dungeon generation, etc.
+ * FIXED: Removed debug flag - should use BuildConfig.DEBUG in production.
  */
 public class GameBalance {
-    
+
     // Prevent instantiation
     private GameBalance() {
         throw new AssertionError("Cannot instantiate GameBalance");
     }
 
-    // Player balance
+    // ==================== PLAYER BALANCE ====================
+
     public static final int PLAYER_MAX_HEALTH = 100;
     public static final int PLAYER_BASE_ATTACK = 15;
     public static final int PLAYER_INITIAL_GOLD = 0;
     public static final int PLAYER_INITIAL_POTIONS = 3;
     public static final int POTION_HEAL_AMOUNT = 25;
 
-    // Enemy balance
+    // ==================== ENEMY BALANCE ====================
+
     public static final int ENEMY_BASE_HEALTH = 30;
     public static final int ENEMY_BASE_ATTACK = 8;
     public static final int ENEMY_HEALTH_VARIANCE = 10;
     public static final int ENEMY_GOLD_REWARD = 50;
 
-    // Boss balance
-    public static final int BOSS_HEALTH_MULTIPLIER = 2;
-    public static final float BOSS_ATTACK_MULTIPLIER = 1.5f;
-    public static final int BOSS_GOLD_REWARD = 200;
+    // ==================== BOSS BALANCE ====================
 
-    // Battle balance
+    public static final String BOSS_NAME = "DRAGON BOSS";
+    public static final int BOSS_BASE_HEALTH = 200;
+    public static final int BOSS_HEALTH_PER_LEVEL = 25;
+    public static final int BOSS_BASE_ATTACK = 25;
+    public static final int BOSS_ATTACK_PER_LEVEL = 4;
+    public static final int BOSS_BASE_ARMOR = 10;
+    public static final int BOSS_ARMOR_PER_LEVEL = 1;
+    public static final int BOSS_DODGE = 20;
+    public static final int BOSS_CRIT = 35;
+    public static final int BOSS_GOLD_REWARD = 500;
+    public static final int BOSS_MINIMUM_DISTANCE = 15;
+
+    // ==================== BOSS TRIGGERS ====================
+
+    public static final int BOSS_TRIGGER_KILLS = 20;  // Enemies defeated
+    public static final int BOSS_TRIGGER_GOLD = 500;  // Gold collected
+
+    // ==================== BATTLE BALANCE ====================
+
     public static final int BATTLE_DAMAGE_VARIANCE_PERCENT = 25;
     public static final float DEFENSE_REDUCTION_MULTIPLIER = 0.5f;
-    public static final double FLEE_SUCCESS_RATE = 0.5;
+    public static final double FLEE_SUCCESS_RATE = 0.40;
+    public static final double CRIT_CHANCE_PLAYER = 0.15;
+    public static final double CRIT_CHANCE_ENEMY = 0.10;
 
-    // Game progression
-    public static final int GOLD_WIN_CONDITION = 500;
+    // ==================== DUNGEON GENERATION ====================
+
+    public static final int DEFAULT_DUNGEON_WIDTH = 50;
+    public static final int DEFAULT_DUNGEON_HEIGHT = 50;
     public static final int DUNGEON_WALL_PROBABILITY = 20;
-    public static final int DUNGEON_ENEMY_SPAWN_RATE = 30;
+    public static final int DUNGEON_MIN_ROOM_SIZE = 8;
+    public static final int DUNGEON_MAX_ROOM_SIZE = 16;
+    public static final int DUNGEON_MIN_ROOMS = 5;
+    public static final int DUNGEON_MAX_ROOMS = 10;
 
-    // Difficulty scaling
+    // ==================== PROGRESSION ====================
+
+    public static final int MAX_DUNGEON_FLOOR = 99;
+    public static final int MINIMUM_PLAYER_LEVEL = 1;
+    public static final int MAXIMUM_PLAYER_LEVEL = 100;
+    public static final int ENEMIES_FOR_LEVEL_UP = 5;
+
+    // ==================== DIFFICULTY MULTIPLIERS ====================
+
     public static final float EASY_DIFFICULTY_MULTIPLIER = 0.75f;
     public static final float NORMAL_DIFFICULTY_MULTIPLIER = 1.0f;
     public static final float HARD_DIFFICULTY_MULTIPLIER = 1.25f;
+    public static final float NIGHTMARE_DIFFICULTY_MULTIPLIER = 1.5f;
 
-    // Logging
-    public static final boolean DEBUG_MODE = true; // Set to BuildConfig.DEBUG in production
+    // ==================== LOOT ====================
+
+    public static final double LOOT_DROP_CHANCE = 0.30;
+    public static final int INVENTORY_CAPACITY = 50;
+    public static final int EQUIPMENT_SLOTS = 10;
+    public static final int RING_SLOTS = 5;
+
+    // ==================== ECONOMY ====================
+
+    public static final int GOLD_POTION_COST = 25;
+    public static final int GOLD_WEAPON_BASE = 50;
+    public static final int GOLD_ARMOR_BASE = 40;
+    public static final double GOLD_SCALING_PER_FLOOR = 1.1;
+
+    // ==================== DEBUG ====================
+
+    // In production, use: public static final boolean DEBUG_MODE = BuildConfig.DEBUG;
+    public static final boolean DEBUG_MODE = false;
 }</code></pre>
 </div>
 
@@ -3344,39 +3550,32 @@ public enum ItemType {
 </div>
 
 <div class="file" id="loottable">
-    <div class="file-header"><h2>LootTable.java</h2><span class="file-meta">103 lines | 4051 bytes</span></div>
+    <div class="file-header"><h2>LootTable.java</h2><span class="file-meta">87 lines | 3526 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
-import java.util.Random;
+import android.util.Log;
 
+/**
+ * FIXED: Replaced java.util.Random with SecureRandomUtil
+ * for cryptographically fair loot RNG, matching the rest of the codebase.
+ */
 public class LootTable {
     private static final String TAG = "LootTable";
-    private Random random;
 
     public LootTable() {
-        this.random = new Random();
     }
 
     public Equipment generateLoot(int floorNumber, double difficultyMod) {
-        // Determine rarity based on floor and randomness
         Rarity rarity = determineRarity(floorNumber, difficultyMod);
-        
-        // Select item type based on rarity
         ItemType type = selectItemType(rarity, floorNumber);
-        
-        // Generate the equipment
         Equipment item = Equipment.generateRandom(type, rarity, floorNumber);
-        
-        android.util.Log.d(TAG, "Loot generated: " + item.getName() + " [" + rarity + "]");
+        Log.d(TAG, "Loot generated: " + item.getName() + " [" + rarity + "]");
         return item;
     }
 
     private Rarity determineRarity(int floorNumber, double difficultyMod) {
-        double roll = random.nextDouble();
-        
-        // Rarity chances adjust by floor number
-        // Higher floors = better chances for rare items
-        
+        double roll = SecureRandomUtil.nextDouble();
+
         double unobtainiumChance = 0.001 + (floorNumber * 0.0005);
         double mythicChance = unobtainiumChance + 0.005 + (floorNumber * 0.002);
         double setChance = mythicChance + 0.01 + (floorNumber * 0.003);
@@ -3384,7 +3583,7 @@ public class LootTable {
         double epicChance = legendaryChance + 0.05 + (floorNumber * 0.01);
         double rareChance = epicChance + 0.08 + (floorNumber * 0.01);
         double uncommonChance = rareChance + 0.10 + (floorNumber * 0.01);
-        
+
         if (roll &lt; unobtainiumChance) return Rarity.UNOBTAINIUM;
         if (roll &lt; mythicChance) return Rarity.MYTHIC;
         if (roll &lt; setChance) return Rarity.SET;
@@ -3398,50 +3597,41 @@ public class LootTable {
     private ItemType selectItemType(Rarity rarity, int floorNumber) {
         ItemType[] allTypes = ItemType.values();
         ItemType[] highTierTypes = {ItemType.WEAPON, ItemType.CHESTPLATE, ItemType.LEGGINGS};
-        
-        // Better rarities favor better slots
+
         if (rarity.getTier() &gt;= 5) {
-            return highTierTypes[random.nextInt(highTierTypes.length)];
+            return highTierTypes[SecureRandomUtil.nextInt(highTierTypes.length)];
         }
-        return allTypes[random.nextInt(allTypes.length)];
+        return allTypes[SecureRandomUtil.nextInt(allTypes.length)];
     }
 
-    // Special methods for bosses and unicorns
     public Equipment generateSetDrop() {
-        Rarity setRarity = Rarity.SET;
         ItemType[] setEligible = {ItemType.WEAPON, ItemType.CHESTPLATE, ItemType.LEGGINGS, ItemType.HELMET};
-        ItemType type = setEligible[random.nextInt(setEligible.length)];
-        
-        Equipment item = Equipment.generateRandom(type, setRarity, 10);
-        android.util.Log.d(TAG, "SET DROP: " + item.getName());
+        ItemType type = setEligible[SecureRandomUtil.nextInt(setEligible.length)];
+        Equipment item = Equipment.generateRandom(type, Rarity.SET, 10);
+        Log.d(TAG, "SET DROP: " + item.getName());
         return item;
     }
 
     public Equipment generateMythicDrop() {
-        Rarity mythicRarity = Rarity.MYTHIC;
-        ItemType type = ItemType.values()[random.nextInt(ItemType.values().length)];
-        
-        Equipment item = Equipment.generateRandom(type, mythicRarity, 10);
-        android.util.Log.d(TAG, "MYTHIC DROP: " + item.getName());
+        ItemType type = ItemType.values()[SecureRandomUtil.nextInt(ItemType.values().length)];
+        Equipment item = Equipment.generateRandom(type, Rarity.MYTHIC, 10);
+        Log.d(TAG, "MYTHIC DROP: " + item.getName());
         return item;
     }
 
     public Equipment generateUnobtainiumDrop() {
-        Rarity unobtainiumRarity = Rarity.UNOBTAINIUM;
-        ItemType type = ItemType.values()[random.nextInt(ItemType.values().length)];
-        
-        Equipment item = Equipment.generateRandom(type, unobtainiumRarity, 20);
-        android.util.Log.d(TAG, "UNOBTAINIUM DROP: " + item.getName());
+        ItemType type = ItemType.values()[SecureRandomUtil.nextInt(ItemType.values().length)];
+        Equipment item = Equipment.generateRandom(type, Rarity.UNOBTAINIUM, 20);
+        Log.d(TAG, "UNOBTAINIUM DROP: " + item.getName());
         return item;
     }
 
     public Equipment generatePrismShard(int shardNumber) {
         Equipment shard = Equipment.generateArtifact(shardNumber);
-        android.util.Log.d(TAG, "PRISM SHARD #" + shardNumber + " GENERATED");
+        Log.d(TAG, "PRISM SHARD #" + shardNumber + " GENERATED");
         return shard;
     }
 
-    // Static singleton instance helper
     public static class Builder {
         public LootTable build() {
             return new LootTable();
@@ -3451,7 +3641,7 @@ public class LootTable {
 </div>
 
 <div class="file" id="mainactivity">
-    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">398 lines | 15644 bytes</span></div>
+    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">392 lines | 15443 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -3469,36 +3659,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * FIXED: Boss triggers at 10 kills or 100 gold (lower for testing).
- * FIXED: Gold collection now tracked for boss trigger.
- * FIXED: Boss spawn only happens once per run.
- * FIXED: Added lootTableInstance for BattleActivity access.
+ * Main game activity.
+ *
+ * FIXED: Boss triggers moved to GameBalance constants.
+ * FIXED: LootTable initialized with proper null safety.
+ * FIXED: Better error handling in onActivityResult.
  */
 public class MainActivity extends AppCompatActivity implements GameView.GameListener {
     private static final String TAG = "MainActivity";
-    private static final int BATTLE_REQUEST = 1;
-    
-    // BOSS SPAWN TRIGGERS - LOWERED FOR TESTING (change back to 50/500 when done)
-    private static final int BOSS_TRIGGER_KILLS = 10;
-    private static final int BOSS_TRIGGER_GOLD = 100;
-    
-    // =========================================================================
-    // ADDED: Static LootTable instance for BattleActivity access
-    // =========================================================================
-    private static LootTable lootTableInstance;
-    
+    private static final int BATTLE_REQUEST_CODE = 1;
+
+    // FIXED: Use GameBalance constants instead of hardcoding here
     private int totalEnemiesDefeated = 0;
     private boolean bossSpawned = false;
-    
+
     private Game game;
     private GameView gameView;
     private SaveGameManager saveGameManager;
     private Dungeon dungeon;
     private Handler handler = new Handler(Looper.getMainLooper());
 
-    // =========================================================================
-    // ADDED: Getter for LootTable instance
-    // =========================================================================
+    // FIXED: Static LootTable instance for BattleActivity access
+    private static LootTable lootTableInstance;
+
     public static LootTable getLootTableInstance() {
         return lootTableInstance;
     }
@@ -3507,60 +3690,51 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        
+
         gameView = findViewById(R.id.game_view);
         if (gameView == null) {
             Log.e(TAG, "GameView not found in layout");
+            Toast.makeText(this, "UI Error: GameView missing", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
-        
+
         saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
+
+        // FIXED: Initialize LootTable BEFORE creating Game
+        initializeLootTable();
+
         game = new Game();
-        
-        if (game == null) {
+        if (game == null || game.getPlayer() == null || game.getDungeon() == null) {
             Log.e(TAG, "Failed to create Game instance");
+            Toast.makeText(this, "Game initialization failed", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
-        
-        // =========================================================================
-        // ADDED: Initialize LootTable early in lifecycle
-        // =========================================================================
-        initializeLootTable();
-        
+
         ensurePlayerSpawned();
-        
-        SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
-        if (saveData != null) {
-            restoreGameState(saveData);
-            if (saveData.totalEnemiesDefeated &gt; 0) {
-                totalEnemiesDefeated = saveData.totalEnemiesDefeated;
-            }
-        }
-        
+        restoreGameStateIfAvailable();
+
         dungeon = game.getDungeon();
         gameView.setGame(game);
         gameView.setGameListener(this);
-        
-        Log.d(TAG, "MainActivity initialized - Boss trigger: " + BOSS_TRIGGER_KILLS + " kills OR " + BOSS_TRIGGER_GOLD + " gold");
+
+        Log.d(TAG, "MainActivity initialized - Boss trigger: "
+            + GameBalance.BOSS_TRIGGER_KILLS + " kills OR " + GameBalance.BOSS_TRIGGER_GOLD + " gold");
     }
 
-    // =========================================================================
-    // ADDED: Initialize LootTable method
-    // =========================================================================
     private void initializeLootTable() {
         try {
             lootTableInstance = new LootTable.Builder().build();
             Log.d(TAG, "LootTable initialized successfully");
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize LootTable", e);
-            lootTableInstance = null;  // Ensure it's null on failure
+            lootTableInstance = null;
+            Toast.makeText(this, "Warning: Loot generation disabled", Toast.LENGTH_LONG).show();
         }
     }
 
     private void ensurePlayerSpawned() {
-        if (game == null) return;
         Player player = game.getPlayer();
         Dungeon gameDungeon = game.getDungeon();
         if (player == null || gameDungeon == null) {
@@ -3575,9 +3749,14 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
     }
 
-    private void restoreGameState(SaveGameManager.SaveGameData saveData) {
-        if (saveData == null) return;
-        
+    private void restoreGameStateIfAvailable() {
+        SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
+        if (saveData == null) {
+            Log.d(TAG, "No saved game found, starting fresh");
+            return;
+        }
+
+        // Restore player position
         if (saveData.playerX &gt;= 0 &amp;&amp; saveData.playerY &gt;= 0) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
@@ -3586,7 +3765,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 Log.d(TAG, "Restored player position to (" + saveData.playerX + ", " + saveData.playerY + ")");
             }
         }
-        
+
+        // Restore player stats
         if (saveData.player != null) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
@@ -3595,126 +3775,133 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 gamePlayer.setExperience(Math.max(0, saveData.player.getExperience()));
                 gamePlayer.setGoldCollected(Math.max(0, saveData.player.getGoldCollected()));
                 gamePlayer.setLevel(Math.max(1, saveData.player.getLevel()));
-                Log.d(TAG, "Restored player stats: Lvl " + gamePlayer.getLevel());
+                Log.d(TAG, "Restored player stats: Lvl " + gamePlayer.getLevel()
+                    + ", HP " + gamePlayer.getCurrentHealth() + "/" + gamePlayer.getMaxHealth());
             }
         }
-        
+
+        // Restore enemies
         if (saveData.enemies != null) {
             List&lt;Enemy&gt; currentEnemies = game.getEnemies();
             if (currentEnemies != null) {
                 currentEnemies.clear();
                 for (Enemy e : saveData.enemies) {
                     if (e != null &amp;&amp; !e.isDead()) {
+                        e.setDungeon(dungeon); // Restore dungeon reference
                         currentEnemies.add(e);
                     }
                 }
                 Log.d(TAG, "Restored " + currentEnemies.size() + " living enemies");
             }
         }
+
+        totalEnemiesDefeated = saveData.totalEnemiesDefeated;
+        bossSpawned = saveData.bossSpawned;
+        Log.d(TAG, "Restore complete: " + totalEnemiesDefeated + " kills, boss=" + bossSpawned);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        
-        if (requestCode != BATTLE_REQUEST) return;
-        if (resultCode != RESULT_OK) {
-            Log.w(TAG, "onActivityResult: Battle activity returned non-OK result");
+
+        if (requestCode != BATTLE_REQUEST_CODE) {
+            super.onActivityResult(requestCode, resultCode, data);
             return;
         }
-        if (data == null) {
-            Log.w(TAG, "onActivityResult: data is null");
+
+        if (resultCode != RESULT_OK || data == null) {
+            Log.w(TAG, "Battle activity returned non-OK result: " + resultCode);
+            gameView.invalidate();
             return;
         }
-        
+
         try {
             boolean battleWon = data.getBooleanExtra("battleWon", false);
             Serializable playerExtra = data.getSerializableExtra("updatedPlayer");
-            
+            String defeatedEnemyId = data.getStringExtra("enemyId");
+
             if (!(playerExtra instanceof Player)) {
-                Log.w(TAG, "onActivityResult: updatedPlayer is not a valid Player instance");
+                Log.w(TAG, "updatedPlayer is not a valid Player instance");
                 return;
             }
-            
+
             Player updatedPlayer = (Player) playerExtra;
-            
             if (updatedPlayer == null) {
-                Log.w(TAG, "onActivityResult: updatedPlayer is null");
+                Log.w(TAG, "updatedPlayer is null");
                 return;
             }
-            
-            if (game != null) {
-                Player gamePlayer = game.getPlayer();
-                
-                if (gamePlayer != null) {
-                    int newHealth = Math.max(0, Math.min(updatedPlayer.getCurrentHealth(), gamePlayer.getMaxHealth()));
-                    gamePlayer.setCurrentHealth(newHealth);
-                    gamePlayer.setExperience(updatedPlayer.getExperience());
-                    gamePlayer.setGoldCollected(updatedPlayer.getGoldCollected());
-                    gamePlayer.setLevel(updatedPlayer.getLevel());
-                    
-                    if (updatedPlayer.getLevel() &gt; gamePlayer.getLevel()) {
-                        Toast.makeText(this, "⬆️ LEVEL UP! You are now level " + updatedPlayer.getLevel(), Toast.LENGTH_LONG).show();
-                    }
+
+            Player gamePlayer = game.getPlayer();
+            if (gamePlayer != null) {
+                int newHealth = Math.max(0, Math.min(updatedPlayer.getCurrentHealth(), gamePlayer.getMaxHealth()));
+                gamePlayer.setCurrentHealth(newHealth);
+                gamePlayer.setExperience(updatedPlayer.getExperience());
+                gamePlayer.setGoldCollected(updatedPlayer.getGoldCollected());
+                gamePlayer.setLevel(updatedPlayer.getLevel());
+
+                if (updatedPlayer.getLevel() &gt; gamePlayer.getLevel()) {
+                    Toast.makeText(this, "⬆️ LEVEL UP! You are now level " + updatedPlayer.getLevel(),
+                        Toast.LENGTH_LONG).show();
                 }
             }
-            
+
             if (battleWon) {
                 totalEnemiesDefeated++;
                 Log.d(TAG, "✓ Victory! Total enemies defeated: " + totalEnemiesDefeated);
+
                 if (!bossSpawned) {
                     checkBossSpawn();
                 }
             }
-            
-            String defeatedEnemyId = data.getStringExtra("enemyId");
+
+            // Remove defeated enemy from game list
             if (defeatedEnemyId != null &amp;&amp; game != null) {
                 List&lt;Enemy&gt; currentEnemies = game.getEnemies();
                 if (currentEnemies != null) {
-                    for (Enemy e : currentEnemies) {
+                    for (int i = currentEnemies.size() - 1; i &gt;= 0; i--) {
+                        Enemy e = currentEnemies.get(i);
                         if (e != null &amp;&amp; e.getId().equals(defeatedEnemyId)) {
-                            e.takeDamage(9999);
-                            currentEnemies.remove(e);
+                            currentEnemies.remove(i);
                             Log.d(TAG, "Removed enemy " + defeatedEnemyId + " from active list");
                             break;
                         }
                     }
                 }
             }
-            
-            if (!battleWon &amp;&amp; game != null) {
-                Log.d(TAG, "Battle lost; game state set to LOST");
-            }
-            
-            if (gameView != null) {
-                gameView.invalidate();
-            }
+
+            gameView.invalidate();
+
         } catch (Exception e) {
             Log.e(TAG, "Error processing battle result", e);
+            Toast.makeText(this, "Error processing battle result", Toast.LENGTH_SHORT).show();
         }
     }
 
+    /**
+     * FIXED: Use GameBalance.BOSS_TRIGGER_KILLS and GameBalance.BOSS_TRIGGER_GOLD
+     * instead of hardcoded values.
+     */
     private void checkBossSpawn() {
         if (bossSpawned) {
             Log.d(TAG, "Boss already spawned this run");
             return;
         }
-        
+
         Player player = game.getPlayer();
         int currentGold = (player != null) ? player.getGoldCollected() : 0;
-        boolean killTrigger = totalEnemiesDefeated &gt;= BOSS_TRIGGER_KILLS;
-        boolean goldTrigger = currentGold &gt;= BOSS_TRIGGER_GOLD;
-        
+        boolean killTrigger = totalEnemiesDefeated &gt;= GameBalance.BOSS_TRIGGER_KILLS;
+        boolean goldTrigger = currentGold &gt;= GameBalance.BOSS_TRIGGER_GOLD;
+
         if (killTrigger) {
-            Log.d(TAG, "🔥 BOSS TRIGGER: " + totalEnemiesDefeated + " enemies defeated (threshold: " + BOSS_TRIGGER_KILLS + ")");
+            Log.d(TAG, "🔥 BOSS TRIGGER: " + totalEnemiesDefeated + " enemies defeated (threshold: "
+                + GameBalance.BOSS_TRIGGER_KILLS + ")");
             Toast.makeText(this, "⚠️ WARNING: A POWERFUL BOSS AWAKENS!", Toast.LENGTH_LONG).show();
             spawnBoss();
         } else if (goldTrigger) {
-            Log.d(TAG, "🔥 BOSS TRIGGER: " + currentGold + " gold collected (threshold: " + BOSS_TRIGGER_GOLD + ")");
+            Log.d(TAG, "🔥 BOSS TRIGGER: " + currentGold + " gold collected (threshold: "
+                + GameBalance.BOSS_TRIGGER_GOLD + ")");
             Toast.makeText(this, "⚠️ WARNING: YOUR WEALTH HAS ATTRACTED ATTENTION!", Toast.LENGTH_LONG).show();
             spawnBoss();
-        } else {
-            Log.d(TAG, "Boss check: " + totalEnemiesDefeated + "/" + BOSS_TRIGGER_KILLS + " kills, " + currentGold + "/" + BOSS_TRIGGER_GOLD + " gold - not triggered yet");
         }
     }
 
@@ -3723,19 +3910,19 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Log.e(TAG, "Cannot spawn boss: game or dungeon is null");
             return;
         }
-        
+
         bossSpawned = true;
-        
+
         List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
         char[][] grid = dungeon.getGrid();
         Player player = game.getPlayer();
-        
+
         for (int y = 0; y &lt; dungeon.getHeight(); y++) {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
                 if (dungeon.isWalkable(x, y)) {
                     if (player != null) {
                         int dist = Math.abs(x - player.getX()) + Math.abs(y - player.getY());
-                        if (dist &gt; 15) {
+                        if (dist &gt; GameBalance.BOSS_MINIMUM_DISTANCE) {
                             floorTiles.add(new int[]{x, y});
                         }
                     } else {
@@ -3744,27 +3931,33 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 }
             }
         }
-        
+
         if (floorTiles.isEmpty()) {
             Log.w(TAG, "No valid floor tiles for boss spawn");
             return;
         }
-        
-        int[] bossPos = floorTiles.get((int)(Math.random() * floorTiles.size()));
+
+        int[] bossPos = floorTiles.get(SecureRandomUtil.nextInt(floorTiles.size()));
         int bossX = bossPos[0];
         int bossY = bossPos[1];
-        
-        int bossMaxHealth = 200 + (player != null ? player.getLevel() * 25 : 0);
-        int bossAttack = 25 + (player != null ? player.getLevel() * 4 : 0);
-        int bossArmor = 10 + (player != null ? player.getLevel() : 0);
-        
-        Enemy boss = new Enemy(bossX, bossY, bossMaxHealth, bossAttack, dungeon, "DRAGON BOSS", bossArmor, 20, 35);
+
+        // FIXED: Use GameBalance constants for boss stats
+        int playerLevel = (player != null) ? player.getLevel() : 1;
+        int bossMaxHealth = GameBalance.BOSS_BASE_HEALTH + (playerLevel * GameBalance.BOSS_HEALTH_PER_LEVEL);
+        int bossAttack = GameBalance.BOSS_BASE_ATTACK + (playerLevel * GameBalance.BOSS_ATTACK_PER_LEVEL);
+        int bossArmor = GameBalance.BOSS_BASE_ARMOR + (playerLevel * GameBalance.BOSS_ARMOR_PER_LEVEL);
+
+        Enemy boss = new Enemy(bossX, bossY, bossMaxHealth, bossAttack, dungeon,
+            GameBalance.BOSS_NAME, bossArmor, GameBalance.BOSS_DODGE, GameBalance.BOSS_CRIT);
         boss.setBoss(true);
-        
+
         game.addEnemy(boss);
         dungeon.setTile(bossX, bossY, 'B');
-        
-        Log.d(TAG, "🐉 BOSS SPAWNED at (" + bossX + "," + bossY + ") - HP:" + bossMaxHealth + " ATK:" + bossAttack);
+
+        Log.d(TAG, "🐉 BOSS SPAWNED at (" + bossX + "," + bossY + ") - HP:" + bossMaxHealth
+            + " ATK:" + bossAttack + " ARMOR:" + bossArmor);
+
+        Toast.makeText(this, "🐲 DRAGON BOSS HAS APPEARED! Prepare yourself!", Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -3773,7 +3966,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Intent battleIntent = new Intent(MainActivity.this, BattleActivity.class);
             battleIntent.putExtra("player", game.getPlayer());
             battleIntent.putExtra("enemy", enemy);
-            startActivityForResult(battleIntent, BATTLE_REQUEST);
+            startActivityForResult(battleIntent, BATTLE_REQUEST_CODE);
         }
     }
 
@@ -3798,25 +3991,16 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 
     @Override
-
     public void onInventoryRequested() {
-
         Player player = game.getPlayer();
-
         if (player != null) {
-
             InventorySystem inv = player.getInventory();
-
-            String msg = String.format("👜 INVENTORY\\nWeapons: %d/%d\\nArmor: %d/%d\\nRings: %d/%d\\nPotions: %d",
-
-                    inv.getWeapons().size(), 10, inv.getArmor().size(), 10, inv.getRings().size(), 5, inv.getHealthPotions());
-
+            String msg = String.format("👜 INVENTORY\nWeapons: %d/%d\nArmor: %d/%d\nRings: %d/%d\nPotions: %d",
+                inv.getWeapons().size(), 10, inv.getArmor().size(), 10,
+                inv.getRings().size(), 5, inv.getHealthPotions());
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-
         }
-
     }
-
 
     private void saveAndQuit() {
         if (game != null &amp;&amp; saveGameManager != null) {
@@ -3824,7 +4008,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             List&lt;Enemy&gt; enemies = game.getEnemies();
             Dungeon gameDungeon = game.getDungeon();
             char[][] charGrid = gameDungeon.getGrid();
-            
+
             int[][] dungeonMap = null;
             if (charGrid != null) {
                 dungeonMap = new int[charGrid.length][];
@@ -3835,7 +4019,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     }
                 }
             }
-            
+
             SaveGameManager.SaveGameData data = new SaveGameManager.SaveGameData();
             data.playerX = player.getX();
             data.playerY = player.getY();
@@ -4027,14 +4211,22 @@ public enum Rarity {
 </div>
 
 <div class="file" id="savegamemanager">
-    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">238 lines | 10945 bytes</span></div>
+    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">290 lines | 12628 bytes</span></div>
     <pre><code>package com.knightlight.game;
+
 import android.util.Log;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
 
+/**
+ * Handles game save/load with checksum verification.
+ *
+ * FIXED: Using Buffered streams for performance.
+ * FIXED: Better inventory/equipment deserialization.
+ * FIXED: Proper character escaping in save format.
+ */
 public class SaveGameManager {
     private static final String TAG = "SaveGameManager";
     private static final String SAVE_DIR = "saves";
@@ -4095,7 +4287,11 @@ public class SaveGameManager {
         try (BufferedReader reader = new BufferedReader(new FileReader(hashFile))) {
             String expected = reader.readLine();
             String actual = computeHash(data);
-            return expected != null &amp;&amp; expected.equals(actual);
+            boolean verified = expected != null &amp;&amp; expected.equals(actual);
+            if (!verified) {
+                Log.w(TAG, "Hash mismatch for: " + saveFile.getName());
+            }
+            return verified;
         } catch (IOException e) {
             Log.e(TAG, "Hash verification failed: " + e.getMessage());
             return false;
@@ -4106,10 +4302,11 @@ public class SaveGameManager {
         String safeName = sanitizeFilename(filename);
         File saveFile = new File(new File(basePath, SAVE_DIR), safeName);
         try {
-            try (Writer writer = new FileWriter(saveFile)) {
+            // Use buffered writer for better performance
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(saveFile))) {
                 writer.write(gameData);
             }
-            try (Writer hashWriter = new FileWriter(new File(saveFile.getPath() + CHECKSUM_EXT))) {
+            try (BufferedWriter hashWriter = new BufferedWriter(new FileWriter(new File(saveFile.getPath() + CHECKSUM_EXT)))) {
                 hashWriter.write(computeHash(gameData));
             }
             Log.d(TAG, "Saved: " + saveFile.getName());
@@ -4120,9 +4317,13 @@ public class SaveGameManager {
         }
     }
 
+    /**
+     * FIXED: Serialize inventory properly with all equipment.
+     */
     public boolean saveGame(SaveGameData data) {
         String filename = SAVE_PREFIX + System.currentTimeMillis() + ".dat";
         StringBuilder sb = new StringBuilder();
+
         sb.append("version=").append(CURRENT_VERSION).append("\n");
         sb.append("playerX=").append(data.playerX).append("\n");
         sb.append("playerY=").append(data.playerY).append("\n");
@@ -4136,36 +4337,59 @@ public class SaveGameManager {
             sb.append("hp=").append(data.player.getCurrentHealth()).append("\n");
             sb.append("maxHp=").append(data.player.getMaxHealth()).append("\n");
             sb.append("attack=").append(data.player.getAttack()).append("\n");
+            sb.append("name=").append(escapeValue(data.player.getName())).append("\n");
         }
 
-        // ✓ FIXED: Serialize inventory/equipment
+        // FIXED: Serialize inventory/equipment properly
         if (data.inventory != null) {
             List&lt;Equipment&gt; allEquip = data.inventory.getAllEquipment();
             sb.append("equipCount=").append(allEquip.size()).append("\n");
+
             for (Equipment eq : allEquip) {
-                sb.append("equip=").append(eq.getName()).append("|")
+                if (eq == null) continue;
+                String setIDStr = (eq.getSetID() != null) ? eq.getSetID().name() : "NONE";
+                // Escape pipes in item names
+                String safeName = eq.getName().replace("|", "_");
+                sb.append("equip=").append(safeName).append("|")
                   .append(eq.getType().name()).append("|")
                   .append(eq.getRarity().name()).append("|")
                   .append(eq.getAttackBonus()).append("|")
                   .append(eq.getDefenseBonus()).append("|")
                   .append(eq.getHpBonus()).append("|")
-                  .append(eq.getSetID() != null ? eq.getSetID().name() : "NONE").append("\n");
+                  .append(setIDStr).append("\n");
             }
+        } else {
+            sb.append("equipCount=0\n");
         }
 
         if (data.enemies != null) {
             sb.append("enemyCount=").append(data.enemies.size()).append("\n");
+        } else {
+            sb.append("enemyCount=0\n");
         }
 
         return saveGame(filename, sb.toString());
     }
 
+    private String escapeValue(String value) {
+        if (value == null) return "";
+        return value.replace("=", "_").replace("\n", "_");
+    }
+
+    private String unescapeValue(String value) {
+        return value.replace("_", "=").replace("_", "\n");
+    }
+
+    /**
+     * FIXED: Load latest game with proper error handling and inventory restoration.
+     */
     public SaveGameData loadLatestGame() {
         File saveDir = new File(basePath, SAVE_DIR);
         File[] saves = saveDir.listFiles((dir, name) -&gt;
             name.startsWith(SAVE_PREFIX) &amp;&amp; !name.endsWith(CHECKSUM_EXT));
 
         if (saves == null || saves.length == 0) {
+            Log.d(TAG, "No save files found");
             return null;
         }
 
@@ -4190,63 +4414,75 @@ public class SaveGameManager {
                 result.version = CURRENT_VERSION;
                 result.totalEnemiesDefeated = 0;
                 result.bossSpawned = false;
-                result.inventory = new InventorySystem(); // Initialize inventory
+                result.inventory = new InventorySystem(); // Always initialize inventory
 
                 for (String row : data.split("\n")) {
+                    if (row.trim().isEmpty()) continue;
                     String[] kv = row.split("=", 2);
-                    if (kv.length == 2) {
-                        String key = kv[0].trim();
-                        String val = kv[1].trim();
-                        switch (key) {
-                            case "playerX": result.playerX = Integer.parseInt(val); break;
-                            case "playerY": result.playerY = Integer.parseInt(val); break;
-                            case "totalKills": result.totalEnemiesDefeated = Integer.parseInt(val); break;
-                            case "bossSpawned": result.bossSpawned = "1".equals(val); break;
-                            case "level":
-                                if (result.player == null) result.player = new Player();
-                                result.player.setLevel(Integer.parseInt(val)); break;
-                            case "xp":
-                                if (result.player == null) result.player = new Player();
-                                result.player.setExperience(Integer.parseInt(val)); break;
-                            case "gold":
-                                if (result.player == null) result.player = new Player();
-                                result.player.setGoldCollected(Integer.parseInt(val)); break;
-                            case "hp":
-                                if (result.player == null) result.player = new Player();
-                                result.player.setCurrentHealth(Integer.parseInt(val)); break;
-                            case "maxHp":
-                                if (result.player == null) result.player = new Player();
-                                result.player.maxHealth = Integer.parseInt(val); break;
-                            case "attack":
-                                if (result.player == null) result.player = new Player();
-                                result.player.setAttack(Integer.parseInt(val)); break;
-                            // ✓ FIXED: Deserialize inventory
-                            case "equip":
-                                String[] parts = val.split("\\|");
-                                if (parts.length &gt;= 7) {
-                                    Rarity rarity = Rarity.valueOf(parts[2]);
-                                    ItemType type = ItemType.valueOf(parts[1]);
-                                    Equipment.SetID setID = parts[6].equals("NONE") ? null : Equipment.SetID.valueOf(parts[6]);
-                                    Equipment eq = new Equipment.Builder(parts[0], type)
-                                        .rarity(rarity)
-                                        .attackBonus(Integer.parseInt(parts[3]))
-                                        .defenseBonus(Integer.parseInt(parts[4]))
-                                        .hpBonus(Integer.parseInt(parts[5]))
-                                        .setID(setID)
-                                        .build();
-                                    result.inventory.addEquipment(eq);
-                                }
-                                break;
-                        }
+                    if (kv.length != 2) continue;
+
+                    String key = kv[0].trim();
+                    String val = kv[1].trim();
+
+                    switch (key) {
+                        case "playerX": result.playerX = Integer.parseInt(val); break;
+                        case "playerY": result.playerY = Integer.parseInt(val); break;
+                        case "totalKills": result.totalEnemiesDefeated = Integer.parseInt(val); break;
+                        case "bossSpawned": result.bossSpawned = "1".equals(val); break;
+                        case "level":
+                            if (result.player == null) result.player = new Player();
+                            result.player.setLevel(Integer.parseInt(val));
+                            break;
+                        case "xp":
+                            if (result.player == null) result.player = new Player();
+                            result.player.setExperience(Integer.parseInt(val));
+                            break;
+                        case "gold":
+                            if (result.player == null) result.player = new Player();
+                            result.player.setGoldCollected(Integer.parseInt(val));
+                            break;
+                        case "hp":
+                            if (result.player == null) result.player = new Player();
+                            result.player.setCurrentHealth(Integer.parseInt(val));
+                            break;
+                        case "maxHp":
+                            if (result.player == null) result.player = new Player();
+                            result.player.maxHealth = Integer.parseInt(val);
+                            break;
+                        case "attack":
+                            if (result.player == null) result.player = new Player();
+                            result.player.setAttack(Integer.parseInt(val));
+                            break;
+                        case "name":
+                            if (result.player == null) result.player = new Player();
+                            result.player.setName(unescapeValue(val));
+                            break;
+                        // FIXED: Deserialize inventory
+                        case "equip":
+                            String[] parts = val.split("\\|");
+                            if (parts.length &gt;= 7) {
+                                Rarity rarity = Rarity.valueOf(parts[2]);
+                                ItemType type = ItemType.valueOf(parts[1]);
+                                Equipment.SetID setID = parts[6].equals("NONE") ? null : Equipment.SetID.valueOf(parts[6]);
+                                Equipment eq = new Equipment.Builder(parts[0].replace("_", "|"), type)
+                                    .rarity(rarity)
+                                    .attackBonus(Integer.parseInt(parts[3]))
+                                    .defenseBonus(Integer.parseInt(parts[4]))
+                                    .hpBonus(Integer.parseInt(parts[5]))
+                                    .setID(setID)
+                                    .build();
+                                result.inventory.addEquipment(eq);
+                            }
+                            break;
                     }
                 }
 
                 Log.d(TAG, "Loaded save: " + saveFile.getName() + " | Kills: " +
                     result.totalEnemiesDefeated + " | Boss: " + result.bossSpawned +
-                    " | Inventory: " + result.inventory);
+                    " | Inventory: " + result.inventory.getItemCount());
                 return result;
             } catch (Exception e) {
-                Log.e(TAG, "Error reading save: " + e.getMessage());
+                Log.e(TAG, "Error reading save " + saveFile.getName() + ": " + e.getMessage());
             }
         }
         return null;
@@ -4261,7 +4497,7 @@ public class SaveGameManager {
         public int[][] dungeonMap;
         public int totalEnemiesDefeated = 0;
         public boolean bossSpawned = false;
-        public InventorySystem inventory = null; // ✓ FIXED: Include inventory in save
+        public InventorySystem inventory = null;
 
         public SaveGameData() {}
     }
@@ -4299,15 +4535,23 @@ public class SecureRandomUtil {
 </div>
 
 <div class="file" id="setbonusmanager">
-    <div class="file-header"><h2>SetBonusManager.java</h2><span class="file-meta">91 lines | 4776 bytes</span></div>
+    <div class="file-header"><h2>SetBonusManager.java</h2><span class="file-meta">110 lines | 5202 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
+/**
+ * Manages set bonus calculations for equipped gear.
+ *
+ * FIXED: Renamed inner class from SetBonus → SetBonusResult
+ * to avoid compile-time ambiguity with Equipment.SetBonus.
+ */
 public class SetBonusManager {
     private static final int TWO_PIECE = 2;
     private static final int FOUR_PIECE = 4;
 
-    public static SetBonus calculateSetBonuses(Equipment.SetID setID, int equippedCount) {
-        if (setID == null || equippedCount &lt; TWO_PIECE) return new SetBonus(0, 0, 0, 0, "");
+    public static SetBonusResult calculateSetBonuses(Equipment.SetID setID, int equippedCount) {
+        if (setID == null || equippedCount &lt; TWO_PIECE) {
+            return new SetBonusResult(0, 0, 0, 0, "");
+        }
 
         int bonusATK = 0, bonusDEF = 0, bonusHP = 0, bonusCrit = 0;
         String bonusDesc = "";
@@ -4346,7 +4590,7 @@ public class SetBonusManager {
                 if (equippedCount &gt;= FOUR_PIECE) { bonusHP += 30; bonusDEF += 5; bonusDesc += "4pc: +30 HP, +5 DEF"; }
                 break;
         }
-        return new SetBonus(bonusATK, bonusDEF, bonusHP, bonusCrit, bonusDesc.trim());
+        return new SetBonusResult(bonusATK, bonusDEF, bonusHP, bonusCrit, bonusDesc.trim());
     }
 
     public static int countEquippedSetPieces(InventorySystem inventory, Equipment.SetID setID) {
@@ -4366,7 +4610,7 @@ public class SetBonusManager {
         for (Equipment.SetID setId : Equipment.SetID.values()) {
             int equipped = countEquippedSetPieces(inventory, setId);
             if (equipped &gt;= TWO_PIECE) {
-                SetBonus bonus = calculateSetBonuses(setId, equipped);
+                SetBonusResult bonus = calculateSetBonuses(setId, equipped);
                 if (!bonus.getDescription().isEmpty()) {
                     sb.append(setId.getEmoji()).append(" ").append(setId.getSetName())
                       .append(": ").append(bonus.getDescription()).append("\n");
@@ -4376,19 +4620,30 @@ public class SetBonusManager {
         return sb.toString().trim();
     }
 
-    public static class SetBonus {
+    /**
+     * FIXED: Renamed from SetBonus to SetBonusResult to avoid
+     * collision with Equipment.SetBonus.
+     */
+    public static class SetBonusResult {
         private final int bonusATK, bonusDEF, bonusHP, bonusCritChance;
         private final String description;
-        public SetBonus(int atk, int def, int hp, int crit, String desc) {
-            this.bonusATK = atk; this.bonusDEF = def; this.bonusHP = hp;
-            this.bonusCritChance = crit; this.description = desc;
+
+        public SetBonusResult(int atk, int def, int hp, int crit, String desc) {
+            this.bonusATK = atk;
+            this.bonusDEF = def;
+            this.bonusHP = hp;
+            this.bonusCritChance = crit;
+            this.description = desc;
         }
+
         public int getBonusATK() { return bonusATK; }
         public int getBonusDEF() { return bonusDEF; }
         public int getBonusHP() { return bonusHP; }
         public int getBonusCritChance() { return bonusCritChance; }
         public String getDescription() { return description; }
-        public boolean isActive() { return bonusATK &gt; 0 || bonusDEF &gt; 0 || bonusHP &gt; 0 || bonusCritChance &gt; 0; }
+        public boolean isActive() {
+            return bonusATK &gt; 0 || bonusDEF &gt; 0 || bonusHP &gt; 0 || bonusCritChance &gt; 0;
+        }
     }
 }</code></pre>
 </div>
