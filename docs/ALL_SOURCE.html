@@ -24,9 +24,9 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">25 files | 4097 lines | 2026-07-30 14:35</div>
+<div class="stats">27 files | 4021 lines | 2026-07-30 22:01</div>
 </header>
-<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
+<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
 
 <div class="file" id="battle">
@@ -229,7 +229,7 @@ public class Battle implements Serializable {
 </div>
 
 <div class="file" id="battleactivity">
-    <div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">159 lines | 5543 bytes</span></div>
+    <div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">135 lines | 5331 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -247,14 +247,13 @@ public class BattleActivity extends AppCompatActivity {
     private static final long TURN_DELAY_MS = 1000;
     private static final long RESULT_DELAY_MS = 2000;
     private static final String TAG = "BattleActivity";
-
     private Battle battle;
     private BattleView battleView;
     private Player player;
     private Enemy enemy;
     private Handler handler;
     private boolean isDestroyed = false;
-    private Button btnAttack, btnDefend, btnFlee;
+    private Button btnAttack, btnHeal, btnFlee;
     private CombatSystem combatSystem;
     private LootTable lootTable;
 
@@ -262,14 +261,12 @@ public class BattleActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_battle);
-
         battleView = findViewById(R.id.battle_view);
         if (battleView == null) {
             Log.e(TAG, "BattleView not found in layout");
             finish();
             return;
         }
-
         handler = new Handler(Looper.getMainLooper());
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
@@ -277,13 +274,10 @@ public class BattleActivity extends AppCompatActivity {
             player = (Player) extras.getSerializable(EXTRA_PLAYER);
             enemy = (Enemy) extras.getSerializable(EXTRA_ENEMY);
         }
-
         if (player != null &amp;&amp; enemy != null) {
             battle = new Battle(player, enemy);
             battleView.setBattle(battle);
             combatSystem = battle.getCombatSystem();
-
-            // ✓ FIXED: Use static LootTable from MainActivity instead of Application
             if (MainActivity.getLootTableInstance() != null) {
                 lootTable = MainActivity.getLootTableInstance();
                 combatSystem.setLootTable(lootTable);
@@ -291,7 +285,6 @@ public class BattleActivity extends AppCompatActivity {
             } else {
                 Log.w(TAG, "No LootTable available, loot drops disabled");
             }
-
             Log.d(TAG, "Battle started: " + enemy.getName());
         } else {
             Log.e(TAG, "Missing player or enemy - finishing battle activity");
@@ -299,20 +292,12 @@ public class BattleActivity extends AppCompatActivity {
             finish();
             return;
         }
-
         btnAttack = findViewById(R.id.btnAttack);
-        btnDefend = findViewById(R.id.btnDefend);
+        btnHeal = findViewById(R.id.btnHeal);
         btnFlee = findViewById(R.id.btnFlee);
-
-        if (btnAttack != null) {
-            btnAttack.setOnClickListener(v -&gt; playerAction(Battle.Action.ATTACK));
-        }
-        if (btnDefend != null) {
-            btnDefend.setOnClickListener(v -&gt; playerAction(Battle.Action.DEFEND));
-        }
-        if (btnFlee != null) {
-            btnFlee.setOnClickListener(v -&gt; playerAction(Battle.Action.RUN));
-        }
+        if (btnAttack != null) { btnAttack.setOnClickListener(v -&gt; playerAction(Battle.Action.ATTACK)); }
+        if (btnHeal != null) { btnHeal.setOnClickListener(v -&gt; playerAction(Battle.Action.USE_POTION)); }
+        if (btnFlee != null) { btnFlee.setOnClickListener(v -&gt; playerAction(Battle.Action.RUN)); }
     }
 
     @Override
@@ -330,19 +315,15 @@ public class BattleActivity extends AppCompatActivity {
         Log.d(TAG, "Player action: " + action);
         battle.playerAction(action);
         battleView.invalidate();
-
         if (isBattleOver()) {
             handler.postDelayed(this::showBattleResult, RESULT_DELAY_MS);
             return;
         }
-
         handler.postDelayed(this::processTurn, TURN_DELAY_MS);
     }
 
     private void processTurn() {
-        if (battle == null || isDestroyed) {
-            return;
-        }
+        if (battle == null || isDestroyed) { return; }
         Log.d(TAG, "Processing enemy turn");
         battle.enemyTurn();
         battleView.invalidate();
@@ -361,26 +342,21 @@ public class BattleActivity extends AppCompatActivity {
     private void showBattleResult() {
         Log.d(TAG, "Showing battle result");
         if (isDestroyed) return;
-
         if (battle == null || player == null || enemy == null) {
             Log.e(TAG, "showBattleResult: null state detected");
             setResult(RESULT_CANCELED);
             finish();
             return;
         }
-
         boolean battleWon = battle.getState() == Battle.State.VICTORY;
-
         if (battleWon &amp;&amp; combatSystem != null) {
             Log.d(TAG, "Victory! Awarding rewards...");
             int estimatedFloor = Math.min(10, (enemy.getGoldReward() / 10) + 1);
             combatSystem.awardRewards(player, estimatedFloor);
-            Log.d(TAG, "Rewards granted: XP=" + player.getExperience() + 
-                       ", Level=" + player.getLevel() + ", Gold=" + player.getGoldCollected());
+            Log.d(TAG, "Rewards granted: XP=" + player.getExperience() + ", Level=" + player.getLevel() + ", Gold=" + player.getGoldCollected());
         } else if (!battleWon) {
             Log.d(TAG, "Defeat or flee: No rewards given");
         }
-
         Intent resultIntent = new Intent();
         resultIntent.putExtra("enemyId", enemy.getId());
         resultIntent.putExtra("updatedPlayer", player);
@@ -551,16 +527,11 @@ public class BattleView extends View {
 </div>
 
 <div class="file" id="character">
-    <div class="file-header"><h2>Character.java</h2><span class="file-meta">92 lines | 2653 bytes</span></div>
+    <div class="file-header"><h2>Character.java</h2><span class="file-meta">51 lines | 1823 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
-/**
- * Base class for all characters in the game (player and enemies).
- * Manages position, health, and combat stats.
- * FIXED: Added public getters to replace fragile reflection access.
- */
 public class Character implements Serializable {
     protected int x;
     protected int y;
@@ -571,9 +542,6 @@ public class Character implements Serializable {
     protected int dodgeChance;
     protected int criticalChance;
 
-    /**
-     * Constructor for Character.
-     */
     public Character(int x, int y, int maxHealth, int attack) {
         this.x = x;
         this.y = y;
@@ -585,35 +553,19 @@ public class Character implements Serializable {
         this.criticalChance = 0;
     }
 
-    // ========== GETTERS (FIX: Replaces reflection access) ==========
     public int getX() { return x; }
     public int getY() { return y; }
     public void setX(int x) { this.x = x; }
     public void setY(int y) { this.y = y; }
 
-    /**
-     * FIX: Public getter replaces reflection-based access in CombatSystem
-     */
     public int getCurrentHealth() { return currentHealth; }
-    public void setCurrentHealth(int health) {
-        this.currentHealth = Math.max(0, Math.min(health, maxHealth));
-    }
-
-    /**
-     * FIX: Public getter replaces reflection-based access
-     */
+    public void setCurrentHealth(int health) { this.currentHealth = Math.max(0, Math.min(health, maxHealth)); }
     public int getHealth() { return currentHealth; }
     public int getMaxHealth() { return maxHealth; }
 
-    /**
-     * FIX: Public getter replaces reflection-based access
-     */
     public int getAttack() { return attack; }
     public void setAttack(int attack) { this.attack = attack; }
 
-    /**
-     * FIX: Public getter replaces reflection-based access
-     */
     public int getArmor() { return armor; }
     public void setArmor(int armor) { this.armor = armor; }
 
@@ -623,26 +575,9 @@ public class Character implements Serializable {
     public int getCriticalChance() { return criticalChance; }
     public void setCriticalChance(int crit) { this.criticalChance = crit; }
 
-    /**
-     * Apply damage to this character.
-     */
-    public void takeDamage(int damage) {
-        this.currentHealth = Math.max(0, currentHealth - damage);
-    }
-
-    /**
-     * Heal this character.
-     */
-    public void heal(int amount) {
-        this.currentHealth = Math.min(maxHealth, currentHealth + amount);
-    }
-
-    /**
-     * Check if character is alive.
-     */
-    public boolean isAlive() {
-        return currentHealth &gt; 0;
-    }
+    public void takeDamage(int damage) { this.currentHealth = Math.max(0, currentHealth - damage); }
+    public void heal(int amount) { this.currentHealth = Math.min(maxHealth, currentHealth + amount); }
+    public boolean isAlive() { return currentHealth &gt; 0; }
 }</code></pre>
 </div>
 
@@ -718,8 +653,9 @@ public class CombatResult {
 </div>
 
 <div class="file" id="combatsystem">
-    <div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">183 lines | 5902 bytes</span></div>
+    <div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">153 lines | 5765 bytes</span></div>
     <pre><code>package com.knightlight.game;
+
 import android.util.Log;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -758,43 +694,21 @@ public class CombatSystem {
         this.lootTable = lootTable;
     }
 
-    public String getLastLogEntry() {
-        return lastLogEntry;
-    }
-
-    public List&lt;String&gt; getCombatLog() {
-        return Collections.unmodifiableList(new ArrayList&lt;&gt;(combatLog));
-    }
-
+    public String getLastLogEntry() { return lastLogEntry; }
+    public List&lt;String&gt; getCombatLog() { return Collections.unmodifiableList(new ArrayList&lt;&gt;(combatLog)); }
     public Enemy getEnemy() { return enemy; }
 
     private void appendLog(String message) {
-        if (message == null || message.isEmpty()) {
-            return;
-        }
+        if (message == null || message.isEmpty()) return;
         combatLog.add(message);
         lastLogEntry = message;
     }
 
-    private int getAttack(Character c) {
-        return c.getAttack();
-    }
-
-    private int getDefense(Character c) {
-        return c.getArmor();
-    }
-
-    private int getCurrentHealth(Character c) {
-        return c.getCurrentHealth();
-    }
-
-    private void setCurrentHealth(Character c, int health) {
-        c.setCurrentHealth(health);
-    }
-
-    private int getMaxHealth(Character c) {
-        return c.getMaxHealth();
-    }
+    private int getAttack(Character c) { return c.getAttack(); }
+    private int getDefense(Character c) { return c.getArmor(); }
+    private int getCurrentHealth(Character c) { return c.getCurrentHealth(); }
+    private void setCurrentHealth(Character c, int health) { c.setCurrentHealth(health); }
+    private int getMaxHealth(Character c) { return c.getMaxHealth(); }
 
     public void playerAttack() {
         if (player == null || enemy == null) {
@@ -804,17 +718,16 @@ public class CombatSystem {
         int playerAttack = getAttack(player);
         int enemyDefense = getDefense(enemy);
         int damage = calculateDamage(playerAttack, enemyDefense);
-
         boolean isCritical = SecureRandomUtil.nextDouble() &lt; 0.15;
+        
         if (isCritical) {
             damage *= 2;
             appendLog("CRITICAL HIT! " + damage + " damage to " + enemy.getName());
         } else {
             appendLog("Player attacks " + enemy.getName() + " for " + damage + " damage");
         }
-
+        
         setCurrentHealth(enemy, getCurrentHealth(enemy) - damage);
-
         if (getCurrentHealth(enemy) &lt;= 0) {
             enemy.takeDamage(9999);
             appendLog(enemy.getName() + " has been defeated!");
@@ -830,21 +743,19 @@ public class CombatSystem {
             Log.w(TAG, "enemyAttack called on dead enemy");
             return;
         }
-
         int enemyAttack = getAttack(enemy);
         int playerDefense = getDefense(player);
         int damage = calculateDamage(enemyAttack, playerDefense);
-
         boolean isCritical = SecureRandomUtil.nextDouble() &lt; 0.10;
+        
         if (isCritical) {
             damage *= 2;
             appendLog("CRITICAL! " + enemy.getName() + " strikes for " + damage + "!");
         } else {
             appendLog(enemy.getName() + " attacks for " + damage + " damage");
         }
-
+        
         setCurrentHealth(player, getCurrentHealth(player) - damage);
-
         if (player.getCurrentHealth() &lt;= 0) {
             appendLog("Player has been defeated!");
         }
@@ -866,18 +777,14 @@ public class CombatSystem {
             Log.w(TAG, "awardRewards called with null player or enemy");
             return;
         }
-
         int xp = enemy.getExperienceReward();
         int gold = enemy.getGoldReward();
-
         Log.d(TAG, "Awarding rewards: XP=" + xp + ", Gold=" + gold);
-
+        
         player.addExperience(xp);
         player.addGold(gold);
-
         appendLog("+" + xp + " XP, +" + gold + " gold");
-
-        // Loot drop with proper null checks
+        
         if (lootTable != null) {
             if (ThreadLocalRandom.current().nextDouble() &lt; 0.30) {
                 Equipment item = lootTable.generateLoot(floorNumber, 0.5);
@@ -892,9 +799,7 @@ public class CombatSystem {
                 }
             }
         }
-
-        Log.d(TAG, "Player now has XP=" + player.getExperience() +
-                    ", Level=" + player.getLevel() + ", Gold=" + player.getGoldCollected());
+        Log.d(TAG, "Player now has XP=" + player.getExperience() + ", Level=" + player.getLevel() + ", Gold=" + player.getGoldCollected());
     }
 
     public boolean isVictory() {
@@ -1157,10 +1062,10 @@ public class Dungeon {
 </div>
 
 <div class="file" id="dungeonlevel">
-    <div class="file-header"><h2>DungeonLevel.java</h2><span class="file-meta">180 lines | 5721 bytes</span></div>
+    <div class="file-header"><h2>DungeonLevel.java</h2><span class="file-meta">180 lines | 5714 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
-import com.knightlight.game.Equipment.Rarity;
+// Removed - Rarity is in same package
 
 /**
  * Represents a single dungeon floor/level.
@@ -1591,7 +1496,7 @@ public class DungeonManager {
 </div>
 
 <div class="file" id="enemy">
-    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">75 lines | 3084 bytes</span></div>
+    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">66 lines | 2821 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -1603,7 +1508,7 @@ public class Enemy extends Character implements Serializable {
     private int goldReward;
     private int experienceReward;
     private boolean isBoss;
-    private boolean isDefeated; // NEW: Track defeated state separately
+    private boolean isDefeated;
     private EnemyType enemyType;
 
     public Enemy(int x, int y, Dungeon dungeon, EnemyType type, String name) {
@@ -1621,11 +1526,8 @@ public class Enemy extends Character implements Serializable {
         this.isDefeated = false;
     }
 
-    public Enemy(int x, int y, int maxHealth, int attack,
-                 Dungeon dungeon, String name,
-                 int armor, int dodge, int critChance) {
+    public Enemy(int x, int y, int maxHealth, int attack, Dungeon dungeon, String name, int armor, int dodge, int critChance) {
         super(x, y, maxHealth, attack);
-
         this.dungeon = dungeon;
         this.enemyType = EnemyType.OGRE;
         this.name = name != null ? name : EnemyType.OGRE.getEmoji();
@@ -1633,8 +1535,7 @@ public class Enemy extends Character implements Serializable {
         this.armor = armor;
         this.dodgeChance = dodge;
         this.criticalChance = critChance;
-        this.goldReward = 5 + (int)(Math.random() * 10)
-                        + (EnemyType.OGRE.ordinal() * 3);
+        this.goldReward = 5 + (int)(Math.random() * 10) + (EnemyType.OGRE.ordinal() * 3);
         this.experienceReward = EnemyType.OGRE.getXpReward();
         this.isBoss = false;
         this.isDefeated = false;
@@ -1644,96 +1545,48 @@ public class Enemy extends Character implements Serializable {
         if (target == null || dungeon == null) return;
         int targetX = target.getX();
         int targetY = target.getY();
-
         if (x &gt; targetX &amp;&amp; dungeon.isWalkable(x - 1, y)) x--;
         else if (y &gt; targetY &amp;&amp; dungeon.isWalkable(x, y - 1)) y--;
         else if (x &lt; targetX &amp;&amp; dungeon.isWalkable(x + 1, y)) x++;
         else if (y &lt; targetY &amp;&amp; dungeon.isWalkable(x, y + 1)) y++;
     }
 
-    // ✓ ADDED: Set defeated state explicitly
-    public void setDefeated(boolean defeated) {
-        this.isDefeated = defeated;
-    }
-
-    public String getName()              { return name; }
-    public String getId()                { return id; }
-    public int getGoldReward()           { return goldReward; }
-    public int getExperienceReward()     { return experienceReward; }
-    public boolean isDefeated()          { return isDefeated || !isAlive(); }
-    public boolean isDead()              { return isDefeated || !isAlive(); }
-    public boolean isBoss()              { return isBoss; }
-    public String getEmoji()             { return enemyType != null ? enemyType.getEmoji() : "👹"; }
-    public EnemyType getType()           { return enemyType; }
-    public void setBoss(boolean boss)    { this.isBoss = boss; }
+    public void setDefeated(boolean defeated) { this.isDefeated = defeated; }
+    public String getName() { return name; }
+    public String getId() { return id; }
+    public int getGoldReward() { return goldReward; }
+    public int getExperienceReward() { return experienceReward; }
+    public boolean isDefeated() { return isDefeated || !isAlive(); }
+    public boolean isDead() { return isDefeated || !isAlive(); }
+    public boolean isBoss() { return isBoss; }
+    public String getEmoji() { return enemyType != null ? enemyType.getEmoji() : "👹"; }
+    public EnemyType getType() { return enemyType; }
+    public void setBoss(boolean boss) { this.isBoss = boss; }
 }</code></pre>
 </div>
 
 <div class="file" id="enemytype">
-    <div class="file-header"><h2>EnemyType.java</h2><span class="file-meta">105 lines | 3210 bytes</span></div>
+    <div class="file-header"><h2>EnemyType.java</h2><span class="file-meta">57 lines | 1849 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 public enum EnemyType {
-    // REGULAR MONSTERS
-    SKELETON("💀", 30, 5, 2, 10, 15),
-    CLOWN("🤡", 35, 6, 2, 12, 20),
-    OGRE("👹", 40, 8, 3, 10, 25),
-    GHOST("👻", 38, 9, 1, 15, 28),
-    ALIEN("👽", 42, 10, 4, 14, 32),
-    MONSTER("👾", 36, 7, 3, 12, 22),
-    ROBOT("🤖", 45, 11, 5, 8, 35),
-    ZOMBIE_M("🧟‍♂️", 50, 12, 4, 6, 40),
-    ZOMBIE_F("🧟‍♀️", 48, 11, 4, 7, 38),
-    BAT("🦇", 28, 10, 1, 20, 18),
-    WOLF("🐺", 45, 13, 3, 12, 30),
-    FOX("🦊", 32, 8, 2, 18, 22),
-    BOAR("🐗", 55, 14, 6, 5, 45),
-    BUNNY("🐇", 25, 6, 1, 25, 12),
-    SQUIRREL("🐿️", 22, 5, 1, 22, 10),
-    HEDGEHOG("🦔", 30, 7, 5, 10, 18),
-    BEAR("🐻", 60, 15, 7, 6, 50),
-    PANDA("🐼", 65, 14, 8, 7, 55),
-    SLOTH("🦥", 35, 4, 4, 30, 20),
-    PENGUIN("🐧", 38, 9, 3, 16, 25),
-    EAGLE("🦅", 40, 12, 2, 22, 28),
-    OWL("🦉", 36, 10, 2, 18, 26),
-    TURTLE("🐢", 50, 8, 10, 5, 35),
-    SNAKE("🐍", 35, 14, 2, 15, 28),
-    LION("🦁", 70, 18, 5, 8, 60),
-    BUG("🐛", 20, 4, 1, 10, 8),
-    ANT("🐜", 18, 5, 2, 15, 10),
-    BEE("🐝", 22, 6, 1, 20, 12),
-    SPIDER("🕷️", 32, 11, 2, 18, 24),
-    SCORPION("🦂", 38, 13, 4, 12, 30),
-    MOSQUITO("🦟", 20, 7, 1, 25, 14),
-    BACTERIA("🦠", 25, 8, 3, 12, 16),
-
-    // REGULAR BOSSES
-    DEMON("😈", 100, 22, 6, 10, 150),
-    RHINO("🦏", 150, 25, 12, 5, 200),
-    APE("🦍", 140, 28, 10, 7, 220),
-    TIGER("🐯", 120, 24, 7, 12, 180),
-    CROCODILE("🐊", 160, 23, 14, 6, 210),
-    LIZARD("🦎", 90, 20, 5, 15, 140),
-    HYDRA("🐲", 180, 30, 12, 8, 280),
-    DRAGON("🐉", 200, 32, 15, 6, 350),
-    DINO("🦕", 220, 25, 18, 4, 300),
-    T_REX("🦖", 250, 35, 14, 5, 400),
-    PUFFERFISH("🐡", 110, 22, 10, 18, 170),
-    KRAKEN("🐙", 130, 26, 8, 14, 200),
-    SHARK("🦈", 170, 30, 9, 16, 250),
-
-    // ELEMENTAL TITANS
-    ICE_TITAN("☃️", 300, 40, 20, 5, 500),
-    METEOR("☄️", 350, 45, 18, 4, 600),
-    FIRE_TITAN("🔥", 320, 48, 15, 3, 550),
-    WATER_TITAN("🌊", 400, 38, 22, 6, 650),
-    LIGHTNING_TITAN("⚡", 280, 52, 12, 8, 700),
-    TORNADO("🌪️", 300, 44, 16, 7, 580),
-    STORM_CLOUD("⛈️", 330, 46, 17, 6, 620),
-
-    // TREASURE MONSTER
-    TREASURE_UNICORN("🦄", 800, 60, 25, 2, 10000);
+    SKELETON("💀", 30, 8, 0, 5, 10),
+    CLOWN("🤡", 35, 10, 2, 8, 15),
+    OGRE("👹", 50, 12, 5, 12, 25),
+    GHOST("👻", 40, 15, 3, 10, 20),
+    ZOMBIE_M("🧟", 45, 9, 4, 10, 18),
+    WOLF("🐺", 38, 14, 2, 12, 15),
+    FOX("🦊", 32, 13, 5, 15, 12),
+    BEAR("🐻", 55, 11, 6, 8, 25),
+    SPIDER("🕷️", 36, 16, 1, 14, 15),
+    BAT("🦇", 28, 12, 0, 18, 10),
+    MONSTER("👾", 60, 18, 7, 10, 30),
+    ALIEN("👽", 58, 20, 5, 12, 28),
+    RHINO("🦏", 70, 15, 10, 5, 35),
+    TIGER("🐯", 52, 22, 4, 15, 30),
+    SHARK("🦈", 65, 19, 8, 10, 32),
+    LION("🦁", 68, 21, 7, 12, 35),
+    UNICORN("🦄", 100, 25, 15, 20, 50);
 
     private final String emoji;
     private final int baseHealth;
@@ -1742,137 +1595,288 @@ public enum EnemyType {
     private final int baseDodge;
     private final int xpReward;
 
-    EnemyType(String emoji, int baseHealth, int baseAttack, 
-              int baseArmor, int baseDodge, int xpReward) {
+    EnemyType(String emoji, int health, int attack, int armor, int dodge, int xp) {
         this.emoji = emoji;
-        this.baseHealth = baseHealth;
-        this.baseAttack = baseAttack;
-        this.baseArmor = baseArmor;
-        this.baseDodge = baseDodge;
-        this.xpReward = xpReward;
+        this.baseHealth = health;
+        this.baseAttack = attack;
+        this.baseArmor = armor;
+        this.baseDodge = dodge;
+        this.xpReward = xp;
     }
 
-    public String getEmoji() {
-        return emoji;
+    public String getEmoji() { return emoji; }
+    public int getBaseHealth() { return baseHealth; }
+    public int getBaseAttack() { return baseAttack; }
+    public int getBaseArmor() { return baseArmor; }
+    public int getBaseDodge() { return baseDodge; }
+    public int getXpReward() { return xpReward; }
+
+    public boolean isSpecialDrop() {
+        return this == UNICORN;
     }
 
-    public int getBaseHealth() {
-        return baseHealth;
-    }
-
-    public int getBaseAttack() {
-        return baseAttack;
-    }
-
-    public int getBaseArmor() {
-        return baseArmor;
-    }
-
-    public int getBaseDodge() {
-        return baseDodge;
-    }
-
-    public int getXpReward() {
-        return xpReward;
+    public static EnemyType[] getRegularMonsters() {
+        EnemyType[] regular = new EnemyType[values().length - 1];
+        int idx = 0;
+        for (EnemyType type : values()) {
+            if (type != UNICORN) regular[idx++] = type;
+        }
+        return regular;
     }
 }</code></pre>
 </div>
 
 <div class="file" id="equipment">
-    <div class="file-header"><h2>Equipment.java</h2><span class="file-meta">96 lines | 3932 bytes</span></div>
+    <div class="file-header"><h2>Equipment.java</h2><span class="file-meta">252 lines | 9938 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
 public class Equipment implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 3L;
 
-    public enum Type { WEAPON, ARMOR, RING }
+    private String name;
+    private ItemType type;
+    private Rarity rarity;
+    private int attackBonus;
+    private int defenseBonus;
+    private int healthBonus;
+    private float dodgeChance;
+    private float critChance;
+    private SetBonus setBonus;
+    private boolean isArtifact;
+    private SetID setID;
 
-    public enum Rarity {
-        COMMON("#CCCCCC"), UNCOMMON("#4CAF50"), RARE("#2196F3"), EPIC("#9C27B0"), LEGENDARY("#FFD700");
-        private final String hexColor;
-        Rarity(String hexColor) { this.hexColor = hexColor; }
-        public String getHexColor() { return hexColor; }
+    public Equipment(String name, ItemType type, Rarity rarity) {
+        this.name = name;
+        this.type = type;
+        this.rarity = rarity;
+        this.attackBonus = 0;
+        this.defenseBonus = 0;
+        this.healthBonus = 0;
+        this.dodgeChance = 0;
+        this.critChance = 0;
+        this.setBonus = null;
+        this.isArtifact = false;
+        this.setID = null;
+    }
+
+    public static Equipment generateRandom(ItemType type, Rarity rarity, int level) {
+        Equipment eq = new Equipment(generateName(type, rarity), type, rarity);
+        float mult = rarity.getStatMultiplier();
+        int baseAtk = 2 + (level * 2);
+        int baseDef = 1 + (level / 2);
+        int baseHp = 5 + (level * 3);
+
+        switch (type) {
+            case WEAPON:
+                eq.attackBonus = Math.round(baseAtk * 2.5f * mult);
+                eq.critChance = 5 + (rarity.getTier() * 2);
+                break;
+            case HELMET:
+                eq.defenseBonus = Math.round(baseDef * 1.5f * mult);
+                eq.healthBonus = Math.round(baseHp * 0.3f * mult);
+                break;
+            case CHESTPLATE:
+                eq.defenseBonus = Math.round(baseDef * 3.0f * mult);
+                eq.healthBonus = Math.round(baseHp * 0.5f * mult);
+                break;
+            case LEGGINGS:
+                eq.defenseBonus = Math.round(baseDef * 2.0f * mult);
+                eq.dodgeChance = 2 + (rarity.getTier() * 1.5f);
+                break;
+            case BOOTS:
+                eq.dodgeChance = 3 + (rarity.getTier() * 2);
+                break;
+            case GLOVES:
+                eq.attackBonus = Math.round(baseAtk * 0.5f * mult);
+                eq.critChance = 2 + rarity.getTier();
+                break;
+            case SHIELD:
+                eq.defenseBonus = Math.round(baseDef * 2.0f * mult);
+                break;
+            case AMULET:
+                eq.healthBonus = Math.round(baseHp * 0.8f * mult);
+                eq.critChance = 3 + rarity.getTier();
+                break;
+            case RING:
+                eq.attackBonus = Math.round(baseAtk * 0.8f * mult);
+                eq.healthBonus = Math.round(baseHp * 0.4f * mult);
+                break;
+            case CLOAK:
+                eq.dodgeChance = 5 + (rarity.getTier() * 2);
+                eq.defenseBonus = Math.round(baseDef * 0.5f * mult);
+                break;
+        }
+
+        if (rarity == Rarity.SET) {
+            eq.setBonus = generateSetBonus(type);
+            // Also assign a SetID for save/load compatibility
+            eq.setID = assignSetID(type);
+        }
+
+        return eq;
+    }
+
+    private static String generateName(ItemType type, Rarity rarity) {
+        String[] prefixes = {"", "Iron", "Steel", "Diamond", "Obsidian", "Ancient", "Celestial", "Eternal"};
+        String[] suffixes = {"", "+1", "+2", "+3", "of Power", "of Might", "of Dominance", "Divine"};
+        int prefixIdx = Math.min(rarity.getTier() - 1, prefixes.length - 1);
+        int suffixIdx = Math.min(rarity.getTier() - 1, suffixes.length - 1);
+
+        String typeName = type.getDisplayName();
+        String prefix = prefixes[prefixIdx];
+        String suffix = suffixes[suffixIdx];
+
+        if (rarity == Rarity.UNOBTAINIUM) return "Unobtainium " + typeName + " of the Void";
+        if (rarity == Rarity.MYTHIC) return "Mythic " + typeName + " of Legend";
+        if (rarity == Rarity.SET &amp;&amp; type != ItemType.RING) return typeName + " " + getRandomSetName();
+
+        return prefix + typeName + suffix;
+    }
+
+    private static String getRandomSetName() {
+        String[] sets = {"Dragon", "Demon", "Angel", "Titan", "Shadow", "Light", "Void", "Eternal"};
+        return sets[(int)(Math.random() * sets.length)];
+    }
+
+    private static SetID assignSetID(ItemType type) {
+        // Assign SetID based on type for save/load compatibility
+        switch (type) {
+            case WEAPON: return SetID.OGRE_SET;
+            case CHESTPLATE: return SetID.GHOST_SET;
+            case LEGGINGS: return SetID.ALIEN_SET;
+            case HELMET: return SetID.MONSTER_SET;
+            case BOOTS: return SetID.ROBOT_SET;
+            case GLOVES: return SetID.CLOWN_SET;
+            case SHIELD: return SetID.SKELETON_SET;
+            case RING: return SetID.ZOMBIE_SET;
+            default: return null;
+        }
+    }
+
+    public static SetBonus generateSetBonus(ItemType type) {
+        SetBonus.Type bonusType;
+        float magnitude;
+        switch (type) {
+            case WEAPON: bonusType = SetBonus.Type.ATTACK_UP; magnitude = 0.3f; break;
+            case CHESTPLATE: bonusType = SetBonus.Type.DEFENSE_UP; magnitude = 0.3f; break;
+            case LEGGINGS: bonusType = SetBonus.Type.DODGE_UP; magnitude = 0.15f; break;
+            case HELMET: bonusType = SetBonus.Type.HEALTH_UP; magnitude = 0.2f; break;
+            default: bonusType = SetBonus.Type.ATTACK_UP; magnitude = 0.1f; break;
+        }
+        return new SetBonus(bonusType, magnitude, 2);
+    }
+
+    public static Equipment generateArtifact(int shardNum) {
+        Equipment eq = new Equipment("Prism Shard " + shardNum, ItemType.fromSlotId(ItemType.SLOT_ARTIFACT), Rarity.MYTHIC);
+        eq.isArtifact = true;
+        eq.attackBonus = 100;
+        eq.defenseBonus = 100;
+        eq.healthBonus = 500;
+        eq.critChance = 50;
+        eq.dodgeChance = 30;
+        return eq;
+    }
+
+    public String getName() { return name; }
+    public ItemType getType() { return type; }
+    public Rarity getRarity() { return rarity; }
+    public int getAttackBonus() { return attackBonus; }
+    public int getDefenseBonus() { return defenseBonus; }
+    public int getHealthBonus() { return healthBonus; }
+    public int getHpBonus() { return healthBonus; }  // Alias for save/load compatibility
+    public float getDodgeChance() { return dodgeChance; }
+    public float getCritChance() { return critChance; }
+    public SetBonus getSetBonus() { return setBonus; }
+    public SetID getSetID() { return setID; }  // New method for save/load
+    public boolean isArtifact() { return isArtifact; }
+
+    public String getDescription() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(rarity.toString()).append(" ").append(name).append("\n");
+        if (attackBonus &gt; 0) sb.append("⚔️ ATK +").append(attackBonus).append("\n");
+        if (defenseBonus &gt; 0) sb.append("🛡️ DEF +").append(defenseBonus).append("\n");
+        if (healthBonus &gt; 0) sb.append("❤️ HP +").append(healthBonus).append("\n");
+        if (dodgeChance &gt; 0) sb.append("💨 Dodge +").append((int)dodgeChance).append("%\n");
+        if (critChance &gt; 0) sb.append("⭐ Crit +").append((int)critChance).append("%\n");
+        if (setBonus != null) sb.append(setBonus.getDescription());
+        return sb.toString();
+    }
+
+    public static class SetBonus implements Serializable {
+        public enum Type { ATTACK_UP, DEFENSE_UP, HEALTH_UP, DODGE_UP, CRIT_UP }
+        private Type type;
+        private float magnitude;
+        private int piecesRequired;
+
+        public SetBonus(Type type, float magnitude, int piecesRequired) {
+            this.type = type;
+            this.magnitude = magnitude;
+            this.piecesRequired = piecesRequired;
+        }
+
+        public String getDescription() {
+            String effect = switch (type) {
+                case ATTACK_UP -&gt; "ATK";
+                case DEFENSE_UP -&gt; "DEF";
+                case HEALTH_UP -&gt; "HP";
+                case DODGE_UP -&gt; "DODGE";
+                case CRIT_UP -&gt; "CRIT";
+            };
+            return "🔥 2-Piece: " + effect + " +" + (int)(magnitude * 100) + "%\n";
+        }
     }
 
     public enum SetID {
-        OGRE_SET("Ogre Berserker", "👹"), GHOST_SET("Spectral Wanderer", "👻"),
-        ALIEN_SET("Cosmic Traveler", "👽"), MONSTER_SET("Void Hunter", "👾"),
-        ROBOT_SET("Cyber Guardian", "🤖"), CLOWN_SET("Harlequin Trickster", "🤡"),
-        SKELETON_SET("Death Knight", "💀"), ZOMBIE_SET("Undead Survivor", "🧟");
+        OGRE_SET("Ogre", "👹"),
+        GHOST_SET("Ghost", "👻"),
+        ALIEN_SET("Alien", "👽"),
+        MONSTER_SET("Monster", "👾"),
+        ROBOT_SET("Robot", "🤖"),
+        CLOWN_SET("Clown", "🤡"),
+        SKELETON_SET("Skeleton", "💀"),
+        ZOMBIE_SET("Zombie", "🧟");
 
         private final String setName;
         private final String emoji;
-        SetID(String name, String emoji) { this.setName = name; this.emoji = emoji; }
+
+        SetID(String setName, String emoji) {
+            this.setName = setName;
+            this.emoji = emoji;
+        }
+
         public String getSetName() { return setName; }
         public String getEmoji() { return emoji; }
     }
 
-    private final String name;
-    private final Type type;
-    private final Rarity rarity;
-    private final SetID setID;
-    private int floorFound;
-    private final int attackBonus;
-    private final int defenseBonus;
-    private final int hpBonus;
-    private final String description;
-
-    private Equipment(Builder builder) {
-        this.name = builder.name;
-        this.type = builder.type;
-        this.rarity = builder.rarity;
-        this.setID = builder.setID;
-        this.attackBonus = builder.attackBonus;
-        this.defenseBonus = builder.defenseBonus;
-        this.hpBonus = builder.hpBonus;
-        this.description = builder.description;
-    }
-
-    public String getName() { return name; }
-    public Type getType() { return type; }
-    public Rarity getRarity() { return rarity; }
-    public int getAttackBonus() { return attackBonus; }
-    public int getDefenseBonus() { return defenseBonus; }
-    public int getHpBonus() { return hpBonus; }
-    public String getDescription() { return description; }
-    public SetID getSetID() { return setID; }
-    public int getFloorFound() { return floorFound; }
-
-    @Override
-    public String toString() {
-        if (setID != null) {
-            return String.format("[%s] %s (%s) ‣ %s Set | ATK+%d DEF+%d HP+%d",
-                    rarity, name, type, setID.getSetName(), attackBonus, defenseBonus, hpBonus);
-        }
-        return String.format("[%s] %s (%s) | ATK+%d DEF+%d HP+%d",
-                rarity, name, type, attackBonus, defenseBonus, hpBonus);
-    }
-
     public static class Builder {
-        private final String name;
-        private final Type type;
-        private Rarity rarity = Rarity.COMMON;
-        private int floorFound;
+        private String name;
+        private ItemType type;
+        private Rarity rarity;
         private int attackBonus = 0;
         private int defenseBonus = 0;
         private int hpBonus = 0;
-        private String description = "";
         private SetID setID = null;
 
-        public Builder(String name, Type type) { this.name = name; this.type = type; }
+        public Builder(String name, ItemType type) {
+            this.name = name;
+            this.type = type;
+        }
+
         public Builder rarity(Rarity rarity) { this.rarity = rarity; return this; }
-        public Builder attackBonus(int bonus) { this.attackBonus = bonus; return this; }
-        public Builder defenseBonus(int bonus) { this.defenseBonus = bonus; return this; }
-        public Builder hpBonus(int bonus) { this.hpBonus = bonus; return this; }
-        public Builder description(String desc) { this.description = desc; return this; }
+        public Builder attackBonus(int val) { this.attackBonus = val; return this; }
+        public Builder defenseBonus(int val) { this.defenseBonus = val; return this; }
+        public Builder hpBonus(int val) { this.hpBonus = val; return this; }
         public Builder setID(SetID setID) { this.setID = setID; return this; }
-        
+
         public Equipment build() {
-            if (name == null || name.isEmpty()) throw new IllegalArgumentException("Name required");
-            if (type == null) throw new IllegalArgumentException("Type required");
-            return new Equipment(this);
+            Equipment eq = new Equipment(name, type, rarity != null ? rarity : Rarity.COMMON);
+            eq.attackBonus = this.attackBonus;
+            eq.defenseBonus = this.defenseBonus;
+            eq.healthBonus = this.hpBonus;
+            eq.setID = this.setID;
+            return eq;
         }
     }
 }</code></pre>
@@ -2201,7 +2205,7 @@ public class GameBalance {
 </div>
 
 <div class="file" id="gameview">
-    <div class="file-header"><h2>GameView.java</h2><span class="file-meta">376 lines | 14919 bytes</span></div>
+    <div class="file-header"><h2>GameView.java</h2><span class="file-meta">377 lines | 18719 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -2213,29 +2217,27 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-
 import java.util.List;
 
 public class GameView extends View {
-
     private static final float ENEMY_RADIUS = 0.4f;
-
     private Game game;
     private Paint tileWallPaint, tileFloorPaint, tileGoldPaint, playerPaint, enemyPaint, textPaint, buttonPaint, buttonPressPaint;
     private float tileSize;
     private GameListener listener;
-
-    private Rect btnUp, btnDown, btnLeft, btnRight, btnQuit;
-
-    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, buttonLabelPaintRed, emojiPaint;
+    private Rect btnUp, btnDown, btnLeft, btnRight, btnUpLeft, btnUpRight, btnDownLeft, btnDownRight;
+    private Rect btnQuit, btnInventory, btnCenter;
+    private Paint overlayPaint, gameOverTextPaint, buttonLabelPaint, emojiPaint, inventoryPaint;
     private final Object buttonLock = new Object();
-
-    private boolean btnUpPressed = false, btnDownPressed = false, btnLeftPressed = false, btnRightPressed = false, btnQuitPressed = false;
+    private boolean btnUpPressed = false, btnDownPressed = false, btnLeftPressed = false, btnRightPressed = false;
+    private boolean btnUpLeftPressed = false, btnUpRightPressed = false, btnDownLeftPressed = false, btnDownRightPressed = false;
+    private boolean btnQuitPressed = false, btnInventoryPressed = false;
 
     public interface GameListener {
         void onGameOver(Game.GameState state);
         void onQuitRequested();
         void onEncounter(Enemy enemy);
+        void onInventoryRequested();
     }
 
     public GameView(Context context) {
@@ -2268,10 +2270,6 @@ public class GameView extends View {
         playerPaint.setColor(Color.parseColor("#00FF00"));
         playerPaint.setStyle(Paint.Style.FILL);
 
-        enemyPaint = new Paint();
-        enemyPaint.setColor(Color.parseColor("#FF0000"));
-        enemyPaint.setStyle(Paint.Style.FILL);
-
         textPaint = new Paint();
         textPaint.setTextSize(40);
         textPaint.setColor(Color.WHITE);
@@ -2279,24 +2277,23 @@ public class GameView extends View {
         emojiPaint = new Paint();
         emojiPaint.setTextAlign(Paint.Align.CENTER);
 
-        // --- BUTTON PAINTS (FIXED) ---
         buttonPaint = new Paint();
-        buttonPaint.setColor(Color.parseColor("#00AA00"));  // darker green base
+        buttonPaint.setColor(Color.parseColor("#00AA00"));
         buttonPaint.setStyle(Paint.Style.FILL);
 
         buttonPressPaint = new Paint();
-        buttonPressPaint.setColor(Color.parseColor("#008800"));  // darker when pressed
+        buttonPressPaint.setColor(Color.parseColor("#008800"));
         buttonPressPaint.setStyle(Paint.Style.FILL);
 
         buttonLabelPaint = new Paint();
-        buttonLabelPaint.setColor(Color.WHITE);           // was BLACK — invisible on green
-        buttonLabelPaint.setTextSize(36);                 // was 20 — too small
+        buttonLabelPaint.setColor(Color.WHITE);
+        buttonLabelPaint.setTextSize(48);
         buttonLabelPaint.setTextAlign(Paint.Align.CENTER);
         buttonLabelPaint.setFakeBoldText(true);
 
-        buttonLabelPaintRed = new Paint(buttonLabelPaint);
-        buttonLabelPaintRed.setColor(Color.RED);
-        buttonLabelPaintRed.setTextSize(28);
+        inventoryPaint = new Paint();
+        inventoryPaint.setColor(Color.parseColor("#9C27B0"));
+        inventoryPaint.setStyle(Paint.Style.FILL);
 
         overlayPaint = new Paint();
         overlayPaint.setColor(Color.argb(200, 0, 0, 0));
@@ -2312,45 +2309,37 @@ public class GameView extends View {
         btnDown = new Rect();
         btnLeft = new Rect();
         btnRight = new Rect();
+        btnUpLeft = new Rect();
+        btnUpRight = new Rect();
+        btnDownLeft = new Rect();
+        btnDownRight = new Rect();
         btnQuit = new Rect();
+        btnInventory = new Rect();
+        btnCenter = new Rect();
     }
 
     public void setGame(Game game) { this.game = game; }
-
     public void setGameListener(GameListener listener) { this.listener = listener; }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
-        if (game == null) {
-            Log.w("GameView", "Game is null in onDraw");
-            return;
-        }
-
+        if (game == null) { Log.w("GameView", "Game is null in onDraw"); return; }
         int width = getWidth(), height = getHeight();
-        int gameAreaHeight = (int) (height * 0.75);
-        int buttonAreaHeight = height - gameAreaHeight;
-
+        int buttonAreaHeight = (int) (height * 0.28);
+        int gameAreaHeight = height - buttonAreaHeight;
         Dungeon dungeon = game.getDungeon();
-        if (dungeon == null) {
-            Log.w("GameView", "Dungeon is null in onDraw");
-            return;
-        }
-
+        if (dungeon == null) { Log.w("GameView", "Dungeon is null in onDraw"); return; }
         tileSize = (float) width / dungeon.getWidth();
-        emojiPaint.setTextSize(tileSize * 0.8f);
-
+        emojiPaint.setTextSize(tileSize * 0.9f);
         drawDungeon(canvas, dungeon);
         drawPlayer(canvas);
         drawEnemies(canvas);
         drawStatus(canvas, gameAreaHeight);
-        drawButtons(canvas, gameAreaHeight, buttonAreaHeight);
-
+        drawDPadButtons(canvas, gameAreaHeight, buttonAreaHeight);
+        drawSideButtons(canvas, gameAreaHeight, buttonAreaHeight);
         Game.GameState state = game.getState();
-        if (state != Game.GameState.PLAYING) {
-            drawGameOverOverlay(canvas, width, gameAreaHeight);
-        }
+        if (state != Game.GameState.PLAYING) { drawGameOverOverlay(canvas, width, gameAreaHeight); }
     }
 
     private void drawDungeon(Canvas canvas, Dungeon dungeon) {
@@ -2359,7 +2348,6 @@ public class GameView extends View {
                 float xPos = x * tileSize;
                 float yPos = y * tileSize;
                 char tile = dungeon.getTile(x, y);
-
                 if (tile == Dungeon.TILE_WALL) {
                     canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileWallPaint);
                 } else if (tile == Dungeon.TILE_FLOOR) {
@@ -2367,11 +2355,19 @@ public class GameView extends View {
                 } else if (tile == Dungeon.TILE_GOLD) {
                     canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
                     canvas.drawCircle(xPos + tileSize / 2, yPos + tileSize / 2, tileSize * 0.3f, tileGoldPaint);
+                    Paint goldEmoji = new Paint(emojiPaint);
+                    goldEmoji.setTextSize(tileSize * 0.7f);
+                    canvas.drawText("💰", xPos + tileSize / 2, yPos + tileSize / 2 + tileSize * 0.3f, goldEmoji);
                 } else if (tile == 'B') {
                     canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
-                    Paint bossPaint = new Paint();
-                    bossPaint.setColor(Color.parseColor("#8B0000"));
-                    canvas.drawCircle(xPos + tileSize / 2, yPos + tileSize / 2, tileSize * 0.4f, bossPaint);
+                    Paint bossEmoji = new Paint(emojiPaint);
+                    bossEmoji.setTextSize(tileSize * 2.5f);
+                    canvas.drawText("🐉", xPos + tileSize / 2, yPos + tileSize / 2 + tileSize * 0.4f, bossEmoji);
+                } else if (tile == 'P') {
+                    canvas.drawRect(xPos, yPos, xPos + tileSize, yPos + tileSize, tileFloorPaint);
+                    Paint potionEmoji = new Paint(emojiPaint);
+                    potionEmoji.setTextSize(tileSize * 0.7f);
+                    canvas.drawText("⛑️", xPos + tileSize / 2, yPos + tileSize / 2 + tileSize * 0.3f, potionEmoji);
                 }
             }
         }
@@ -2379,64 +2375,33 @@ public class GameView extends View {
 
     private void drawPlayer(Canvas canvas) {
         Player player = game.getPlayer();
-        if (player == null) {
-            Log.w("GameView", "Player is null in drawPlayer");
-            return;
-        }
+        if (player == null) { Log.w("GameView", "Player is null in drawPlayer"); return; }
         float x = player.getX() * tileSize + tileSize / 2;
         float y = player.getY() * tileSize + tileSize / 2;
-        canvas.drawCircle(x, y, tileSize * 0.4f, playerPaint);
+        Paint heroEmoji = new Paint(emojiPaint);
+        heroEmoji.setTextSize(tileSize * 0.8f);
+        canvas.drawText("🧙‍♂️", x, y + tileSize * 0.3f, heroEmoji);
     }
 
     private void drawEnemies(Canvas canvas) {
         List&lt;Enemy&gt; enemies = game.getEnemies();
-        if (enemies == null) {
-            Log.w("GameView", "Enemies list is null in drawEnemies");
-            return;
-        }
-
+        if (enemies == null) { Log.w("GameView", "Enemies list is null in drawEnemies"); return; }
         for (Enemy enemy : enemies) {
             if (enemy == null) continue;
-
-            if (enemy.isDead()) {
-                float x = enemy.getX() * tileSize + tileSize / 2;
-                float y = enemy.getY() * tileSize + tileSize / 2;
-                Rect bounds = new Rect();
-                emojiPaint.getTextBounds("\u2620\uFE0F", 0, 1, bounds);
-                float emojiY = y + (tileSize - bounds.height()) / 2;
-                canvas.drawText("\u2620\uFE0F", x, emojiY, emojiPaint);
-                continue;
-            }
-
             float x = enemy.getX() * tileSize + tileSize / 2;
             float y = enemy.getY() * tileSize + tileSize / 2;
-
-            if (enemy.isBoss()) {
-                if (!enemy.isDead()) {
-                    float dragonSize = tileSize * 4;
-                    Paint dragonPaint = new Paint(emojiPaint);
-                    dragonPaint.setTextSize(dragonSize);
-                    Rect bounds = new Rect();
-                    dragonPaint.getTextBounds("\uD83D\uDC09", 0, 1, bounds);
-                    float dragonY = y + (dragonSize - bounds.height()) / 2;
-                    canvas.drawText("\uD83D\uDC09", x, dragonY, dragonPaint);
-                } else {
-                    float dragonSize = tileSize * 4;
-                    Paint skullPaint = new Paint(emojiPaint);
-                    skullPaint.setTextSize(dragonSize);
-                    Rect bounds = new Rect();
-                    skullPaint.getTextBounds("\u2620\uFE0F", 0, 1, bounds);
-                    float skullY = y + (dragonSize - bounds.height()) / 2;
-                    canvas.drawText("\u2620\uFE0F", x, skullY, skullPaint);
-                }
+            if (enemy.isDead()) {
+                Paint skullEmoji = new Paint(emojiPaint);
+                skullEmoji.setTextSize(tileSize * 0.7f);
+                canvas.drawText("⚰️", x, y + tileSize * 0.3f, skullEmoji);
             } else {
-                if (!enemy.isDead()) {
-                    canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
+                String emoji = enemy.getEmoji();
+                if (emoji != null &amp;&amp; !emoji.isEmpty()) {
+                    Paint enemyEmoji = new Paint(emojiPaint);
+                    enemyEmoji.setTextSize(tileSize * 0.9f);
+                    canvas.drawText(emoji, x, y + tileSize * 0.4f, enemyEmoji);
                 } else {
-                    Rect bounds = new Rect();
-                    emojiPaint.getTextBounds("\u2620\uFE0F", 0, 1, bounds);
-                    float emojiY = y + (tileSize - bounds.height()) / 2;
-                    canvas.drawText("\u2620\uFE0F", x, emojiY, emojiPaint);
+                    canvas.drawCircle(x, y, tileSize * ENEMY_RADIUS, enemyPaint);
                 }
             }
         }
@@ -2444,74 +2409,88 @@ public class GameView extends View {
 
     private void drawStatus(Canvas canvas, int gameAreaHeight) {
         Player player = game.getPlayer();
-        if (player == null) {
-            Log.w("GameView", "Player is null in drawStatus");
-            return;
-        }
-        String status = String.format("LVL: %d (XP: %d) | HP: %d/%d | Gold: %d | Turn: %d",
-                player.getLevel(), player.getExperience(),
-                player.getCurrentHealth(), player.getMaxHealth(),
-                player.getGoldCollected(), game.getTurnCount());
-        canvas.drawText(status, 10, gameAreaHeight - 10, textPaint);
+        if (player == null) { Log.w("GameView", "Player is null in drawStatus"); return; }
+        String status = String.format("LVL: %d (XP: %d) | HP: %d/%d | Gold: %d | Potions: %d",
+                player.getLevel(), player.getExperience(), player.getCurrentHealth(),
+                player.getMaxHealth(), player.getGoldCollected(), player.getInventory().getHealthPotions());
+        Paint statusPaint = new Paint(textPaint);
+        statusPaint.setTextSize(28);
+        canvas.drawText(status, 10, gameAreaHeight - 10, statusPaint);
     }
 
-    private void drawButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
-        int buttonWidth = getWidth() / 5;
-        int buttonHeight = buttonAreaHeight;  // use full height, not halved
-        int startY = gameAreaHeight;
-
-        btnUp.set(0, startY, buttonWidth, startY + buttonHeight);
-        btnDown.set(buttonWidth, startY, 2 * buttonWidth, startY + buttonHeight);
-        btnLeft.set(2 * buttonWidth, startY, 3 * buttonWidth, startY + buttonHeight);
-        btnRight.set(3 * buttonWidth, startY, 4 * buttonWidth, startY + buttonHeight);
-        btnQuit.set(4 * buttonWidth, startY, 5 * buttonWidth, startY + buttonHeight);
-
+    private void drawDPadButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
+        int dpadSize = buttonAreaHeight / 3;
+        int dpadX = 10;
+        int dpadY = gameAreaHeight + 5;
+        btnUpLeft.set(dpadX, dpadY, dpadX + dpadSize, dpadY + dpadSize);
+        btnUp.set(dpadX + dpadSize, dpadY, dpadX + dpadSize * 2, dpadY + dpadSize);
+        btnUpRight.set(dpadX + dpadSize * 2, dpadY, dpadX + dpadSize * 3, dpadY + dpadSize);
+        btnLeft.set(dpadX, dpadY + dpadSize, dpadX + dpadSize, dpadY + dpadSize * 2);
+        btnCenter.set(dpadX + dpadSize, dpadY + dpadSize, dpadX + dpadSize * 2, dpadY + dpadSize * 2);
+        btnRight.set(dpadX + dpadSize * 2, dpadY + dpadSize, dpadX + dpadSize * 3, dpadY + dpadSize * 2);
+        btnDownLeft.set(dpadX, dpadY + dpadSize * 2, dpadX + dpadSize, dpadY + dpadSize * 3);
+        btnDown.set(dpadX + dpadSize, dpadY + dpadSize * 2, dpadX + dpadSize * 2, dpadY + dpadSize * 3);
+        btnDownRight.set(dpadX + dpadSize * 2, dpadY + dpadSize * 2, dpadX + dpadSize * 3, dpadY + dpadSize * 3);
         synchronized (buttonLock) {
-            drawButton(canvas, btnUp, "\u2191", btnUpPressed, buttonLabelPaint, buttonPaint, buttonPressPaint);
-            drawButton(canvas, btnDown, "\u2193", btnDownPressed, buttonLabelPaint, buttonPaint, buttonPressPaint);
-            drawButton(canvas, btnLeft, "\u2190", btnLeftPressed, buttonLabelPaint, buttonPaint, buttonPressPaint);
-            drawButton(canvas, btnRight, "\u2192", btnRightPressed, buttonLabelPaint, buttonPaint, buttonPressPaint);
+            drawEmojiButton(canvas, btnUpLeft, "↖️", btnUpLeftPressed);
+            drawEmojiButton(canvas, btnUp, "⬆️", btnUpPressed);
+            drawEmojiButton(canvas, btnUpRight, "↗️", btnUpRightPressed);
+            drawEmojiButton(canvas, btnLeft, "⬅️", btnLeftPressed);
+            drawEmojiButton(canvas, btnCenter, "⏺️", false);
+            drawEmojiButton(canvas, btnRight, "➡️", btnRightPressed);
+            drawEmojiButton(canvas, btnDownLeft, "↙️", btnDownLeftPressed);
+            drawEmojiButton(canvas, btnDown, "⬇️", btnDownPressed);
+            drawEmojiButton(canvas, btnDownRight, "↘️", btnDownRightPressed);
         }
+    }
 
-        // QUIT button — distinct red border + red text
-        Paint quitBg = btnQuitPressed ? buttonPressPaint : buttonPaint;
-        canvas.drawRect(btnQuit, quitBg);
+    private void drawSideButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
+        int sideSize = buttonAreaHeight / 2 - 5;
+        int rightEdge = getWidth() - 10;
+        int topY = gameAreaHeight + 5;
+        btnInventory.set(rightEdge - sideSize, topY, rightEdge, topY + sideSize);
+        btnQuit.set(rightEdge - sideSize, topY + sideSize + 5, rightEdge, topY + sideSize * 2 + 5);
 
+        Paint invPaint = btnInventoryPressed ? buttonPressPaint : inventoryPaint;
+        canvas.drawRect(btnInventory, invPaint);
+        Paint invBorder = new Paint();
+        invBorder.setColor(Color.parseColor("#6A0DAD"));
+        invBorder.setStrokeWidth(3);
+        invBorder.setStyle(Paint.Style.STROKE);
+        canvas.drawRect(btnInventory, invBorder);
+        Paint.FontMetrics ifm = buttonLabelPaint.getFontMetrics();
+        float invCY = btnInventory.centerY() + (ifm.descent - ifm.ascent) / 2;
+        canvas.drawText("👜", btnInventory.centerX(), invCY, buttonLabelPaint);
+
+        Paint quitPaint = btnQuitPressed ? buttonPressPaint : buttonPaint;
+        quitPaint.setColor(Color.parseColor("#CC0000"));
+        canvas.drawRect(btnQuit, quitPaint);
         Paint quitBorder = new Paint();
         quitBorder.setColor(Color.RED);
-        quitBorder.setStrokeWidth(4);
+        quitBorder.setStrokeWidth(3);
         quitBorder.setStyle(Paint.Style.STROKE);
         canvas.drawRect(btnQuit, quitBorder);
-
-        Paint.FontMetrics qfm = buttonLabelPaintRed.getFontMetrics();
-        float quitCenterY = btnQuit.centerY() + (qfm.descent - qfm.ascent) / 2;
-        canvas.drawText("QUIT", btnQuit.centerX(), quitCenterY, buttonLabelPaintRed);
+        Paint.FontMetrics qfm = buttonLabelPaint.getFontMetrics();
+        float quitCY = btnQuit.centerY() + (qfm.descent - qfm.ascent) / 2;
+        canvas.drawText("🚪", btnQuit.centerX(), quitCY, buttonLabelPaint);
     }
 
-    /**
-     * Draws a button: filled background, dark-green border, centred label.
-     */
-    private void drawButton(Canvas canvas, Rect rect, String label, boolean pressed,
-                            Paint labelPaint, Paint bgPaint, Paint pressedPaint) {
-        Paint paint = pressed ? pressedPaint : bgPaint;
+    private void drawEmojiButton(Canvas canvas, Rect rect, String emoji, boolean pressed) {
+        Paint paint = pressed ? buttonPressPaint : buttonPaint;
         canvas.drawRect(rect, paint);
-
-        // dark-green border for visibility
         Paint border = new Paint();
         border.setColor(Color.parseColor("#006600"));
         border.setStrokeWidth(3);
         border.setStyle(Paint.Style.STROKE);
         canvas.drawRect(rect, border);
-
-        // vertically-centred label
-        Paint.FontMetrics fm = labelPaint.getFontMetrics();
+        Paint.FontMetrics fm = buttonLabelPaint.getFontMetrics();
         float centerY = rect.centerY() + (fm.descent - fm.ascent) / 2;
-        canvas.drawText(label, rect.centerX(), centerY, labelPaint);
+        canvas.drawText(emoji, rect.centerX(), centerY, buttonLabelPaint);
     }
 
     private void drawGameOverOverlay(Canvas canvas, int width, int gameAreaHeight) {
         canvas.drawRect(0, 0, width, gameAreaHeight, overlayPaint);
-        String message = game.getState() == Game.GameState.WON ? "YOU WIN!" : "GAME OVER";
+        String message = game.getState() == Game.GameState.WON ? "🏆 YOU WIN!" : "💀 GAME OVER";
         canvas.drawText(message, width / 2, gameAreaHeight / 2, gameOverTextPaint);
     }
 
@@ -2519,62 +2498,88 @@ public class GameView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getAction();
         float x = event.getX(), y = event.getY();
-
         switch (action) {
-            case MotionEvent.ACTION_DOWN:
-                handleButtonPress(x, y);
-                break;
-            case MotionEvent.ACTION_UP:
-                handleButtonRelease();
-                break;
+            case MotionEvent.ACTION_DOWN: handleTouchDown(x, y); break;
+            case MotionEvent.ACTION_UP: handleTouchUp(); break;
         }
         invalidate();
         return true;
     }
 
-    private void handleButtonPress(float x, float y) {
-        if (game == null) {
-            Log.w("GameView", "Game is null in handleButtonPress");
-            return;
-        }
-
+    private void handleTouchDown(float x, float y) {
+        if (game == null) { Log.w("GameView", "Game is null in handleTouchDown"); return; }
         boolean encounterOccurred = false;
-
-        if (btnUp != null &amp;&amp; btnUp.contains((int) x, (int) y)) {
+        Dungeon dungeon = game.getDungeon();
+        if (btnUpLeft != null &amp;&amp; btnUpLeft.contains((int)x, (int)y)) {
+            synchronized (buttonLock) { btnUpLeftPressed = true; }
+            if (dungeon != null &amp;&amp; dungeon.isWalkable(game.getPlayer().getX() - 1, game.getPlayer().getY() - 1))
+                encounterOccurred = game.playerMove(-1, -1);
+        } else if (btnUp != null &amp;&amp; btnUp.contains((int)x, (int)y)) {
             synchronized (buttonLock) { btnUpPressed = true; }
             encounterOccurred = game.playerMove(0, -1);
-        } else if (btnDown != null &amp;&amp; btnDown.contains((int) x, (int) y)) {
-            synchronized (buttonLock) { btnDownPressed = true; }
-            encounterOccurred = game.playerMove(0, 1);
-        } else if (btnLeft != null &amp;&amp; btnLeft.contains((int) x, (int) y)) {
+        } else if (btnUpRight != null &amp;&amp; btnUpRight.contains((int)x, (int)y)) {
+            synchronized (buttonLock) { btnUpRightPressed = true; }
+            if (dungeon != null &amp;&amp; dungeon.isWalkable(game.getPlayer().getX() + 1, game.getPlayer().getY() - 1))
+                encounterOccurred = game.playerMove(1, -1);
+        } else if (btnLeft != null &amp;&amp; btnLeft.contains((int)x, (int)y)) {
             synchronized (buttonLock) { btnLeftPressed = true; }
             encounterOccurred = game.playerMove(-1, 0);
-        } else if (btnRight != null &amp;&amp; btnRight.contains((int) x, (int) y)) {
+        } else if (btnRight != null &amp;&amp; btnRight.contains((int)x, (int)y)) {
             synchronized (buttonLock) { btnRightPressed = true; }
             encounterOccurred = game.playerMove(1, 0);
-        } else if (btnQuit != null &amp;&amp; btnQuit.contains((int) x, (int) y)) {
+        } else if (btnDownLeft != null &amp;&amp; btnDownLeft.contains((int)x, (int)y)) {
+            synchronized (buttonLock) { btnDownLeftPressed = true; }
+            if (dungeon != null &amp;&amp; dungeon.isWalkable(game.getPlayer().getX() - 1, game.getPlayer().getY() + 1))
+                encounterOccurred = game.playerMove(-1, 1);
+        } else if (btnDown != null &amp;&amp; btnDown.contains((int)x, (int)y)) {
+            synchronized (buttonLock) { btnDownPressed = true; }
+            encounterOccurred = game.playerMove(0, 1);
+        } else if (btnDownRight != null &amp;&amp; btnDownRight.contains((int)x, (int)y)) {
+            synchronized (buttonLock) { btnDownRightPressed = true; }
+            if (dungeon != null &amp;&amp; dungeon.isWalkable(game.getPlayer().getX() + 1, game.getPlayer().getY() + 1))
+                encounterOccurred = game.playerMove(1, 1);
+        } else if (btnInventory != null &amp;&amp; btnInventory.contains((int)x, (int)y)) {
+            synchronized (buttonLock) { btnInventoryPressed = true; }
+            if (listener != null) { listener.onInventoryRequested(); }
+        } else if (btnQuit != null &amp;&amp; btnQuit.contains((int)x, (int)y)) {
             synchronized (buttonLock) { btnQuitPressed = true; }
             if (listener != null) { listener.onQuitRequested(); }
+        } else {
+            if (dungeon != null &amp;&amp; game.getPlayer() != null) {
+                int tapX = (int)(x / tileSize);
+                int tapY = (int)(y / tileSize);
+                if (tapX &gt;= 0 &amp;&amp; tapX &lt; dungeon.getWidth() &amp;&amp; tapY &gt;= 0 &amp;&amp; tapY &lt; dungeon.getHeight()) {
+                    if (dungeon.isWalkable(tapX, tapY)) {
+                        Player player = game.getPlayer();
+                        int dx = Integer.compare(tapX, player.getX());
+                        int dy = Integer.compare(tapY, player.getY());
+                        if (dx != 0 &amp;&amp; dy != 0) {
+                            if (dungeon.isWalkable(player.getX() + dx, player.getY()))
+                                encounterOccurred = game.playerMove(dx, 0);
+                            else if (dungeon.isWalkable(player.getX(), player.getY() + dy))
+                                encounterOccurred = game.playerMove(0, dy);
+                        } else if (dx != 0) {
+                            encounterOccurred = game.playerMove(dx, 0);
+                        } else if (dy != 0) {
+                            encounterOccurred = game.playerMove(0, dy);
+                        }
+                    }
+                }
+            }
         }
-
         if (encounterOccurred &amp;&amp; listener != null) {
             Enemy enemy = game.getAndClearEncounteredEnemy();
             if (enemy != null) { listener.onEncounter(enemy); }
         }
-
         Game.GameState state = game.getState();
-        if (state != Game.GameState.PLAYING &amp;&amp; listener != null) {
-            listener.onGameOver(state);
-        }
+        if (state != Game.GameState.PLAYING &amp;&amp; listener != null) { listener.onGameOver(state); }
     }
 
-    private void handleButtonRelease() {
+    private void handleTouchUp() {
         synchronized (buttonLock) {
-            btnUpPressed = false;
-            btnDownPressed = false;
-            btnLeftPressed = false;
-            btnRightPressed = false;
-            btnQuitPressed = false;
+            btnUpPressed = false; btnDownPressed = false; btnLeftPressed = false; btnRightPressed = false;
+            btnUpLeftPressed = false; btnUpRightPressed = false; btnDownLeftPressed = false; btnDownRightPressed = false;
+            btnQuitPressed = false; btnInventoryPressed = false;
         }
     }
 }</code></pre>
@@ -2862,458 +2867,354 @@ public class Inventory implements Serializable {
 </div>
 
 <div class="file" id="inventorysystem">
-    <div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">246 lines | 8192 bytes</span></div>
+    <div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">188 lines | 5998 bytes</span></div>
     <pre><code>package com.knightlight.game;
-import android.util.Log;
-
-import java.util.logging.Logger;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-/**
- * Thread-safe inventory management system for weapons, armor, rings, and potions.
- * Enforces capacity limits and tracks equipped items.
- */
 public class InventorySystem implements Serializable {
-    private static final long serialVersionUID = 1L;
-    private static final String TAG = "InventorySystem";
+    private static final long serialVersionUID = 4L;
 
-    private static final int MAX_WEAPONS = 10;
-    private static final int MAX_ARMOR = 10;
-    private static final int MAX_RINGS = 5;
-    private static final int MAX_POTIONS = 99;
+    private Map&lt;Integer, Equipment&gt; equipmentSlots;
+    private List&lt;Equipment&gt; inventory;
+    private int healthPotions;
+    private int maxItemCapacity;
 
-    private final List&lt;Equipment&gt; weapons = new ArrayList&lt;&gt;();
-    private final List&lt;Equipment&gt; armor = new ArrayList&lt;&gt;();
-    private final List&lt;Equipment&gt; rings = new ArrayList&lt;&gt;();
+    public InventorySystem() {
+        this.equipmentSlots = new HashMap&lt;&gt;();
+        this.inventory = new ArrayList&lt;&gt;();
+        this.healthPotions = 5;
+        this.maxItemCapacity = 50;
+    }
 
-    private Equipment equippedWeapon = null;
-    private Equipment equippedArmor = null;
-    private Equipment equippedRing = null;
-
-    private int healthPotions = 0;
-
-    /**
-     * Add equipment to inventory. Returns true if successful, false if full.
-     */
-    public synchronized boolean addEquipment(Equipment equipment) {
-        if (equipment == null) {
-            Log.w(TAG, "Attempted to add null equipment");
-            return false;
+    public boolean addEquipment(Equipment item) {
+        if (item == null) return false;
+        if (item.getType().getSlotId() == ItemType.SLOT_ARTIFACT) {
+            equipmentSlots.put(ItemType.SLOT_ARTIFACT, item);
+            return true;
         }
+        if (inventory.size() &gt;= maxItemCapacity) return false;
+        return inventory.add(item);
+    }
 
-        List&lt;Equipment&gt; targetList = getListForType(equipment.getType());
-        int maxCapacity = getMaxCapacity(equipment.getType());
+    public boolean equip(ItemType type, int index) {
+        Equipment equipped = equipmentSlots.get(type.getSlotId());
+        Equipment toEquip = inventory.get(index);
 
-        if (targetList.size() &gt;= maxCapacity) {
-            Log.w(TAG, "Inventory full for " + equipment.getType());
-            return false;
+        if (toEquip.getType().getSlotId() != type.getSlotId()) return false;
+
+        equipmentSlots.put(type.getSlotId(), toEquip);
+        inventory.remove(index);
+
+        if (equipped != null) {
+            inventory.add(equipped);
         }
-
-        targetList.add(equipment);
-        Log.d(TAG, "Added: " + equipment.getName());
         return true;
     }
 
-    /**
-     * Remove equipment from inventory.
-     */
-    public synchronized boolean removeEquipment(Equipment equipment) {
-        Equipment.Type type = equipment.getType();
-        List&lt;Equipment&gt; targetList = getListForType(type);
+    public boolean unequip(ItemType type) {
+        Equipment toUnequip = equipmentSlots.get(type.getSlotId());
+        if (toUnequip == null) return false;
+        if (inventory.size() &gt;= maxItemCapacity) return false;
 
-        if (targetList.remove(equipment)) {
-            // If equipped item was removed, unequip it
-            if (equipment.equals(equippedWeapon)) {
-                equippedWeapon = null;
-            } else if (equipment.equals(equippedArmor)) {
-                equippedArmor = null;
-            } else if (equipment.equals(equippedRing)) {
-                equippedRing = null;
-            }
-            Log.d(TAG, "Removed: " + equipment.getName());
-            return true;
+        inventory.add(toUnequip);
+        equipmentSlots.remove(type.getSlotId());
+        return true;
+    }
+
+    public Equipment getEquipped(ItemType type) {
+        return equipmentSlots.get(type.getSlotId());
+    }
+
+    public boolean hasEquipped(ItemType type) {
+        return equipmentSlots.containsKey(type.getSlotId());
+    }
+
+    public List&lt;Equipment&gt; getInventory() {
+        return new ArrayList&lt;&gt;(inventory);
+    }
+
+    public Equipment getItem(int index) {
+        if (index &gt;= 0 &amp;&amp; index &lt; inventory.size()) {
+            return inventory.get(index);
         }
+        return null;
+    }
+
+    public boolean useItem(int index) {
+        Equipment item = getItem(index);
+        if (item == null) return false;
         return false;
     }
 
-    /**
-     * Equip an item. Returns true if successful.
-     */
-    public synchronized boolean equip(Equipment equipment) {
-        if (equipment == null) {
-            Log.w(TAG, "Cannot equip null equipment");
-            return false;
-        }
-
-        switch (equipment.getType()) {
-            case WEAPON:
-                if (!weapons.contains(equipment)) {
-                    Log.w(TAG, "Weapon not in inventory");
-                    return false;
-                }
-                equippedWeapon = equipment;
-                Log.d(TAG, "Equipped weapon: " + equipment.getName());
-                return true;
-
-            case ARMOR:
-                if (!armor.contains(equipment)) {
-                    Log.w(TAG, "Armor not in inventory");
-                    return false;
-                }
-                equippedArmor = equipment;
-                Log.d(TAG, "Equipped armor: " + equipment.getName());
-                return true;
-
-            case RING:
-                if (!rings.contains(equipment)) {
-                    Log.w(TAG, "Ring not in inventory");
-                    return false;
-                }
-                equippedRing = equipment;
-                Log.d(TAG, "Equipped ring: " + equipment.getName());
-                return true;
-
-            default:
-                Log.w(TAG, "Unknown equipment type");
-                return false;
-        }
-    }
-
-    /**
-     * Unequip an item type.
-     */
-    public synchronized void unequip(Equipment.Type type) {
-        switch (type) {
-            case WEAPON:
-                equippedWeapon = null;
-                break;
-            case ARMOR:
-                equippedArmor = null;
-                break;
-            case RING:
-                equippedRing = null;
-                break;
-        }
-        Log.d(TAG, "Unequipped: " + type);
-    }
-
-    /**
-     * Get current health potion count.
-     */
-    public synchronized int getHealthPotions() {
-        return healthPotions;
-    }
-
-    /**
-     * Use one health potion. Returns true if successful, false if none available.
-     */
-    public synchronized boolean usePotion() {
+    public int getItemCount() { return inventory.size(); }
+    public int getHealthPotions() { return healthPotions; }
+    public void addHealthPotions(int amount) { this.healthPotions += amount; }
+    public boolean usePotion() {
         if (healthPotions &gt; 0) {
             healthPotions--;
-            Log.d(TAG, "Used health potion. Remaining: " + healthPotions);
             return true;
         }
-        Log.w(TAG, "No health potions available");
         return false;
     }
 
-    /**
-     * Add health potions to inventory. Returns true if successful, false if would exceed max.
-     */
-    public synchronized boolean addHealthPotions(int count) {
-        if (count &lt; 0) {
-            Log.w(TAG, "Cannot add negative potions");
-            return false;
-        }
-        if (healthPotions + count &lt;= MAX_POTIONS) {
-            healthPotions += count;
-            Log.d(TAG, "Added " + count + " health potions. Total: " + healthPotions);
-            return true;
-        }
-        Log.w(TAG, "Health potion capacity exceeded. Max: " + MAX_POTIONS);
-        return false;
-    }
-
-    // Getters for equipped items
-    public synchronized Equipment getEquippedWeapon() { return equippedWeapon; }
-    public synchronized Equipment getEquippedArmor() { return equippedArmor; }
-    public synchronized Equipment getEquippedRing() { return equippedRing; }
-
-    // Getters for inventory lists (defensive copies)
-    public synchronized List&lt;Equipment&gt; getWeapons() { return new ArrayList&lt;&gt;(weapons); }
-    public synchronized List&lt;Equipment&gt; getArmor() { return new ArrayList&lt;&gt;(armor); }
-    public synchronized List&lt;Equipment&gt; getRings() { return new ArrayList&lt;&gt;(rings); }
-
-    /**
-     * Calculate total stat bonuses from equipped items.
-     */
-    public synchronized int getTotalAttackBonus() {
-        int total = 0;
-        if (equippedWeapon != null) total += equippedWeapon.getAttackBonus();
-        if (equippedArmor != null) total += equippedArmor.getAttackBonus();
-        if (equippedRing != null) total += equippedRing.getAttackBonus();
-        return total;
-    }
-
-    public synchronized int getTotalDefenseBonus() {
-        int total = 0;
-        if (equippedWeapon != null) total += equippedWeapon.getDefenseBonus();
-        if (equippedArmor != null) total += equippedArmor.getDefenseBonus();
-        if (equippedRing != null) total += equippedRing.getDefenseBonus();
-        return total;
-    }
-
-    public synchronized int getTotalHpBonus() {
-        int total = 0;
-        if (equippedWeapon != null) total += equippedWeapon.getHpBonus();
-        if (equippedArmor != null) total += equippedArmor.getHpBonus();
-        if (equippedRing != null) total += equippedRing.getHpBonus();
-        return total;
-    }
-
-    // Private helpers
-    private List&lt;Equipment&gt; getListForType(Equipment.Type type) {
-        switch (type) {
-            case WEAPON: return weapons;
-            case ARMOR: return armor;
-            case RING: return rings;
-            default: throw new IllegalArgumentException("Unknown type: " + type);
-        }
-    }
-
-    private int getMaxCapacity(Equipment.Type type) {
-        switch (type) {
-            case WEAPON: return MAX_WEAPONS;
-            case ARMOR: return MAX_ARMOR;
-            case RING: return MAX_RINGS;
-            default: return 0;
-        }
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Inventory [W:%d/%d | A:%d/%d | R:%d/%d | P:%d/%d]",
-                weapons.size(), MAX_WEAPONS,
-                armor.size(), MAX_ARMOR,
-                rings.size(), MAX_RINGS,
-                healthPotions, MAX_POTIONS);
-    }
-    public synchronized List&lt;Equipment&gt; getAllEquipment() {
-        List&lt;Equipment&gt; all = new ArrayList&lt;&gt;(weapons);
-        all.addAll(armor);
-        all.addAll(rings);
+    // NEW METHODS FOR COMPILATION
+    public List&lt;Equipment&gt; getAllEquipment() {
+        List&lt;Equipment&gt; all = new ArrayList&lt;&gt;(inventory);
+        all.addAll(equipmentSlots.values());
         return all;
+    }
+
+    public List&lt;Equipment&gt; getWeapons() {
+        List&lt;Equipment&gt; weapons = new ArrayList&lt;&gt;();
+        for (Equipment eq : inventory) {
+            if (eq.getType() == ItemType.WEAPON) weapons.add(eq);
+        }
+        return weapons;
+    }
+
+    public List&lt;Equipment&gt; getArmor() {
+        List&lt;Equipment&gt; armor = new ArrayList&lt;&gt;();
+        for (Equipment eq : inventory) {
+            ItemType t = eq.getType();
+            if (t == ItemType.HELMET || t == ItemType.CHESTPLATE || t == ItemType.LEGGINGS ||
+                t == ItemType.BOOTS || t == ItemType.GLOVES || t == ItemType.SHIELD || t == ItemType.CLOAK) {
+                armor.add(eq);
+            }
+        }
+        return armor;
+    }
+
+    public List&lt;Equipment&gt; getRings() {
+        List&lt;Equipment&gt; rings = new ArrayList&lt;&gt;();
+        for (Equipment eq : inventory) {
+            if (eq.getType() == ItemType.RING) rings.add(eq);
+        }
+        return rings;
+    }
+
+    public Equipment getEquippedWeapon() { return getEquipped(ItemType.WEAPON); }
+    public Equipment getEquippedArmor() {
+        for (ItemType t : new ItemType[]{ItemType.HELMET, ItemType.CHESTPLATE, ItemType.LEGGINGS, ItemType.BOOTS, ItemType.GLOVES, ItemType.SHIELD, ItemType.CLOAK}) {
+            Equipment eq = getEquipped(t);
+            if (eq != null) return eq;
+        }
+        return null;
+    }
+    public Equipment getEquippedRing() { return getEquipped(ItemType.RING); }
+    // END NEW METHODS
+
+    public Equipment.SetBonus[] getActiveSetBonuses() {
+        Map&lt;String, Integer&gt; setCounts = new HashMap&lt;&gt;();
+
+        for (Equipment eq : equipmentSlots.values()) {
+            if (eq != null &amp;&amp; eq.getSetBonus() != null) {
+                String setName = eq.getName().split(" ")[0];
+                setCounts.put(setName, setCounts.getOrDefault(setName, 0) + 1);
+            }
+        }
+
+        List&lt;Equipment.SetBonus&gt; activeBonuses = new ArrayList&lt;&gt;();
+        for (Map.Entry&lt;String, Integer&gt; entry : setCounts.entrySet()) {
+            if (entry.getValue() &gt;= 2) {
+                for (Equipment eq : equipmentSlots.values()) {
+                    if (eq != null &amp;&amp; eq.getSetBonus() != null &amp;&amp; eq.getName().startsWith(entry.getKey())) {
+                        activeBonuses.add(eq.getSetBonus());
+                    }
+                }
+            }
+        }
+
+        return activeBonuses.toArray(new Equipment.SetBonus[0]);
+    }
+
+    public int getTotalAttack() {
+        int total = 15;
+        for (Equipment eq : equipmentSlots.values()) {
+            if (eq != null) total += eq.getAttackBonus();
+        }
+        return total;
+    }
+
+    public int getTotalDefense() {
+        int total = 0;
+        for (Equipment eq : equipmentSlots.values()) {
+            if (eq != null) total += eq.getDefenseBonus();
+        }
+        return total;
+    }
+
+    public int getTotalHealth() {
+        int total = 100;
+        for (Equipment eq : equipmentSlots.values()) {
+            if (eq != null) total += eq.getHealthBonus();
+        }
+        return total;
+    }
+}</code></pre>
+</div>
+
+<div class="file" id="itemtype">
+    <div class="file-header"><h2>ItemType.java</h2><span class="file-meta">44 lines | 1287 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+public enum ItemType {
+    HELMET("Helmet", 0),
+    CHESTPLATE("Chestplate", 1),
+    LEGGINGS("Leggings", 2),
+    BOOTS("Boots", 3),
+    GLOVES("Gloves", 4),
+    WEAPON("Weapon", 5),
+    SHIELD("Shield", 6),
+    AMULET("Amulet", 7),
+    RING("Ring", 8),
+    CLOAK("Cloak", 9);
+
+    public static final int SLOT_HELM = 0;
+    public static final int SLOT_CHEST = 1;
+    public static final int SLOT_LEGS = 2;
+    public static final int SLOT_BOOTS = 3;
+    public static final int SLOT_GLOVES = 4;
+    public static final int SLOT_WEAPON = 5;
+    public static final int SLOT_SHIELD = 6;
+    public static final int SLOT_AMULET = 7;
+    public static final int SLOT_RING = 8;
+    public static final int SLOT_CLOAK = 9;
+    public static final int SLOT_ARTIFACT = 10;
+
+    private final String displayName;
+    private final int slotId;
+
+    ItemType(String displayName, int slotId) {
+        this.displayName = displayName;
+        this.slotId = slotId;
+    }
+
+    public String getDisplayName() { return displayName; }
+    public int getSlotId() { return slotId; }
+
+    public static ItemType fromSlotId(int slotId) {
+        for (ItemType type : values()) {
+            if (type.getSlotId() == slotId) return type;
+        }
+        return null;
     }
 }</code></pre>
 </div>
 
 <div class="file" id="loottable">
-    <div class="file-header"><h2>LootTable.java</h2><span class="file-meta">198 lines | 6654 bytes</span></div>
+    <div class="file-header"><h2>LootTable.java</h2><span class="file-meta">103 lines | 4051 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
-import com.knightlight.game.Equipment;
+import java.util.Random;
 
-import java.util.*;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-/**
- * Thread-safe, immutable loot table for generating equipment drops.
- * FIXED: Corrected rarity weight assignments (EPIC had wrong key).
- */
 public class LootTable {
-    private final Map&lt;Equipment.Rarity, List&lt;Equipment&gt;&gt; poolsByRarity;
-    private final Map&lt;Equipment.Rarity, Double&gt; rarityWeights;
-    private final Random random;
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private static final String TAG = "LootTable";
+    private Random random;
 
-    /**
-     * Private constructor enforces Builder pattern.
-     */
-    private LootTable(Builder builder) {
-        this.poolsByRarity = new EnumMap&lt;&gt;(builder.poolsByRarity);
-        this.rarityWeights = new EnumMap&lt;&gt;(builder.rarityWeights);
+    public LootTable() {
         this.random = new Random();
     }
 
-    /**
-     * Generate a single loot item based on floor and rarity threshold.
-     */
-    public Equipment generateLoot(int floorNumber, double rarityThreshold) {
-        lock.readLock().lock();
-        try {
-            // Roll for loot drop
-            if (random.nextDouble() &gt; rarityThreshold) {
-                return null; // No loot
-            }
-
-            // Select rarity tier based on weights
-            Equipment.Rarity selectedRarity = selectRarityByWeight();
-            if (selectedRarity == null) {
-                return null;
-            }
-
-            List&lt;Equipment&gt; pool = poolsByRarity.get(selectedRarity);
-            if (pool == null || pool.isEmpty()) {
-                return null;
-            }
-
-            // Select random item from rarity pool
-            Equipment baseItem = pool.get(random.nextInt(pool.size()));
-
-            // Scale stats by floor: 1.0 + (floor - 1) * 0.05
-            double floorScalar = 1.0 + (floorNumber - 1) * 0.05;
-            int scaledATK = (int) (baseItem.getAttackBonus() * floorScalar);
-            int scaledDEF = (int) (baseItem.getDefenseBonus() * floorScalar);
-            int scaledHP = (int) (baseItem.getHpBonus() * floorScalar);
-
-            return new Equipment.Builder(baseItem.getName(), baseItem.getType())
-                    .rarity(baseItem.getRarity())
-                    .attackBonus(scaledATK)
-                    .defenseBonus(scaledDEF)
-                    .hpBonus(scaledHP)
-                    .description(baseItem.getDescription())
-                    .build();
-        } finally {
-            lock.readLock().unlock();
-        }
+    public Equipment generateLoot(int floorNumber, double difficultyMod) {
+        // Determine rarity based on floor and randomness
+        Rarity rarity = determineRarity(floorNumber, difficultyMod);
+        
+        // Select item type based on rarity
+        ItemType type = selectItemType(rarity, floorNumber);
+        
+        // Generate the equipment
+        Equipment item = Equipment.generateRandom(type, rarity, floorNumber);
+        
+        android.util.Log.d(TAG, "Loot generated: " + item.getName() + " [" + rarity + "]");
+        return item;
     }
 
-    /**
-     * Generate multiple loot items in a batch.
-     */
-    public List&lt;Equipment&gt; generateLootBatch(int floorNumber, double rarityThreshold, int count) {
-        List&lt;Equipment&gt; loot = new ArrayList&lt;&gt;();
-        for (int i = 0; i &lt; count; i++) {
-            Equipment item = generateLoot(floorNumber, rarityThreshold);
-            if (item != null) {
-                loot.add(item);
-            }
-        }
-        return loot;
+    private Rarity determineRarity(int floorNumber, double difficultyMod) {
+        double roll = random.nextDouble();
+        
+        // Rarity chances adjust by floor number
+        // Higher floors = better chances for rare items
+        
+        double unobtainiumChance = 0.001 + (floorNumber * 0.0005);
+        double mythicChance = unobtainiumChance + 0.005 + (floorNumber * 0.002);
+        double setChance = mythicChance + 0.01 + (floorNumber * 0.003);
+        double legendaryChance = setChance + 0.03 + (floorNumber * 0.005);
+        double epicChance = legendaryChance + 0.05 + (floorNumber * 0.01);
+        double rareChance = epicChance + 0.08 + (floorNumber * 0.01);
+        double uncommonChance = rareChance + 0.10 + (floorNumber * 0.01);
+        
+        if (roll &lt; unobtainiumChance) return Rarity.UNOBTAINIUM;
+        if (roll &lt; mythicChance) return Rarity.MYTHIC;
+        if (roll &lt; setChance) return Rarity.SET;
+        if (roll &lt; legendaryChance) return Rarity.LEGENDARY;
+        if (roll &lt; epicChance) return Rarity.EPIC;
+        if (roll &lt; rareChance) return Rarity.RARE;
+        if (roll &lt; uncommonChance) return Rarity.UNCOMMON;
+        return Rarity.COMMON;
     }
 
-    /**
-     * Select a rarity tier probabilistically based on configured weights.
-     */
-    private Equipment.Rarity selectRarityByWeight() {
-        double totalWeight = rarityWeights.values().stream()
-                .mapToDouble(Double::doubleValue)
-                .sum();
-
-        if (totalWeight &lt;= 0) {
-            return Equipment.Rarity.COMMON;
+    private ItemType selectItemType(Rarity rarity, int floorNumber) {
+        ItemType[] allTypes = ItemType.values();
+        ItemType[] highTierTypes = {ItemType.WEAPON, ItemType.CHESTPLATE, ItemType.LEGGINGS};
+        
+        // Better rarities favor better slots
+        if (rarity.getTier() &gt;= 5) {
+            return highTierTypes[random.nextInt(highTierTypes.length)];
         }
-
-        double roll = random.nextDouble() * totalWeight;
-        double cumulative = 0;
-
-        for (Map.Entry&lt;Equipment.Rarity, Double&gt; entry : rarityWeights.entrySet()) {
-            cumulative += entry.getValue();
-            if (roll &lt;= cumulative) {
-                return entry.getKey();
-            }
-        }
-
-        return Equipment.Rarity.COMMON;
+        return allTypes[random.nextInt(allTypes.length)];
     }
 
-    public void addItemToPool(Equipment item) {
-        lock.writeLock().lock();
-        try {
-            poolsByRarity.computeIfAbsent(item.getRarity(), k -&gt; new ArrayList&lt;&gt;())
-                    .add(item);
-        } finally {
-            lock.writeLock().unlock();
-        }
+    // Special methods for bosses and unicorns
+    public Equipment generateSetDrop() {
+        Rarity setRarity = Rarity.SET;
+        ItemType[] setEligible = {ItemType.WEAPON, ItemType.CHESTPLATE, ItemType.LEGGINGS, ItemType.HELMET};
+        ItemType type = setEligible[random.nextInt(setEligible.length)];
+        
+        Equipment item = Equipment.generateRandom(type, setRarity, 10);
+        android.util.Log.d(TAG, "SET DROP: " + item.getName());
+        return item;
     }
 
-    public int getPoolSize(Equipment.Rarity rarity) {
-        lock.readLock().lock();
-        try {
-            List&lt;Equipment&gt; pool = poolsByRarity.get(rarity);
-            return pool != null ? pool.size() : 0;
-        } finally {
-            lock.readLock().unlock();
-        }
+    public Equipment generateMythicDrop() {
+        Rarity mythicRarity = Rarity.MYTHIC;
+        ItemType type = ItemType.values()[random.nextInt(ItemType.values().length)];
+        
+        Equipment item = Equipment.generateRandom(type, mythicRarity, 10);
+        android.util.Log.d(TAG, "MYTHIC DROP: " + item.getName());
+        return item;
     }
 
-    /**
-     * Builder for LootTable.
-     * FIXED: Corrected EPIC/LEGENDARY weight assignment bug.
-     */
+    public Equipment generateUnobtainiumDrop() {
+        Rarity unobtainiumRarity = Rarity.UNOBTAINIUM;
+        ItemType type = ItemType.values()[random.nextInt(ItemType.values().length)];
+        
+        Equipment item = Equipment.generateRandom(type, unobtainiumRarity, 20);
+        android.util.Log.d(TAG, "UNOBTAINIUM DROP: " + item.getName());
+        return item;
+    }
+
+    public Equipment generatePrismShard(int shardNumber) {
+        Equipment shard = Equipment.generateArtifact(shardNumber);
+        android.util.Log.d(TAG, "PRISM SHARD #" + shardNumber + " GENERATED");
+        return shard;
+    }
+
+    // Static singleton instance helper
     public static class Builder {
-        private final Map&lt;Equipment.Rarity, List&lt;Equipment&gt;&gt; poolsByRarity = new EnumMap&lt;&gt;(Equipment.Rarity.class);
-        private final Map&lt;Equipment.Rarity, Double&gt; rarityWeights = new EnumMap&lt;&gt;(Equipment.Rarity.class);
-
-        public Builder() {
-            // Initialize default weights - FIX: EPIC was incorrectly assigned to LEGENDARY key
-            rarityWeights.put(Equipment.Rarity.COMMON, 1.0);
-            rarityWeights.put(Equipment.Rarity.UNCOMMON, 0.4);
-            rarityWeights.put(Equipment.Rarity.RARE, 0.15);
-            rarityWeights.put(Equipment.Rarity.EPIC, 0.04);       // FIXED: Was LEGENDARY before
-            rarityWeights.put(Equipment.Rarity.LEGENDARY, 0.01);  // FIXED: Correct key
-
-            // Initialize empty pools
-            for (Equipment.Rarity rarity : Equipment.Rarity.values()) {
-                poolsByRarity.put(rarity, new ArrayList&lt;&gt;());
-            }
-        }
-
-        public Builder addItem(Equipment item) {
-            if (item != null) {
-                poolsByRarity.computeIfAbsent(item.getRarity(), k -&gt; new ArrayList&lt;&gt;())
-                        .add(item);
-            }
-            return this;
-        }
-
-        public Builder addItems(List&lt;Equipment&gt; items) {
-            if (items != null) {
-                for (Equipment item : items) {
-                    addItem(item);
-                }
-            }
-            return this;
-        }
-
-        public Builder setRarityWeight(Equipment.Rarity rarity, double weight) {
-            if (rarity != null) {
-                rarityWeights.put(rarity, Math.max(0, weight));
-            }
-            return this;
-        }
-
         public LootTable build() {
-            return new LootTable(this);
-        }
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    @Override
-    public String toString() {
-        lock.readLock().lock();
-        try {
-            int totalItems = poolsByRarity.values().stream()
-                    .mapToInt(List::size)
-                    .sum();
-            return String.format("LootTable{totalItems=%d, rarities=%d}", 
-                    totalItems, poolsByRarity.size());
-        } finally {
-            lock.readLock().unlock();
+            return new LootTable();
         }
     }
 }</code></pre>
 </div>
 
 <div class="file" id="mainactivity">
-    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">377 lines | 15123 bytes</span></div>
+    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">398 lines | 15644 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -3659,6 +3560,27 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
     }
 
+    @Override
+
+    public void onInventoryRequested() {
+
+        Player player = game.getPlayer();
+
+        if (player != null) {
+
+            InventorySystem inv = player.getInventory();
+
+            String msg = String.format("👜 INVENTORY\\nWeapons: %d/%d\\nArmor: %d/%d\\nRings: %d/%d\\nPotions: %d",
+
+                    inv.getWeapons().size(), 10, inv.getArmor().size(), 10, inv.getRings().size(), 5, inv.getHealthPotions());
+
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+
+        }
+
+    }
+
+
     private void saveAndQuit() {
         if (game != null &amp;&amp; saveGameManager != null) {
             Player player = game.getPlayer();
@@ -3694,8 +3616,9 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 </div>
 
 <div class="file" id="player">
-    <div class="file-header"><h2>Player.java</h2><span class="file-meta">159 lines | 4500 bytes</span></div>
+    <div class="file-header"><h2>Player.java</h2><span class="file-meta">122 lines | 4161 bytes</span></div>
     <pre><code>package com.knightlight.game;
+
 import java.io.Serializable;
 
 public class Player extends Character implements Serializable {
@@ -3704,7 +3627,7 @@ public class Player extends Character implements Serializable {
     private int experience;
     private int goldCollected;
     private String name;
-    private InventorySystem inventory; // ✓ ADDED: Inventory system
+    private InventorySystem inventory;
 
     public Player(int x, int y) {
         super(x, y, 100, 15);
@@ -3712,7 +3635,7 @@ public class Player extends Character implements Serializable {
         this.level = 1;
         this.experience = 0;
         this.goldCollected = 0;
-        this.inventory = new InventorySystem(); // Initialize inventory
+        this.inventory = new InventorySystem();
     }
 
     public Player() {
@@ -3738,69 +3661,40 @@ public class Player extends Character implements Serializable {
         this.y += dy;
     }
 
-    public void addGold(int amount) {
-        this.goldCollected += amount;
-    }
-
-    public int getGoldCollected() {
-        return goldCollected;
-    }
-
-    public void setGoldCollected(int gold) {
-        this.goldCollected = gold;
-    }
-
-    // ✓ ADDED: Get inventory accessor
-    public InventorySystem getInventory() {
-        return inventory;
-    }
+    public void addGold(int amount) { this.goldCollected += amount; }
+    public int getGoldCollected() { return goldCollected; }
+    public void setGoldCollected(int gold) { this.goldCollected = gold; }
+    public InventorySystem getInventory() { return inventory; }
 
     public int addExperience(int amount) {
         if (amount &lt; 0) return 0;
         int oldLevel = this.level;
         int oldHP = this.maxHealth;
         int oldATK = this.attack;
-
         ExperienceSystem expSys = new ExperienceSystem();
         expSys.setCurrentLevel(this.level);
         expSys.setCurrentExperience(this.experience);
         int levelsGained = expSys.addExperience(amount);
-
         this.level = expSys.getCurrentLevel();
         this.experience = (int) expSys.getCurrentExperience();
-
         if (levelsGained &gt; 0) {
             applyLevelUpStats(levelsGained);
-
             android.util.Log.d("PLAYER", String.format(
                 "⬆️ LEVEL UP! Gained %d level(s). HP +%d → %d/%d (FULL RESTORE), ATK +%d → %d",
-                levelsGained,
-                this.maxHealth - oldHP,
-                this.currentHealth,
-                this.maxHealth,
-                this.attack - oldATK,
-                this.attack
-            ));
+                levelsGained, this.maxHealth - oldHP, this.currentHealth, this.maxHealth, 
+                this.attack - oldATK, this.attack));
         }
         return levelsGained;
     }
 
-    public int getExperience() {
-        return experience;
-    }
-
+    public int getExperience() { return experience; }
     public void setExperience(int exp) {
         this.experience = exp;
         checkLevelUpInternal();
     }
 
-    public int getLevel() {
-        return level;
-    }
-
-    public void setLevel(int level) {
-        this.level = level;
-    }
+    public int getLevel() { return level; }
+    public void setLevel(int level) { this.level = level; }
 
     private void checkLevelUpInternal() {
         long xpThreshold = calculateXpThreshold(level);
@@ -3820,16 +3714,12 @@ public class Player extends Character implements Serializable {
     private void applyLevelUpStats(int levels) {
         int maxHealthIncrease = 5 * levels;
         int attackIncrease = 2 * levels;
-
         this.maxHealth += maxHealthIncrease;
-        this.currentHealth = this.maxHealth; // Full health restoration
+        this.currentHealth = this.maxHealth;
         this.attack += attackIncrease;
-
         android.util.Log.d("PLAYER", String.format(
             "Stats applied: HP +%d → %d/%d (FULL HEAL), ATK +%d → now %d",
-            maxHealthIncrease, this.currentHealth, this.maxHealth,
-            attackIncrease, this.attack
-        ));
+            maxHealthIncrease, this.currentHealth, this.maxHealth, attackIncrease, this.attack));
     }
 
     public boolean usePotion() {
@@ -3846,18 +3736,61 @@ public class Player extends Character implements Serializable {
         return false;
     }
 
-    public String getName() {
-        return name;
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+}</code></pre>
+</div>
+
+<div class="file" id="rarity">
+    <div class="file-header"><h2>Rarity.java</h2><span class="file-meta">44 lines | 1569 bytes</span></div>
+    <pre><code>package com.knightlight.game;
+
+public enum Rarity {
+    COMMON(1, 0x808080, 1.0f),          // Gray
+    UNCOMMON(2, 0x00FF00, 1.2f),        // Green
+    RARE(3, 0x0000FF, 1.4f),            // Blue
+    EPIC(4, 0xA020F0, 1.6f),            // Purple
+    LEGENDARY(5, 0xFFA500, 1.8f),       // Orange
+    SET(6, 0xFF1493, 2.0f),             // Deep Pink
+    MYTHIC(7, 0xFFD700, 2.5f),          // Gold
+    UNOBTAINIUM(8, 0xFFFFFF, 3.0f);     // White
+
+    private final int tier;
+    private final int color;
+    private final float statMultiplier;
+
+    Rarity(int tier, int color, float multiplier) {
+        this.tier = tier;
+        this.color = color;
+        this.statMultiplier = multiplier;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public int getTier() { return tier; }
+    public int getColor() { return color; }
+    public float getStatMultiplier() { return statMultiplier; }
+
+    public static Rarity fromDropChance(double roll, double floorNumber) {
+        // Weighted drop based on rarity tiers
+        double cumulative = 0;
+        double[] weights = {0.35, 0.25, 0.18, 0.12, 0.07, 0.02, 0.008, 0.002};
+        // Adjust weights by floor number
+        for (int i = 0; i &lt; weights.length; i++) {
+            weights[i] *= (1.0 + (floorNumber * 0.05));
+        }
+        
+        for (int i = 0; i &lt; weights.length; i++) {
+            cumulative += weights[i];
+            if (roll &lt; cumulative) return Rarity.values()[i];
+        }
+        return COMMON;
     }
+
+    public static String[] ALL_NAMES = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Set", "Mythic", "Unobtainium"};
 }</code></pre>
 </div>
 
 <div class="file" id="savegamemanager">
-    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">238 lines | 10977 bytes</span></div>
+    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">238 lines | 10945 bytes</span></div>
     <pre><code>package com.knightlight.game;
 import android.util.Log;
 import java.io.*;
@@ -4054,8 +3987,8 @@ public class SaveGameManager {
                             case "equip":
                                 String[] parts = val.split("\\|");
                                 if (parts.length &gt;= 7) {
-                                    Equipment.Rarity rarity = Equipment.Rarity.valueOf(parts[2]);
-                                    Equipment.Type type = Equipment.Type.valueOf(parts[1]);
+                                    Rarity rarity = Rarity.valueOf(parts[2]);
+                                    ItemType type = ItemType.valueOf(parts[1]);
                                     Equipment.SetID setID = parts[6].equals("NONE") ? null : Equipment.SetID.valueOf(parts[6]);
                                     Equipment eq = new Equipment.Builder(parts[0], type)
                                         .rarity(rarity)
