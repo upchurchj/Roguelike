@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnightLight - All Source</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>KnightLight - All Source</title>
 <style>
 body { font-family: monospace; background: #1a1a2e; color: #eaeaea; margin: 0; }
 header { background: #6d4aff; padding: 20px; position: sticky; top: 0; z-index: 100; }
@@ -24,14 +23,13 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">27 files | 4686 lines | 2026-08-01 12:40</div>
+<div class="stats">30 files | 5246 lines | 2026-08-01 15:02</div>
 </header>
-<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
+<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
-
 <div class="file" id="battle">
-    <div class="file-header"><h2>Battle.java</h2><span class="file-meta">195 lines | 6302 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Battle.java</h2><span class="file-meta">195 lines | 6302 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.io.Serializable;
@@ -227,10 +225,9 @@ public class Battle implements Serializable {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="battleactivity">
-    <div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">151 lines | 5561 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">151 lines | 5561 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import android.widget.Toast;
@@ -382,10 +379,9 @@ public class BattleActivity extends AppCompatActivity {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="battleview">
-    <div class="file-header"><h2>BattleView.java</h2><span class="file-meta">326 lines | 14332 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>BattleView.java</h2><span class="file-meta">326 lines | 14332 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import android.util.AttributeSet;
@@ -712,10 +708,9 @@ public class BattleView extends View {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="character">
-    <div class="file-header"><h2>Character.java</h2><span class="file-meta">51 lines | 1823 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Character.java</h2><span class="file-meta">51 lines | 1823 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
@@ -767,10 +762,9 @@ public class Character implements Serializable {
     public boolean isAlive() { return currentHealth &gt; 0; }
 }</code></pre>
 </div>
-
 <div class="file" id="combatresult">
-    <div class="file-header"><h2>CombatResult.java</h2><span class="file-meta">67 lines | 1762 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>CombatResult.java</h2><span class="file-meta">67 lines | 1762 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 /**
  * Represents the result of a combat encounter.
@@ -838,10 +832,9 @@ public class CombatResult {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="combatsystem">
-    <div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">153 lines | 5765 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">153 lines | 5765 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.util.ArrayList;
@@ -995,10 +988,9 @@ public class CombatSystem {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="dungeon">
-    <div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">236 lines | 7187 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">236 lines | 7187 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.util.ArrayList;
@@ -1235,10 +1227,9 @@ public class Dungeon {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="dungeonlevel">
-    <div class="file-header"><h2>DungeonLevel.java</h2><span class="file-meta">180 lines | 5714 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>DungeonLevel.java</h2><span class="file-meta">180 lines | 5714 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 // Removed - Rarity is in same package
 
@@ -1418,10 +1409,9 @@ public class DungeonLevel {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="dungeonmanager">
-    <div class="file-header"><h2>DungeonManager.java</h2><span class="file-meta">248 lines | 6583 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>DungeonManager.java</h2><span class="file-meta">248 lines | 6583 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -1669,10 +1659,9 @@ public class DungeonManager {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="enemy">
-    <div class="file-header"><h2>Enemy.java</h2><span class="file-meta">81 lines | 3371 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Enemy.java</h2><span class="file-meta">81 lines | 3371 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
@@ -1754,10 +1743,9 @@ public class Enemy extends Character implements Serializable {
     public void setDungeon(Dungeon dungeon) { this.dungeon = dungeon; }
 }</code></pre>
 </div>
-
 <div class="file" id="enemytype">
-    <div class="file-header"><h2>EnemyType.java</h2><span class="file-meta">109 lines | 3647 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>EnemyType.java</h2><span class="file-meta">109 lines | 3647 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -1867,10 +1855,9 @@ public enum EnemyType {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="equipment">
-    <div class="file-header"><h2>Equipment.java</h2><span class="file-meta">252 lines | 9938 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Equipment.java</h2><span class="file-meta">252 lines | 9938 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
@@ -2123,10 +2110,392 @@ public class Equipment implements Serializable {
     }
 }</code></pre>
 </div>
+<div class="file" id="equipmentactivity">
+<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">347 lines | 14480 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
+import java.util.HashMap;
+import java.util.Map;
+
+public class EquipmentActivity extends Activity {
+    private static final String TAG = "EquipmentActivity";
+    private static final int INVENTORY_REQUEST_CODE = 100;
+
+    private Player player;
+    private InventorySystem inventorySystem;
+    private EquipmentView equipmentView;
+
+    private View helmetSlot, chestplateSlot, leggingsSlot, bootsSlot, glovesSlot;
+    private View weaponSlot, shieldSlot, amuletSlot, ringSlot, cloakSlot, artifactSlot;
+
+    private TextView extraSlot1, extraSlot2, extraSlot3, extraSlot4;
+
+    private TextView healthStat, attackStat, defenseStat, speedStat, critStat, dodgeStat;
+
+    private TextView setBonusText;
+
+    // FIX: HashMap to replace switch statements (R.id constants are not compile-time constants)
+    private static Map&lt;Integer, ItemType&gt; SLOT_ID_TO_ITEM_TYPE_MAP;
+    private static Map&lt;Integer, String&gt; STAT_ID_TO_TITLE_MAP;
+
+    static {
+        // Initialize slot ID mapping (replaces switch-case)
+        SLOT_ID_TO_ITEM_TYPE_MAP = new HashMap&lt;&gt;();
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_helmet, ItemType.HELMET);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_chestplate, ItemType.CHESTPLATE);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_leggings, ItemType.LEGGINGS);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_boots, ItemType.BOOTS);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_gloves, ItemType.GLOVES);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_weapon, ItemType.WEAPON);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_shield, ItemType.SHIELD);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_amulet, ItemType.AMULET);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_ring, ItemType.RING);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_cloak, ItemType.CLOAK);
+        SLOT_ID_TO_ITEM_TYPE_MAP.put(R.id.slot_artifact, ItemType.fromSlotId(ItemType.SLOT_ARTIFACT));
+
+        // Initialize stat title mapping
+        STAT_ID_TO_TITLE_MAP = new HashMap&lt;&gt;();
+        STAT_ID_TO_TITLE_MAP.put(R.id.stat_health, "Health Points");
+        STAT_ID_TO_TITLE_MAP.put(R.id.stat_attack, "Attack Power");
+        STAT_ID_TO_TITLE_MAP.put(R.id.stat_defense, "Defense");
+        STAT_ID_TO_TITLE_MAP.put(R.id.stat_crit, "Critical Chance");
+        STAT_ID_TO_TITLE_MAP.put(R.id.stat_dodge, "Dodge Chance");
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_equipment);
+
+        // FIX: Changed from R.id.equipment_view to R.id.equipment_layout (matches XML)
+        player = (Player) getIntent().getSerializableExtra("player");
+        if (player == null) {
+            Log.e(TAG, "Player null - falling back to MainActivity instance");
+            player = MainActivity.getInstance() != null ?
+                MainActivity.getInstance().getGame().getPlayer() : null;
+        }
+
+        if (player == null) {
+            Toast.makeText(this, "Error: No player data", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        inventorySystem = player.getInventory();
+        equipmentView = findViewById(R.id.equipment_layout);  // FIXED: was R.id.equipment_view
+
+        initViews();
+        bindClickListeners();
+        updateEquippedItems();
+        updateStats();
+        updateSetBonusDisplay();
+
+        ImageButton btnBack = findViewById(R.id.btn_back);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -&gt; finish());
+        }
+    }
+
+    private void initViews() {
+        helmetSlot = findViewById(R.id.slot_helmet);
+        chestplateSlot = findViewById(R.id.slot_chestplate);
+        leggingsSlot = findViewById(R.id.slot_leggings);
+        bootsSlot = findViewById(R.id.slot_boots);
+        glovesSlot = findViewById(R.id.slot_gloves);
+        weaponSlot = findViewById(R.id.slot_weapon);
+        shieldSlot = findViewById(R.id.slot_shield);
+        amuletSlot = findViewById(R.id.slot_amulet);
+        ringSlot = findViewById(R.id.slot_ring);
+        cloakSlot = findViewById(R.id.slot_cloak);
+        artifactSlot = findViewById(R.id.slot_artifact);
+
+        extraSlot1 = findViewById(R.id.extra_slot_1);
+        extraSlot2 = findViewById(R.id.extra_slot_2);
+        extraSlot3 = findViewById(R.id.extra_slot_3);
+        extraSlot4 = findViewById(R.id.extra_slot_4);
+
+        healthStat = findViewById(R.id.stat_health);
+        attackStat = findViewById(R.id.stat_attack);
+        defenseStat = findViewById(R.id.stat_defense);
+        speedStat = findViewById(R.id.stat_speed);
+        critStat = findViewById(R.id.stat_crit);
+        dodgeStat = findViewById(R.id.stat_dodge);
+        setBonusText = findViewById(R.id.set_bonus_text);
+    }
+
+    private void bindClickListeners() {
+        View.OnClickListener slotClickListener = v -&gt; openInventoryForSlot(v.getId());
+
+        helmetSlot.setOnClickListener(slotClickListener);
+        chestplateSlot.setOnClickListener(slotClickListener);
+        leggingsSlot.setOnClickListener(slotClickListener);
+        bootsSlot.setOnClickListener(slotClickListener);
+        glovesSlot.setOnClickListener(slotClickListener);
+        weaponSlot.setOnClickListener(slotClickListener);
+        shieldSlot.setOnClickListener(slotClickListener);
+        amuletSlot.setOnClickListener(slotClickListener);
+        ringSlot.setOnClickListener(slotClickListener);
+        cloakSlot.setOnClickListener(slotClickListener);
+        artifactSlot.setOnClickListener(slotClickListener);
+
+        View.OnClickListener statClickListener = v -&gt; showStatDetails(v.getId());
+
+        healthStat.setOnClickListener(statClickListener);
+        attackStat.setOnClickListener(statClickListener);
+        defenseStat.setOnClickListener(statClickListener);
+        speedStat.setOnClickListener(statClickListener);
+        critStat.setOnClickListener(statClickListener);
+        dodgeStat.setOnClickListener(statClickListener);
+    }
+
+    private void openInventoryForSlot(int slotId) {
+        ItemType itemType = getItemTypeFromSlotId(slotId);
+        if (itemType == null) {
+            Log.w(TAG, "Unknown slot ID: " + slotId);
+            return;
+        }
+
+        Intent intent = new Intent(this, InventoryActivity.class);
+        intent.putExtra("filter_type", itemType.name());
+        intent.putExtra("player_serialized", player);
+        startActivityForResult(intent, INVENTORY_REQUEST_CODE);
+    }
+
+    private ItemType getItemTypeFromSlotId(int slotId) {
+        // FIX: Use HashMap instead of switch (R.id constants not compile-time)
+        return SLOT_ID_TO_ITEM_TYPE_MAP.get(slotId);
+    }
+
+    private void showStatDetails(int statId) {
+        StringBuilder details = new StringBuilder();
+
+        // FIX: Replace switch with if-else for stat calculations
+        if (statId == R.id.stat_health) {
+            details.append("Base HP: ").append(player.getMaxHealth()).append("\n");
+            details.append("Gear Bonus: +").append(calculateTotalHealthBonus()).append("\n");
+            details.append("Total: ").append(calculateTotalHealth());
+        } else if (statId == R.id.stat_attack) {
+            details.append("Base ATK: ").append(player.getAttack()).append("\n");
+            details.append("Gear Bonus: +").append(calculateTotalAttackBonus()).append("\n");
+            details.append("Total: ").append(calculateTotalAttack());
+        } else if (statId == R.id.stat_defense) {
+            details.append("Base DEF: ").append(player.getArmor()).append("\n");
+            details.append("Gear Bonus: +").append(calculateTotalDefenseBonus()).append("\n");
+            details.append("Total: ").append(calculateTotalDefense());
+        } else if (statId == R.id.stat_crit) {
+            details.append("Base CRIT: 15%\n");
+            details.append("Gear Bonus: +").append(calculateTotalCritBonus()).append("%\n");
+            details.append("Total: ").append((int)(calculateTotalCrit() * 100)).append("%");
+        } else if (statId == R.id.stat_dodge) {
+            details.append("Base DODGE: ").append(player.getDodgeChance()).append("%\n");
+            details.append("Gear Bonus: +").append(calculateTotalDodgeBonus()).append("%\n");
+            details.append("Total: ").append((int)(calculateTotalDodge() * 100)).append("%");
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle(getStatTitle(statId))
+            .setMessage(details.toString())
+            .setPositiveButton("OK", null)
+            .show();
+    }
+
+    private String getStatTitle(int statId) {
+        // FIX: Use HashMap instead of switch
+        String title = STAT_ID_TO_TITLE_MAP.get(statId);
+        return title != null ? title : "Stats";
+    }
+
+    private void updateEquippedItems() {
+        updateSlotVisual(helmetSlot, inventorySystem.getEquipped(ItemType.HELMET));
+        updateSlotVisual(chestplateSlot, inventorySystem.getEquipped(ItemType.CHESTPLATE));
+        updateSlotVisual(leggingsSlot, inventorySystem.getEquipped(ItemType.LEGGINGS));
+        updateSlotVisual(bootsSlot, inventorySystem.getEquipped(ItemType.BOOTS));
+        updateSlotVisual(glovesSlot, inventorySystem.getEquipped(ItemType.GLOVES));
+        updateSlotVisual(weaponSlot, inventorySystem.getEquipped(ItemType.WEAPON));
+        updateSlotVisual(shieldSlot, inventorySystem.getEquipped(ItemType.SHIELD));
+        updateSlotVisual(amuletSlot, inventorySystem.getEquipped(ItemType.AMULET));
+        updateSlotVisual(ringSlot, inventorySystem.getEquipped(ItemType.RING));
+        updateSlotVisual(cloakSlot, inventorySystem.getEquipped(ItemType.CLOAK));
+        updateSlotVisual(artifactSlot, inventorySystem.getEquipped(ItemType.fromSlotId(ItemType.SLOT_ARTIFACT)));
+    }
+
+    private void updateSlotVisual(View slotView, Equipment equipment) {
+        if (equipment == null) {
+            slotView.setBackgroundColor(0xFF333333);
+            slotView.setAlpha(0.5f);
+            return;
+        }
+        slotView.setAlpha(1.0f);
+        slotView.setTag(equipment.getName());
+        int rarityColor = getRarityColor(equipment.getRarity());
+        slotView.setBackgroundTintList(ColorStateList.valueOf(rarityColor));
+    }
+
+    private int getRarityColor(Rarity rarity) {
+        // This switch is OK because Rarity enum values ARE compile-time constants
+        switch (rarity) {
+            case MYTHIC: return 0xFFFFD700;
+            case UNOBTAINIUM: return 0xFFFFFFFF;
+            case SET: return 0xFFFF1493;
+            case LEGENDARY: return 0xFFFFA500;
+            case EPIC: return 0xFFA020F0;
+            case RARE: return 0xFF0000FF;
+            case UNCOMMON: return 0xFF00FF00;
+            case COMMON:
+            default: return 0xFF808080;
+        }
+    }
+
+    private void updateStats() {
+        healthStat.setText("❤️ " + calculateTotalHealth());
+        attackStat.setText("⚔️ " + calculateTotalAttack());
+        defenseStat.setText("🛡️ " + calculateTotalDefense());
+        speedStat.setText("⚡ " + player.getDodgeChance());
+        critStat.setText("⭐ " + (int)(calculateTotalCrit() * 100) + "%");
+        dodgeStat.setText("💨 " + (int)(calculateTotalDodge() * 100) + "%");
+    }
+
+    private void updateSetBonusDisplay() {
+        Equipment.SetBonus[] activeBonuses = inventorySystem.getActiveSetBonuses();
+        if (activeBonuses.length == 0) {
+            setBonusText.setVisibility(View.GONE);
+            return;
+        }
+        setBonusText.setVisibility(View.VISIBLE);
+        StringBuilder bonuses = new StringBuilder("🔥 Active Set Bonuses:\n");
+        for (Equipment.SetBonus bonus : activeBonuses) {
+            bonuses.append(bonus.getDescription()).append("\n");
+        }
+        setBonusText.setText(bonuses.toString());
+    }
+
+    // === STAT CALCULATIONS ===
+
+    private int calculateTotalHealth() {
+        return player.getMaxHealth() + calculateTotalHealthBonus();
+    }
+
+    private int calculateTotalHealthBonus() {
+        int bonus = 0;
+        for (Equipment eq : inventorySystem.getAllEquipment()) {
+            if (eq != null) bonus += eq.getHealthBonus();
+        }
+        return bonus;
+    }
+
+    private int calculateTotalAttack() {
+        return player.getAttack() + calculateTotalAttackBonus();
+    }
+
+    private int calculateTotalAttackBonus() {
+        int bonus = 0;
+        for (Equipment eq : inventorySystem.getAllEquipment()) {
+            if (eq != null) bonus += eq.getAttackBonus();
+        }
+        return bonus;
+    }
+
+    private int calculateTotalDefense() {
+        return player.getArmor() + calculateTotalDefenseBonus();
+    }
+
+    private int calculateTotalDefenseBonus() {
+        int bonus = 0;
+        for (Equipment eq : inventorySystem.getAllEquipment()) {
+            if (eq != null) bonus += eq.getDefenseBonus();
+        }
+        return bonus;
+    }
+
+    private float calculateTotalCrit() {
+        float base = 0.15f;
+        for (Equipment eq : inventorySystem.getAllEquipment()) {
+            if (eq != null) base += eq.getCritChance() / 100f;
+        }
+        return Math.min(1.0f, base);
+    }
+
+    private int calculateTotalCritBonus() {
+        int bonus = 0;
+        for (Equipment eq : inventorySystem.getAllEquipment()) {
+            if (eq != null) bonus += eq.getCritChance();
+        }
+        return bonus;
+    }
+
+    private float calculateTotalDodge() {
+        float base = player.getDodgeChance() / 100f;
+        for (Equipment eq : inventorySystem.getAllEquipment()) {
+            if (eq != null) base += eq.getDodgeChance() / 100f;
+        }
+        return Math.min(1.0f, base);
+    }
+
+    private int calculateTotalDodgeBonus() {
+        int bonus = 0;
+        for (Equipment eq : inventorySystem.getAllEquipment()) {
+            if (eq != null) bonus += eq.getDodgeChance();
+        }
+        return bonus;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == INVENTORY_REQUEST_CODE &amp;&amp; resultCode == RESULT_OK) {
+            updateEquippedItems();
+            updateStats();
+            updateSetBonusDisplay();
+        }
+    }
+}</code></pre>
+</div>
+<div class="file" id="equipmentview">
+<div class="file-header"><h2>EquipmentView.java</h2><span class="file-meta">30 lines | 723 bytes</span></div>
+<pre><code>package com.knightlight.game;
+
+import android.content.Context;
+import android.util.AttributeSet;
+import android.widget.FrameLayout;
+
+public class EquipmentView extends FrameLayout {
+    public EquipmentView(Context context) {
+        super(context);
+        init();
+    }
+
+    public EquipmentView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init();
+    }
+
+    public EquipmentView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init();
+    }
+
+    private void init() {
+        // Custom equipment display initialization
+    }
+
+    public void updateDisplay(Player player) {
+        // Update UI with player equipment
+    }
+}</code></pre>
+</div>
 <div class="file" id="experiencesystem">
-    <div class="file-header"><h2>ExperienceSystem.java</h2><span class="file-meta">116 lines | 3695 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>ExperienceSystem.java</h2><span class="file-meta">116 lines | 3695 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.io.Serializable;
@@ -2243,10 +2612,9 @@ public class ExperienceSystem implements Serializable {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="game">
-    <div class="file-header"><h2>Game.java</h2><span class="file-meta">250 lines | 8453 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Game.java</h2><span class="file-meta">250 lines | 8453 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.util.ArrayList;
@@ -2497,10 +2865,9 @@ public class Game {
     public boolean isPlaying() { return state == GameState.PLAYING; }
 }</code></pre>
 </div>
-
 <div class="file" id="gamebalance">
-    <div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">100 lines | 4050 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">100 lines | 4050 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 /**
  * Centralized game balance and configuration constants.
@@ -2601,10 +2968,9 @@ public class GameBalance {
     public static final boolean DEBUG_MODE = false;
 }</code></pre>
 </div>
-
 <div class="file" id="gameview">
-    <div class="file-header"><h2>GameView.java</h2><span class="file-meta">601 lines | 27605 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>GameView.java</h2><span class="file-meta">601 lines | 27605 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import android.content.Context;
@@ -3206,10 +3572,9 @@ public class GameView extends View {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="inputvalidator">
-    <div class="file-header"><h2>InputValidator.java</h2><span class="file-meta">248 lines | 7697 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>InputValidator.java</h2><span class="file-meta">248 lines | 7697 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -3458,10 +3823,9 @@ public class InputValidator {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="inventory">
-    <div class="file-header"><h2>Inventory.java</h2><span class="file-meta">25 lines | 550 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Inventory.java</h2><span class="file-meta">25 lines | 550 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -3487,10 +3851,188 @@ public class Inventory implements Serializable {
     }
 }</code></pre>
 </div>
+<div class="file" id="inventoryactivity">
+<div class="file-header"><h2>InventoryActivity.java</h2><span class="file-meta">176 lines | 5875 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.GridView;
+import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class InventoryActivity extends Activity {
+    private static final String TAG = "InventoryActivity";
+
+    private Player player;
+    private InventorySystem inventory;
+    private String filterType;
+    private InventoryListAdapter adapter;
+    private GridView inventoryGrid;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_inventory);
+
+        player = (Player) getIntent().getSerializableExtra("player_serialized");
+        if (player == null) {
+            finish();
+            return;
+        }
+
+        inventory = player.getInventory();
+        filterType = getIntent().getStringExtra("filter_type");
+
+        initViews();
+        setupFilter();
+        loadInventoryItems();
+    }
+
+    private void initViews() {
+        inventoryGrid = findViewById(R.id.inventory_grid);
+        adapter = new InventoryListAdapter();
+        inventoryGrid.setAdapter(adapter);
+
+        TextView btnClose = findViewById(R.id.btn_close_inv);
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -&gt; finish());
+        }
+    }
+
+    private void setupFilter() {
+        TextView title = findViewById(R.id.inventory_title);
+        if (filterType != null) {
+            title.setText(filterType + " ITEMS");
+        } else {
+            title.setText("ALL ITEMS");
+        }
+    }
+
+    private void loadInventoryItems() {
+        List&lt;Equipment&gt; filteredItems = new ArrayList&lt;&gt;();
+
+        if (filterType == null) {
+            filteredItems.addAll(inventory.getInventory());
+        } else {
+            ItemType type = ItemType.valueOf(filterType);
+            switch (type) {
+                case WEAPON:
+                    filteredItems.addAll(inventory.getWeapons());
+                    break;
+                case HELMET: case CHESTPLATE: case LEGGINGS:
+                case BOOTS: case GLOVES: case SHIELD: case CLOAK:
+                    filteredItems.addAll(inventory.getArmor());
+                    break;
+                case RING:
+                    filteredItems.addAll(inventory.getRings());
+                    break;
+                default:
+                    filteredItems.addAll(inventory.getInventory());
+            }
+        }
+
+        adapter.setItems(filteredItems);
+        adapter.notifyDataSetChanged();
+    }
+
+    private class InventoryListAdapter extends BaseAdapter {
+        private List&lt;Equipment&gt; items = new ArrayList&lt;&gt;();
+
+        public void setItems(List&lt;Equipment&gt; items) {
+            this.items = items;
+        }
+
+        @Override
+        public int getCount() { return items.size(); }
+
+        @Override
+        public Object getItem(int position) { return items.get(position); }
+
+        @Override
+        public long getItemId(int position) { return position; }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ViewHolder holder;
+            if (convertView == null) {
+                convertView = LayoutInflater.from(InventoryActivity.this)
+                        .inflate(R.layout.item_equipment_row, parent, false);
+                holder = new ViewHolder();
+                holder.nameText = convertView.findViewById(R.id.item_name);
+                holder.rarityText = convertView.findViewById(R.id.item_rarity);
+                holder.statsText = convertView.findViewById(R.id.item_stats);
+                convertView.setTag(holder);
+            } else {
+                holder = (ViewHolder) convertView.getTag();
+            }
+
+            Equipment item = items.get(position);
+            holder.nameText.setText(item.getName());
+            holder.rarityText.setText(item.getRarity().toString());
+            holder.rarityText.setTextColor(getRarityColor(item.getRarity()));
+            holder.statsText.setText(item.getDescription());
+
+            convertView.setOnClickListener(v -&gt; equipOrUnequipItem(position));
+            return convertView;
+        }
+
+        private int getRarityColor(Rarity rarity) {
+            switch (rarity) {
+                case MYTHIC: return 0xFFFFD700;
+                case UNOBTAINIUM: return 0xFFFFFFFF;
+                case SET: return 0xFFFF1493;
+                case LEGENDARY: return 0xFFFFA500;
+                case EPIC: return 0xFFA020F0;
+                case RARE: return 0xFF0000FF;
+                case UNCOMMON: return 0xFF00FF00;
+                case COMMON: default: return 0xFF808080;
+            }
+        }
+
+        private void equipOrUnequipItem(int index) {
+            Equipment item = items.get(index);
+            ItemType type = item.getType();
+
+            // Find the item in the full inventory to get correct index
+            List&lt;Equipment&gt; fullInv = inventory.getInventory();
+            int realIndex = -1;
+            for (int i = 0; i &lt; fullInv.size(); i++) {
+                if (fullInv.get(i) == item) {
+                    realIndex = i;
+                    break;
+                }
+            }
+
+            if (realIndex &gt;= 0) {
+                if (inventory.hasEquipped(type)) {
+                    inventory.unequip(type);
+                }
+                inventory.equip(type, realIndex);
+            }
+
+            Intent result = new Intent();
+            result.putExtra("player_updated", player);
+            setResult(RESULT_OK, result);
+            finish();
+        }
+
+        private class ViewHolder {
+            TextView nameText, rarityText, statsText;
+        }
+    }
+}</code></pre>
+</div>
 <div class="file" id="inventorysystem">
-    <div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">188 lines | 5998 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">188 lines | 5998 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -3679,10 +4221,9 @@ public class InventorySystem implements Serializable {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="itemtype">
-    <div class="file-header"><h2>ItemType.java</h2><span class="file-meta">44 lines | 1287 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>ItemType.java</h2><span class="file-meta">44 lines | 1287 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 public enum ItemType {
     HELMET("Helmet", 0),
@@ -3727,10 +4268,9 @@ public enum ItemType {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="loottable">
-    <div class="file-header"><h2>LootTable.java</h2><span class="file-meta">87 lines | 3526 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>LootTable.java</h2><span class="file-meta">87 lines | 3526 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 
@@ -3818,10 +4358,9 @@ public class LootTable {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="mainactivity">
-    <div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">383 lines | 15859 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">390 lines | 15826 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -3840,6 +4379,8 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements GameView.GameListener {
     private static final String TAG = "MainActivity";
     private static final int BATTLE_REQUEST_CODE = 1;
+
+    public static MainActivity instance;
 
     private int totalEnemiesDefeated = 0;
     private boolean bossSpawned = false;
@@ -3860,6 +4401,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        instance = this;
 
         gameView = findViewById(R.id.game_view);
         if (gameView == null) {
@@ -3887,6 +4429,14 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         gameView.setGameListener(this);
 
         Log.d(TAG, "MainActivity initialized - Boss trigger: " + GameBalance.BOSS_TRIGGER_KILLS + " kills OR " + GameBalance.BOSS_TRIGGER_GOLD + " gold");
+    }
+
+    public static MainActivity getInstance() {
+        return instance;
+    }
+
+    public Game getGame() {
+        return game;
     }
 
     private void initializeLootTable() {
@@ -3939,7 +4489,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 gamePlayer.setExperience(Math.max(0, saveData.player.getExperience()));
                 gamePlayer.setGoldCollected(Math.max(0, saveData.player.getGoldCollected()));
                 gamePlayer.setLevel(Math.max(1, saveData.player.getLevel()));
-                // NEW: Sync maxHealth and attack from saved player
                 gamePlayer.setMaxHealth(saveData.player.getMaxHealth());
                 gamePlayer.setAttack(saveData.player.getAttack());
                 Log.d(TAG, "Restored player stats: Lvl " + gamePlayer.getLevel() + ", HP " + gamePlayer.getCurrentHealth() + "/" + gamePlayer.getMaxHealth());
@@ -3968,7 +4517,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != BATTLE_REQUEST_CODE) {
-            super.onActivityResult(requestCode, resultCode, data);
             return;
         }
 
@@ -3982,7 +4530,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             boolean battleWon = data.getBooleanExtra("battleWon", false);
             Serializable playerExtra = data.getSerializableExtra("updatedPlayer");
             String defeatedEnemyId = data.getStringExtra("enemyId");
-
             if (!(playerExtra instanceof Player)) {
                 Log.w(TAG, "updatedPlayer is not a valid Player instance");
                 return;
@@ -4001,7 +4548,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 gamePlayer.setExperience(updatedPlayer.getExperience());
                 gamePlayer.setGoldCollected(updatedPlayer.getGoldCollected());
                 gamePlayer.setLevel(updatedPlayer.getLevel());
-                // FIX: Copy maxHealth and attack (otherwise level-up gains are lost!)
                 gamePlayer.setMaxHealth(updatedPlayer.getMaxHealth());
                 gamePlayer.setAttack(updatedPlayer.getAttack());
 
@@ -4147,7 +4693,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         if (player != null) {
             InventorySystem inv = player.getInventory();
             String msg = "INVENTORY\n═══════════\nWeapons: " + inv.getWeapons().size() + "/1\nArmor: " + inv.getArmor().size() + "/1\nRings: " + inv.getRings().size() + "/2\nPotions: " + inv.getHealthPotions();
-            
+
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle("🎒 Equipment &amp; Items");
             builder.setMessage(msg);
@@ -4205,10 +4751,9 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 }</code></pre>
 </div>
-
 <div class="file" id="player">
-    <div class="file-header"><h2>Player.java</h2><span class="file-meta">125 lines | 4358 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Player.java</h2><span class="file-meta">125 lines | 4358 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
@@ -4334,10 +4879,9 @@ public class Player extends Character implements Serializable {
     public void setName(String name) { this.name = name; }
 }</code></pre>
 </div>
-
 <div class="file" id="rarity">
-    <div class="file-header"><h2>Rarity.java</h2><span class="file-meta">44 lines | 1569 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>Rarity.java</h2><span class="file-meta">44 lines | 1569 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 public enum Rarity {
     COMMON(1, 0x808080, 1.0f),          // Gray
@@ -4382,10 +4926,9 @@ public enum Rarity {
     public static String[] ALL_NAMES = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Set", "Mythic", "Unobtainium"};
 }</code></pre>
 </div>
-
 <div class="file" id="savegamemanager">
-    <div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">290 lines | 12628 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">290 lines | 12628 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.io.*;
@@ -4676,10 +5219,9 @@ public class SaveGameManager {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="securerandomutil">
-    <div class="file-header"><h2>SecureRandomUtil.java</h2><span class="file-meta">26 lines | 680 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>SecureRandomUtil.java</h2><span class="file-meta">26 lines | 680 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 import java.security.SecureRandom;
 
@@ -4706,10 +5248,9 @@ public class SecureRandomUtil {
     }
 }</code></pre>
 </div>
-
 <div class="file" id="setbonusmanager">
-    <div class="file-header"><h2>SetBonusManager.java</h2><span class="file-meta">110 lines | 5202 bytes</span></div>
-    <pre><code>package com.knightlight.game;
+<div class="file-header"><h2>SetBonusManager.java</h2><span class="file-meta">110 lines | 5202 bytes</span></div>
+<pre><code>package com.knightlight.game;
 
 /**
  * Manages set bonus calculations for equipped gear.
@@ -4824,11 +5365,11 @@ public class SetBonusManager {
 <footer>Auto-generated by KnightLight Documentation Pipeline</footer>
 <script>
 document.querySelectorAll('nav a').forEach(function(a){
-    a.addEventListener('click',function(e){
-        e.preventDefault();
-        var t=document.querySelector(this.getAttribute('href'));
-        window.scrollTo({top:t.offsetTop-85,behavior:'smooth'});
-    });
+  a.addEventListener('click',function(e){
+    e.preventDefault();
+    var t=document.querySelector(this.getAttribute('href'));
+    window.scrollTo({top:t.offsetTop-85,behavior:'smooth'});
+  });
 });
 </script>
 </body>
