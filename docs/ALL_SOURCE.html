@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>KnightLight - All Source</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KnightLight - All Source</title>
 <style>
 body { font-family: monospace; background: #1a1a2e; color: #eaeaea; margin: 0; }
 header { background: #6d4aff; padding: 20px; position: sticky; top: 0; z-index: 100; }
@@ -11,6 +12,9 @@ header h1 { color: white; margin: 0; }
 nav { background: #2a2a4a; padding: 12px; position: sticky; top: 65px; z-index: 99; overflow-x: auto; white-space: nowrap; }
 nav a { color: #aaaaff; text-decoration: none; margin-right: 15px; padding: 4px 8px; border-radius: 4px; }
 nav a:hover { background: #4a4a8a; }
+.nav-label { color: #8a8acc; font-size: 0.75em; text-transform: uppercase; margin-right: 10px; }
+.nav-br { display: block; height: 6px; }
+.section-divider { background: #6d4aff; color: white; padding: 15px 20px; font-size: 1.1em; margin: 10px 20px; border-radius: 8px; }
 .file { border: 1px solid #4a4a8a; margin: 20px; background: #1e1e3e; border-radius: 8px; overflow: hidden; }
 .file-header { background: #2a2a5a; padding: 12px 18px; border-bottom: 2px solid #6d4aff; display: flex; justify-content: space-between; align-items: center; }
 .file-header h2 { color: #d0d0ff; font-size: 1.2em; margin: 0; }
@@ -23,9 +27,13 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">30 files | 5246 lines | 2026-08-01 15:02</div>
+<div class="stats">30 Java files | 18 XML/Config files | 6102 total lines | 2026-08-01 15:45</div>
 </header>
-<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
+<nav>
+<span class="nav-label">Java:</span><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> 
+<span class="nav-br"></span>
+<span class="nav-label">XML/Config:</span><a href="#xml1">AndroidManifest.xml</a> <a href="#xml2">proguard-rules.pro</a> <a href="#xml3">res/drawable/button_blue.xml</a> <a href="#xml4">res/drawable/button_flee.xml</a> <a href="#xml5">res/drawable/button_state.xml</a> <a href="#xml6">res/drawable/ic_launcher_background.xml</a> <a href="#xml7">res/drawable/ic_launcher_foreground.xml</a> <a href="#xml8">res/drawable/player_silhouette.xml</a> <a href="#xml9">res/layout/activity_battle.xml</a> <a href="#xml10">res/layout/activity_equipment.xml</a> <a href="#xml11">res/layout/activity_inventory.xml</a> <a href="#xml12">res/layout/activity_main.xml</a> <a href="#xml13">res/layout/item_equipment_row.xml</a> <a href="#xml14">res/mipmap-anydpi-v33/ic_launcher.xml</a> <a href="#xml15">res/values/attrs.xml</a> <a href="#xml16">res/values/colors.xml</a> <a href="#xml17">res/values/strings.xml</a> <a href="#xml18">res/values/styles.xml</a> 
+</nav>
 <div id="files">
 <div class="file" id="battle">
 <div class="file-header"><h2>Battle.java</h2><span class="file-meta">195 lines | 6302 bytes</span></div>
@@ -5361,15 +5369,926 @@ public class SetBonusManager {
     }
 }</code></pre>
 </div>
+<div class="section-divider">Android Configuration &amp; Resources</div>
+<div class="file" id="xml1">
+<div class="file-header"><h2>AndroidManifest.xml</h2><span class="file-meta">46 lines | 1688 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;manifest xmlns:android="http://schemas.android.com/apk/res/android"&gt;
+    &lt;application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"&gt;
+
+        &lt;!-- MainActivity - Entry point --&gt;
+        &lt;activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden"&gt;
+            &lt;intent-filter&gt;
+                &lt;action android:name="android.intent.action.MAIN" /&gt;
+                &lt;category android:name="android.intent.category.LAUNCHER" /&gt;
+            &lt;/intent-filter&gt;
+        &lt;/activity&gt;
+
+        &lt;!-- BattleActivity --&gt;
+        &lt;activity
+            android:name=".BattleActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:parentActivityName=".MainActivity" /&gt;
+
+        &lt;!-- EquipmentActivity --&gt;
+        &lt;activity
+            android:name=".EquipmentActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".MainActivity" /&gt;
+
+        &lt;!-- InventoryActivity --&gt;
+        &lt;activity
+            android:name=".InventoryActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".MainActivity" /&gt;
+
+    &lt;/application&gt;
+&lt;/manifest&gt;</code></pre>
 </div>
-<footer>Auto-generated by KnightLight Documentation Pipeline</footer>
+<div class="file" id="xml2">
+<div class="file-header"><h2>proguard-rules.pro</h2><span class="file-meta">32 lines | 1148 bytes</span></div>
+<pre><code># ============================================================
+# KnightLight ProGuard Rules
+# ============================================================
+
+# --- Keep serialized model classes ---
+-keep class com.knightlight.game.Player { *; }
+-keep class com.knightlight.game.Enemy { *; }
+-keep class com.knightlight.game.Character { *; }
+-keep class com.knightlight.game.Equipment { *; }
+-keep class com.knightlight.game.Equipment$* { *; }
+-keep class com.knightlight.game.InventorySystem { *; }
+-keep class com.knightlight.game.Dungeon { *; }
+-keep class com.knightlight.game.Dungeon$Room { *; }
+-keep class com.knightlight.game.Battle { *; }
+-keep class com.knightlight.game.Battle$* { *; }
+-keep class com.knightlight.game.CombatResult { *; }
+-keep class com.knightlight.game.CombatResult$* { *; }
+-keep class com.knightlight.game.SaveGameManager$SaveGameData { *; }
+
+# --- Keep enums ---
+-keepclassmembers enum com.knightlight.game.* {
+    **[] VALUES;
+    public *;
+}
+
+# --- Suppress warnings ---
+-dontwarn android.util.Log
+
+# --- Standard ---
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable</code></pre>
+</div>
+<div class="file" id="xml3">
+<div class="file-header"><h2>res/drawable/button_blue.xml</h2><span class="file-meta">11 lines | 385 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#00AAFF"&gt;
+    &lt;item&gt;
+        &lt;shape android:shape="rectangle"&gt;
+            &lt;solid android:color="#0066FF" /&gt;
+            &lt;corners android:radius="6dp" /&gt;
+            &lt;stroke android:width="2dp" android:color="#003399" /&gt;
+        &lt;/shape&gt;
+    &lt;/item&gt;
+&lt;/ripple&gt;</code></pre>
+</div>
+<div class="file" id="xml4">
+<div class="file-header"><h2>res/drawable/button_flee.xml</h2><span class="file-meta">11 lines | 385 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#FF6666"&gt;
+    &lt;item&gt;
+        &lt;shape android:shape="rectangle"&gt;
+            &lt;solid android:color="#CC0000" /&gt;
+            &lt;corners android:radius="6dp" /&gt;
+            &lt;stroke android:width="2dp" android:color="#8B0000" /&gt;
+        &lt;/shape&gt;
+    &lt;/item&gt;
+&lt;/ripple&gt;</code></pre>
+</div>
+<div class="file" id="xml5">
+<div class="file-header"><h2>res/drawable/button_state.xml</h2><span class="file-meta">24 lines | 782 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;selector xmlns:android="http://schemas.android.com/apk/res/android"&gt;
+    &lt;!-- Pressed state --&gt;
+    &lt;item android:state_pressed="true"&gt;
+        &lt;shape android:shape="rectangle"&gt;
+            &lt;solid android:color="#CCFFFFFF"/&gt;
+            &lt;corners android:radius="8dp"/&gt;
+        &lt;/shape&gt;
+    &lt;/item&gt;
+    &lt;!-- Enabled state --&gt;
+    &lt;item android:state_enabled="true"&gt;
+        &lt;shape android:shape="rectangle"&gt;
+            &lt;solid android:color="#FFFFFFFF"/&gt;
+            &lt;corners android:radius="8dp"/&gt;
+        &lt;/shape&gt;
+    &lt;/item&gt;
+    &lt;!-- Default/disabled --&gt;
+    &lt;item&gt;
+        &lt;shape android:shape="rectangle"&gt;
+            &lt;solid android:color="#66FFFFFF"/&gt;
+            &lt;corners android:radius="8dp"/&gt;
+        &lt;/shape&gt;
+    &lt;/item&gt;
+&lt;/selector&gt;</code></pre>
+</div>
+<div class="file" id="xml6">
+<div class="file-header"><h2>res/drawable/ic_launcher_background.xml</h2><span class="file-meta">5 lines | 183 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle"&gt;
+    &lt;solid android:color="#6d4aff" /&gt;
+&lt;/shape&gt;</code></pre>
+</div>
+<div class="file" id="xml7">
+<div class="file-header"><h2>res/drawable/ic_launcher_foreground.xml</h2><span class="file-meta">32 lines | 1043 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108"&gt;
+
+    &lt;path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,38 C44,38 36,46 36,58 C36,70 42,78 54,78 C66,78 72,70 72,58 C72,46 64,38 54,38 Z" /&gt;
+
+    &lt;path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,40 L36,30 L46,38 Z" /&gt;
+
+    &lt;path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,40 L72,30 L62,38 Z" /&gt;
+
+    &lt;path
+        android:fillColor="#333333"
+        android:pathData="M45,56 C45,53 47,51 49,51 C51,51 53,53 53,56 C53,59 51,61 49,61 C47,61 45,59 45,56 Z" /&gt;
+
+    &lt;path
+        android:fillColor="#333333"
+        android:pathData="M55,56 C55,53 57,51 59,51 C61,51 63,53 63,56 C63,59 61,61 59,61 C57,61 55,59 55,56 Z" /&gt;
+
+    &lt;path
+        android:fillColor="#FFD700"
+        android:pathData="M54,72 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" /&gt;
+
+&lt;/vector&gt;</code></pre>
+</div>
+<div class="file" id="xml8">
+<div class="file-header"><h2>res/drawable/player_silhouette.xml</h2><span class="file-meta">6 lines | 232 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval"&gt;
+    &lt;solid android:color="#6d4aff"/&gt;
+    &lt;size android:width="64dp" android:height="64dp"/&gt;
+&lt;/shape&gt;</code></pre>
+</div>
+<div class="file" id="xml9">
+<div class="file-header"><h2>res/layout/activity_battle.xml</h2><span class="file-meta">59 lines | 2116 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/battle_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000000"&gt;
+
+    &lt;!-- Battle View - Takes 80% (everything except buttons) --&gt;
+    &lt;com.knightlight.game.BattleView
+        android:id="@+id/battle_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="4" /&gt;
+
+    &lt;!-- Action Buttons - 20% height, 3 buttons at 33% width each --&gt;
+    &lt;LinearLayout
+        android:id="@+id/button_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="#1a1a1a"&gt;
+
+        &lt;Button
+            android:id="@+id/btnAttack"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="⚔️ ATTACK"
+            android:textSize="16sp"
+            android:padding="8dp"
+            android:background="@drawable/button_state"
+            android:layout_margin="4dp" /&gt;
+
+        &lt;Button
+            android:id="@+id/btnHeal"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="❤️ HEAL"
+            android:textSize="16sp"
+            android:padding="8dp"
+            android:background="@drawable/button_state"
+            android:layout_margin="4dp" /&gt;
+
+        &lt;Button
+            android:id="@+id/btnFlee"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="🏃 FLEE"
+            android:textSize="16sp"
+            android:padding="8dp"
+            android:background="@drawable/button_state"
+            android:layout_margin="4dp" /&gt;
+    &lt;/LinearLayout&gt;
+&lt;/LinearLayout&gt;</code></pre>
+</div>
+<div class="file" id="xml10">
+<div class="file-header"><h2>res/layout/activity_equipment.xml</h2><span class="file-meta">367 lines | 13291 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/equipment_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1a1a1a"&gt;
+
+    &lt;TextView
+        android:id="@+id/header_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="EQUIPMENT"
+        android:textSize="28sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:layout_marginTop="20dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/&gt;
+
+    &lt;ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@android:drawable/ic_menu_revert"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Back"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_margin="16dp"/&gt;
+
+    &lt;ImageView
+        android:id="@+id/player_silhouette"
+        android:layout_width="200dp"
+        android:layout_height="380dp"
+        android:src="@drawable/player_silhouette"
+        android:scaleType="centerInside"
+        android:layout_marginTop="60dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/&gt;
+
+    &lt;LinearLayout
+        android:id="@+id/stat_overlay_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#80000000"
+        android:padding="12dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="80dp"&gt;
+
+        &lt;TextView
+            android:id="@+id/stat_health"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="❤️ 100"
+            android:textColor="#00FF00"
+            android:textSize="14sp"
+            android:clickable="true"/&gt;
+
+        &lt;TextView
+            android:id="@+id/stat_attack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚔️ 15"
+            android:textColor="#FF4444"
+            android:textSize="14sp"
+            android:clickable="true"/&gt;
+
+        &lt;TextView
+            android:id="@+id/stat_defense"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛡️ 0"
+            android:textColor="#6666FF"
+            android:textSize="14sp"
+            android:clickable="true"/&gt;
+
+        &lt;TextView
+            android:id="@+id/stat_speed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚡ 0"
+            android:textColor="#FFFF00"
+            android:textSize="14sp"
+            android:clickable="true"/&gt;
+
+        &lt;TextView
+            android:id="@+id/stat_crit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⭐ 15%"
+            android:textColor="#FFA500"
+            android:textSize="14sp"
+            android:clickable="true"/&gt;
+
+        &lt;TextView
+            android:id="@+id/stat_dodge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="💨 0%"
+            android:textColor="#00FFFF"
+            android:textSize="14sp"
+            android:clickable="true"/&gt;
+    &lt;/LinearLayout&gt;
+
+    &lt;!-- Slot cluster LEFT side of silhouette --&gt;
+    &lt;FrameLayout
+        android:id="@+id/slot_helmet"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toTopOf="@id/player_silhouette"
+        app:layout_constraintStart_toStartOf="@id/player_silhouette"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="10dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="⛑"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;FrameLayout
+        android:id="@+id/slot_amulet"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toBottomOf="@id/slot_helmet"
+        app:layout_constraintStart_toStartOf="@id/slot_helmet"
+        android:layout_marginTop="4dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="💎"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;FrameLayout
+        android:id="@+id/slot_chestplate"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toBottomOf="@id/slot_amulet"
+        app:layout_constraintStart_toStartOf="@id/slot_amulet"
+        android:layout_marginTop="4dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="🛡"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;FrameLayout
+        android:id="@+id/slot_cloak"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toBottomOf="@id/slot_chestplate"
+        app:layout_constraintStart_toStartOf="@id/slot_chestplate"
+        android:layout_marginTop="4dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="🧥"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;FrameLayout
+        android:id="@+id/slot_leggings"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toBottomOf="@id/slot_cloak"
+        app:layout_constraintStart_toStartOf="@id/slot_cloak"
+        android:layout_marginTop="4dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="👖"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;FrameLayout
+        android:id="@+id/slot_boots"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toBottomOf="@id/slot_leggings"
+        app:layout_constraintStart_toStartOf="@id/slot_leggings"
+        android:layout_marginTop="4dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="🥾"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;!-- RIGHT side of silhouette --&gt;
+    &lt;FrameLayout
+        android:id="@+id/slot_weapon"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toTopOf="@id/slot_helmet"
+        app:layout_constraintEnd_toEndOf="@id/player_silhouette"
+        android:layout_marginEnd="8dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="⚔️"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;FrameLayout
+        android:id="@+id/slot_shield"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toBottomOf="@id/slot_weapon"
+        app:layout_constraintEnd_toEndOf="@id/slot_weapon"
+        android:layout_marginTop="4dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="🛡️"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;FrameLayout
+        android:id="@+id/slot_gloves"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toBottomOf="@id/slot_shield"
+        app:layout_constraintEnd_toEndOf="@id/slot_shield"
+        android:layout_marginTop="4dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="🧤"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;FrameLayout
+        android:id="@+id/slot_ring"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#333333"
+        android:clickable="true"
+        app:layout_constraintTop_toBottomOf="@id/slot_gloves"
+        app:layout_constraintEnd_toEndOf="@id/slot_gloves"
+        android:layout_marginTop="4dp"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="💍"
+            android:textSize="28sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;!-- Extra expansion slots (future use) --&gt;
+    &lt;TextView
+        android:id="@+id/extra_slot_1"
+        android:layout_width="60dp"
+        android:layout_height="30dp"
+        android:background="#222222"
+        android:text="+"
+        android:gravity="center"
+        android:textColor="#555555"
+        app:layout_constraintTop_toBottomOf="@id/slot_ring"
+        app:layout_constraintEnd_toEndOf="@id/slot_ring"
+        android:layout_marginTop="4dp"/&gt;
+
+    &lt;TextView
+        android:id="@+id/extra_slot_2"
+        android:layout_width="60dp"
+        android:layout_height="30dp"
+        android:background="#222222"
+        android:text="+"
+        android:gravity="center"
+        android:textColor="#555555"
+        app:layout_constraintTop_toBottomOf="@id/extra_slot_1"
+        app:layout_constraintEnd_toEndOf="@id/extra_slot_1"
+        android:layout_marginTop="4dp"/&gt;
+
+    &lt;TextView
+        android:id="@+id/extra_slot_3"
+        android:layout_width="60dp"
+        android:layout_height="30dp"
+        android:background="#222222"
+        android:text="+"
+        android:gravity="center"
+        android:textColor="#555555"
+        app:layout_constraintTop_toBottomOf="@id/slot_boots"
+        app:layout_constraintStart_toStartOf="@id/slot_boots"
+        android:layout_marginTop="4dp"/&gt;
+
+    &lt;TextView
+        android:id="@+id/extra_slot_4"
+        android:layout_width="60dp"
+        android:layout_height="30dp"
+        android:background="#222222"
+        android:text="+"
+        android:gravity="center"
+        android:textColor="#555555"
+        app:layout_constraintTop_toBottomOf="@id/extra_slot_3"
+        app:layout_constraintStart_toStartOf="@id/extra_slot_3"
+        android:layout_marginTop="4dp"/&gt;
+
+    &lt;!-- Artifact slot - special, bottom center --&gt;
+    &lt;FrameLayout
+        android:id="@+id/slot_artifact"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:background="#FFD700"
+        android:clickable="true"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/player_silhouette"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"&gt;
+        &lt;TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="✨"
+            android:textSize="36sp"/&gt;
+    &lt;/FrameLayout&gt;
+
+    &lt;TextView
+        android:id="@+id/set_bonus_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:textColor="#FF00FF"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:padding="8dp"
+        android:layout_marginTop="10dp"
+        app:layout_constraintTop_toBottomOf="@id/slot_artifact"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/&gt;
+
+&lt;/androidx.constraintlayout.widget.ConstraintLayout&gt;</code></pre>
+</div>
+<div class="file" id="xml11">
+<div class="file-header"><h2>res/layout/activity_inventory.xml</h2><span class="file-meta">49 lines | 1587 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1a1a1a"
+    android:orientation="vertical"&gt;
+
+    &lt;LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="#222222"&gt;
+
+        &lt;TextView
+            android:id="@+id/btn_close_inv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="◀ BACK"
+            android:textColor="#9C27B0"
+            android:textSize="16sp"
+            android:clickable="true"
+            android:padding="8dp"/&gt;
+
+        &lt;TextView
+            android:id="@+id/inventory_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="ITEMS"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold"/&gt;
+    &lt;/LinearLayout&gt;
+
+    &lt;GridView
+        android:id="@+id/inventory_grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:numColumns="1"
+        android:divider="#333333"
+        android:dividerHeight="1dp"
+        android:padding="8dp"/&gt;
+
+&lt;/LinearLayout&gt;</code></pre>
+</div>
+<div class="file" id="xml12">
+<div class="file-header"><h2>res/layout/activity_main.xml</h2><span class="file-meta">27 lines | 886 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000000"
+    android:padding="0dp"&gt;
+
+    &lt;TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Playing..."
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:background="#1a1a1a" /&gt;
+
+    &lt;com.knightlight.game.GameView
+        android:id="@+id/game_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:background="#000000" /&gt;
+
+&lt;/LinearLayout&gt;</code></pre>
+</div>
+<div class="file" id="xml13">
+<div class="file-header"><h2>res/layout/item_equipment_row.xml</h2><span class="file-meta">52 lines | 1676 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="#222222"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"&gt;
+
+    &lt;LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"&gt;
+
+        &lt;TextView
+            android:id="@+id/item_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"/&gt;
+
+        &lt;TextView
+            android:id="@+id/item_rarity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textStyle="bold"/&gt;
+
+        &lt;TextView
+            android:id="@+id/item_stats"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp"/&gt;
+    &lt;/LinearLayout&gt;
+
+    &lt;TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="EQUIP ▶"
+        android:textColor="#9C27B0"
+        android:textSize="14sp"
+        android:padding="8dp"/&gt;
+
+&lt;/LinearLayout&gt;</code></pre>
+</div>
+<div class="file" id="xml14">
+<div class="file-header"><h2>res/mipmap-anydpi-v33/ic_launcher.xml</h2><span class="file-meta">5 lines | 273 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"&gt;
+    &lt;background android:drawable="@drawable/ic_launcher_background" /&gt;
+    &lt;foreground android:drawable="@drawable/ic_launcher_foreground" /&gt;
+&lt;/adaptive-icon&gt;</code></pre>
+</div>
+<div class="file" id="xml15">
+<div class="file-header"><h2>res/values/attrs.xml</h2><span class="file-meta">14 lines | 416 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+
+    &lt;declare-styleable name="GameView"&gt;
+        &lt;attr name="showGrid" format="boolean" /&gt;
+        &lt;attr name="tileSize" format="dimension" /&gt;
+    &lt;/declare-styleable&gt;
+
+    &lt;declare-styleable name="BattleView"&gt;
+        &lt;attr name="showHealthBars" format="boolean" /&gt;
+        &lt;attr name="healthBarHeight" format="dimension" /&gt;
+    &lt;/declare-styleable&gt;
+
+&lt;/resources&gt;</code></pre>
+</div>
+<div class="file" id="xml16">
+<div class="file-header"><h2>res/values/colors.xml</h2><span class="file-meta">68 lines | 2526 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+
+    &lt;!-- Primary brand colors --&gt;
+    &lt;color name="colorPrimary"&gt;#6d4aff&lt;/color&gt;
+    &lt;color name="colorPrimaryDark"&gt;#4a2fcc&lt;/color&gt;
+    &lt;color name="colorAccent"&gt;#6d4aff&lt;/color&gt;
+    &lt;color name="colorPrimaryVariant"&gt;#4a2fcc&lt;/color&gt;
+    &lt;color name="colorSecondary"&gt;#03DAC6&lt;/color&gt;
+    &lt;color name="colorSecondaryVariant"&gt;#018786&lt;/color&gt;
+    &lt;color name="colorError"&gt;#CF6679&lt;/color&gt;
+    &lt;color name="colorSurface"&gt;#FFFFFF&lt;/color&gt;
+    &lt;color name="colorOnPrimary"&gt;#FFFFFF&lt;/color&gt;
+    &lt;color name="colorOnSecondary"&gt;#000000&lt;/color&gt;
+    &lt;color name="colorOnError"&gt;#000000&lt;/color&gt;
+    &lt;color name="colorOnSurface"&gt;#000000&lt;/color&gt;
+
+    &lt;!-- Material legacy compat --&gt;
+    &lt;color name="purple_500"&gt;#6200EE&lt;/color&gt;
+    &lt;color name="purple_700"&gt;#3700B3&lt;/color&gt;
+    &lt;color name="teal_200"&gt;#03DAC6&lt;/color&gt;
+    &lt;color name="teal_700"&gt;#018786&lt;/color&gt;
+    &lt;color name="red_500"&gt;#CF6679&lt;/color&gt;
+    &lt;color name="white"&gt;#FFFFFF&lt;/color&gt;
+    &lt;color name="black"&gt;#000000&lt;/color&gt;
+
+    &lt;!-- Background colors --&gt;
+    &lt;color name="bgDark"&gt;#1a1a1a&lt;/color&gt;
+    &lt;color name="bgDarker"&gt;#0d0d0d&lt;/color&gt;
+    &lt;color name="bgFloor"&gt;#333333&lt;/color&gt;
+    &lt;color name="bgPanel"&gt;#222222&lt;/color&gt;
+
+    &lt;!-- Tile colors --&gt;
+    &lt;color name="tileWall"&gt;#1a1a1a&lt;/color&gt;
+    &lt;color name="tileFloor"&gt;#333333&lt;/color&gt;
+    &lt;color name="tileGold"&gt;#FFD700&lt;/color&gt;
+
+    &lt;!-- Entity colors --&gt;
+    &lt;color name="playerColor"&gt;#00FF00&lt;/color&gt;
+    &lt;color name="enemyColor"&gt;#FF4444&lt;/color&gt;
+
+    &lt;!-- Health bar colors --&gt;
+    &lt;color name="healthGreen"&gt;#00FF00&lt;/color&gt;
+    &lt;color name="healthYellow"&gt;#FFFF00&lt;/color&gt;
+    &lt;color name="healthRed"&gt;#FF0000&lt;/color&gt;
+    &lt;color name="healthBarBg"&gt;#333333&lt;/color&gt;
+
+    &lt;!-- UI colors --&gt;
+    &lt;color name="textWhite"&gt;#FFFFFF&lt;/color&gt;
+    &lt;color name="textYellow"&gt;#FFFF00&lt;/color&gt;
+    &lt;color name="buttonBlue"&gt;#0066FF&lt;/color&gt;
+    &lt;color name="buttonBluePressed"&gt;#0044AA&lt;/color&gt;
+    &lt;color name="buttonBlueBorder"&gt;#003399&lt;/color&gt;
+    &lt;color name="buttonRed"&gt;#CC0000&lt;/color&gt;
+    &lt;color name="buttonRedPressed"&gt;#8B0000&lt;/color&gt;
+    &lt;color name="overlayDim"&gt;#CC000000&lt;/color&gt;
+
+    &lt;!-- Rarity colors --&gt;
+    &lt;color name="rarityCommon"&gt;#808080&lt;/color&gt;
+    &lt;color name="rarityUncommon"&gt;#00FF00&lt;/color&gt;
+    &lt;color name="rarityRare"&gt;#0000FF&lt;/color&gt;
+    &lt;color name="rarityEpic"&gt;#A020F0&lt;/color&gt;
+    &lt;color name="rarityLegendary"&gt;#FFA500&lt;/color&gt;
+    &lt;color name="raritySet"&gt;#FF1493&lt;/color&gt;
+    &lt;color name="rarityMythic"&gt;#FFD700&lt;/color&gt;
+    &lt;color name="rarityUnobtainium"&gt;#FFFFFF&lt;/color&gt;
+
+&lt;/resources&gt;</code></pre>
+</div>
+<div class="file" id="xml17">
+<div class="file-header"><h2>res/values/strings.xml</h2><span class="file-meta">32 lines | 1229 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+
+    &lt;string name="app_name"&gt;KnightLight&lt;/string&gt;
+
+    &lt;!-- Main Activity --&gt;
+    &lt;string name="welcome_message"&gt;Welcome to KnightLight!&lt;/string&gt;
+    &lt;string name="loading_game"&gt;Loading game...&lt;/string&gt;
+    &lt;string name="game_saved"&gt;Game saved successfully!&lt;/string&gt;
+    &lt;string name="save_failed"&gt;Failed to save game&lt;/string&gt;
+
+    &lt;!-- Battle --&gt;
+    &lt;string name="battle_attack"&gt;Attack&lt;/string&gt;
+    &lt;string name="battle_heal"&gt;Heal&lt;/string&gt;
+    &lt;string name="battle_flee"&gt;Flee&lt;/string&gt;
+
+    &lt;!-- Boss --&gt;
+    &lt;string name="boss_warning_kills"&gt;WARNING: A POWERFUL BOSS AWAKENS!&lt;/string&gt;
+    &lt;string name="boss_warning_gold"&gt;WARNING: YOUR WEALTH HAS ATTRACTED ATTENTION!&lt;/string&gt;
+    &lt;string name="boss_appeared"&gt;DRAGON BOSS HAS APPEARED!&lt;/string&gt;
+
+    &lt;!-- Game Over --&gt;
+    &lt;string name="game_won"&gt;YOU DEFEATED THE DRAGON! YOU WIN!&lt;/string&gt;
+    &lt;string name="game_lost"&gt;You have been defeated...&lt;/string&gt;
+
+    &lt;!-- Quit --&gt;
+    &lt;string name="quit_title"&gt;Quit Game&lt;/string&gt;
+    &lt;string name="quit_message"&gt;Are you sure you want to quit? Your progress will be saved.&lt;/string&gt;
+    &lt;string name="quit_yes"&gt;Quit&lt;/string&gt;
+    &lt;string name="quit_cancel"&gt;Cancel&lt;/string&gt;
+
+&lt;/resources&gt;</code></pre>
+</div>
+<div class="file" id="xml18">
+<div class="file-header"><h2>res/values/styles.xml</h2><span class="file-meta">16 lines | 643 bytes</span></div>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+
+    &lt;style name="AppTheme" parent="Theme.AppCompat.NoActionBar"&gt;
+        &lt;item name="colorPrimary"&gt;@color/colorPrimary&lt;/item&gt;
+        &lt;item name="colorPrimaryDark"&gt;@color/colorPrimaryDark&lt;/item&gt;
+        &lt;item name="colorAccent"&gt;@color/colorAccent&lt;/item&gt;
+        &lt;item name="android:windowBackground"&gt;@color/black&lt;/item&gt;
+        &lt;item name="android:statusBarColor"&gt;@color/bgDarker&lt;/item&gt;
+        &lt;item name="android:navigationBarColor"&gt;@color/bgDarker&lt;/item&gt;
+    &lt;/style&gt;
+
+    &lt;!-- Backward-compatible alias --&gt;
+    &lt;style name="Theme.RoguelikeGame" parent="@style/AppTheme" /&gt;
+
+&lt;/resources&gt;</code></pre>
+</div>
+</div>
+<footer>Auto-generated by KnightLight Documentation Pipeline v5.0</footer>
 <script>
 document.querySelectorAll('nav a').forEach(function(a){
-  a.addEventListener('click',function(e){
-    e.preventDefault();
-    var t=document.querySelector(this.getAttribute('href'));
-    window.scrollTo({top:t.offsetTop-85,behavior:'smooth'});
-  });
+    a.addEventListener('click',function(e){
+        e.preventDefault();
+        var t=document.querySelector(this.getAttribute('href'));
+        if(t) window.scrollTo({top:t.offsetTop-85,behavior:'smooth'});
+    });
 });
 </script>
 </body>
