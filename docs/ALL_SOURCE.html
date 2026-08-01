@@ -24,7 +24,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">27 files | 4597 lines | 2026-07-31 21:33</div>
+<div class="stats">27 files | 4686 lines | 2026-08-01 12:02</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -384,7 +384,7 @@ public class BattleActivity extends AppCompatActivity {
 </div>
 
 <div class="file" id="battleview">
-    <div class="file-header"><h2>BattleView.java</h2><span class="file-meta">237 lines | 9782 bytes</span></div>
+    <div class="file-header"><h2>BattleView.java</h2><span class="file-meta">326 lines | 14332 bytes</span></div>
     <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -398,12 +398,15 @@ import android.graphics.BitmapFactory;
 import android.graphics.RectF;
 import android.view.View;
 
+/**
+ * Vertical layout: 10% health bars, 55% sprites, 15% message, 20% buttons (handled by XML).
+ * Horizontal layout: 50% player (left), 50% enemy (right).
+ */
 public class BattleView extends View {
     private static final String TAG = "BattleView";
     private Battle battle;
     private Paint healthBarBackPaint, textPaint;
     private Paint playerHealthPaint, enemyHealthPaint;
-
     private Bitmap playerBitmap;
     private Bitmap enemyBitmap;
     private boolean imagesLoaded = false;
@@ -429,8 +432,8 @@ public class BattleView extends View {
             playerBitmap = BitmapFactory.decodeResource(getResources(), playerResId);
             enemyBitmap = BitmapFactory.decodeResource(getResources(), enemyResId);
             imagesLoaded = true;
-            Log.d(TAG, "Character images loaded: player=" + (playerBitmap != null) +
-                ", enemy=" + (enemyBitmap != null));
+            Log.d(TAG, "Character images loaded: player=" + (playerBitmap != null)
+                    + ", enemy=" + (enemyBitmap != null));
         } catch (Exception e) {
             Log.e(TAG, "Failed to load battle images", e);
             imagesLoaded = false;
@@ -450,8 +453,9 @@ public class BattleView extends View {
 
         textPaint = new Paint();
         textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(36);
+        textPaint.setTextSize(32);
         textPaint.setTextAlign(Paint.Align.LEFT);
+        textPaint.setFakeBoldText(true);
     }
 
     private int getHealthColor(float healthRatio) {
@@ -485,11 +489,26 @@ public class BattleView extends View {
 
         int height = getHeight();
         int width = getWidth();
-        int statusAreaHeight = (int) (height * 0.75);
 
-        drawHealthBars(canvas, statusAreaHeight);
-        drawCharacterImages(canvas, width, statusAreaHeight);
-        drawMessage(canvas, statusAreaHeight - 10);
+        // === VERTICAL BREAKDOWN ===
+        // Health bars: 12.5% of BattleView
+        // HERO/ENEMY labels: ~4% strip between health bars and sprites
+        // Sprites: ~64% (reduced from 68.75% to make room for labels)
+        // Message: remaining (~19%)
+        int healthBarAreaHeight = Math.max(50, (int)(height * 0.125));
+        int labelStripHeight = Math.max(30, (int)(height * 0.04));
+        int spriteAreaHeight = (int)(height * 0.6875) - labelStripHeight;
+        int messageAreaHeight = height - healthBarAreaHeight - labelStripHeight - spriteAreaHeight;
+
+        int labelTop = healthBarAreaHeight;
+        int imageTop = healthBarAreaHeight + labelStripHeight;
+        int imageBottom = imageTop + spriteAreaHeight;
+        int messageTop = imageBottom;
+
+        drawHealthBars(canvas, width, healthBarAreaHeight);
+        drawHeroEnemyLabels(canvas, width, labelTop, labelStripHeight);
+        drawCharacterImages(canvas, width, imageTop, imageBottom);
+        drawMessage(canvas, width, messageTop, messageAreaHeight);
     }
 
     private void drawEmptyState(Canvas canvas) {
@@ -500,101 +519,186 @@ public class BattleView extends View {
         canvas.drawText("Battle not started", getWidth() / 2, getHeight() / 2, emptyPaint);
     }
 
-    private void drawHealthBars(Canvas canvas, int statusAreaHeight) {
+    private void drawHealthBars(Canvas canvas, int width, int healthBarAreaHeight) {
         Player player = battle.getPlayer();
         Enemy enemy = battle.getEnemy();
         if (player == null || enemy == null) return;
 
-        int barWidth = getWidth() / 2 - 20;
-        int barHeight = 30;
+        // Each bar takes 50% width minus margins
+        int barWidth = width / 2 - 10;
+        int barHeight = Math.max(20, healthBarAreaHeight - 10);
+        int centerY = healthBarAreaHeight / 2;
 
-        int playerBarX = 10;
-        int playerBarY = 10;
+        // === Player health bar (left 50%) ===
+        int playerBarX = 5;
+        int playerBarY = centerY - barHeight / 2;
         int playerMaxHealth = player.getMaxHealth();
         int playerCurrentHealth = Math.max(0, Math.min(player.getCurrentHealth(), playerMaxHealth));
         float playerHealthRatio = (float) playerCurrentHealth / playerMaxHealth;
 
         canvas.drawRect(playerBarX, playerBarY, playerBarX + barWidth, playerBarY + barHeight, healthBarBackPaint);
         playerHealthPaint.setColor(getHealthColor(playerHealthRatio));
-        canvas.drawRect(playerBarX, playerBarY, playerBarX + (int) (barWidth * playerHealthRatio),
-            playerBarY + barHeight, playerHealthPaint);
-        canvas.drawText("Player: " + playerCurrentHealth + "/" + playerMaxHealth,
-            playerBarX + 5, playerBarY + 22, textPaint);
+        canvas.drawRect(playerBarX, playerBarY,
+                playerBarX + (int)(barWidth * playerHealthRatio),
+                playerBarY + barHeight, playerHealthPaint);
+        canvas.drawText("HP: " + playerCurrentHealth + "/" + playerMaxHealth,
+                playerBarX + 5, centerY + 8, textPaint);
 
-        int enemyBarX = playerBarX + barWidth + 20;
-        int enemyBarY = 10;
+        // === Enemy health bar (right 50%) ===
+        int enemyBarX = playerBarX + barWidth + 10;
 
         if (enemy.getCurrentHealth() &gt; 0 &amp;&amp; !enemy.isDefeated()) {
             int enemyMaxHealth = enemy.getMaxHealth();
             int enemyCurrentHealth = Math.max(0, Math.min(enemy.getCurrentHealth(), enemyMaxHealth));
             float enemyHealthRatio = (float) enemyCurrentHealth / enemyMaxHealth;
 
-            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + barWidth, enemyBarY + barHeight, healthBarBackPaint);
+            canvas.drawRect(enemyBarX, playerBarY, enemyBarX + barWidth, playerBarY + barHeight, healthBarBackPaint);
             enemyHealthPaint.setColor(getHealthColor(enemyHealthRatio));
-            canvas.drawRect(enemyBarX, enemyBarY, enemyBarX + (int) (barWidth * enemyHealthRatio),
-                enemyBarY + barHeight, enemyHealthPaint);
-            canvas.drawText("Enemy: " + enemyCurrentHealth + "/" + enemyMaxHealth,
-                enemyBarX + 5, enemyBarY + 22, textPaint);
+            canvas.drawRect(enemyBarX, playerBarY,
+                    enemyBarX + (int)(barWidth * enemyHealthRatio),
+                    playerBarY + barHeight, enemyHealthPaint);
+            canvas.drawText("HP: " + enemyCurrentHealth + "/" + enemyMaxHealth,
+                    enemyBarX + 5, centerY + 8, textPaint);
         } else {
-            drawSkull(canvas, enemyBarX + barWidth / 2 - 15, enemyBarY, 30);
+            drawSkull(canvas, enemyBarX + barWidth / 2 - 15, centerY - 15, 30);
             Paint skullText = new Paint(textPaint);
             skullText.setColor(Color.parseColor("#FFD700"));
-            canvas.drawText(enemy.getName() + " DEFEATED", enemyBarX + 5, enemyBarY + 22, skullText);
+            skullText.setTextSize(28);
+            canvas.drawText(enemy.getName() + " DEFEATED", enemyBarX + 5, centerY + 8, skullText);
         }
     }
 
-    private void drawCharacterImages(Canvas canvas, int width, int statusAreaHeight) {
+    /**
+     * Draws HERO and ENEMY labels in a strip between health bars and sprites.
+     * Large font, centered horizontally in each half, no pipe separator.
+     */
+    private void drawHeroEnemyLabels(Canvas canvas, int width, int labelTop, int labelStripHeight) {
+        int centerXLeft = width / 4;
+        int centerXRight = width * 3 / 4;
+        // Vertically centered in the label strip
+        int centerY = labelTop + labelStripHeight / 2;
+
+        Paint labelPaint = new Paint(textPaint);
+        labelPaint.setTextSize(Math.max(36, labelStripHeight * 0.7f));
+        labelPaint.setTextAlign(Paint.Align.CENTER);
+        labelPaint.setFakeBoldText(true);
+
+        // HERO (left side) - green
+        labelPaint.setColor(Color.parseColor("#00FF00"));
+        Paint.FontMetrics fm = labelPaint.getFontMetrics();
+        float textHeight = fm.descent - fm.ascent;
+        float baselineY = centerY + textHeight / 2 - fm.descent;
+        canvas.drawText("HERO", centerXLeft, baselineY, labelPaint);
+
+        // ENEMY (right side) - red
+        labelPaint.setColor(Color.parseColor("#FF4444"));
+        canvas.drawText("ENEMY", centerXRight, baselineY, labelPaint);
+    }
+
+    private void drawCharacterImages(Canvas canvas, int width, int imageTop, int imageBottom) {
         if (battle == null) return;
 
-        int imageTop = 50;
-        int imageBottom = statusAreaHeight - 80;
-        int imageHeight = Math.max(10, imageBottom - imageTop);
+        int spriteAreaHeight = imageBottom - imageTop;
+        int halfWidth = width / 2;
 
-        // FIX: clamp image width to 35% of screen so sprites never overlap
-        int imageWidth = (int) Math.min(imageHeight * 0.75f, width * 0.35f);
+        // Centers of each half
+        float centerXLeft = halfWidth * 0.5f;       // 25% of total width
+        float centerXRight = halfWidth + halfWidth * 0.5f;  // 75% of total width
 
-        float centerXLeft = width * 0.25f;
-        float centerXRight = width * 0.75f;
+        // Max sprite bounds within each 50% half
+        int maxSpriteWidth = halfWidth - 20;  // 10px margin each side
+        int maxSpriteHeight = spriteAreaHeight - 20;  // 10px margin top/bottom
 
         Player player = battle.getPlayer();
         if (player != null) {
             if (imagesLoaded &amp;&amp; playerBitmap != null &amp;&amp; playerBitmap.getWidth() &gt; 0) {
-                RectF dst = new RectF(centerXLeft - imageWidth / 2f, imageTop,
-                    centerXLeft + imageWidth / 2f, imageBottom);
+                float bitmapAspect = (float) playerBitmap.getWidth() / playerBitmap.getHeight();
+                int spriteHeight = maxSpriteHeight;
+                int spriteWidth = (int)(spriteHeight * bitmapAspect);
+                if (spriteWidth &gt; maxSpriteWidth) {
+                    spriteWidth = maxSpriteWidth;
+                    spriteHeight = (int)(spriteWidth / bitmapAspect);
+                }
+                // Center vertically within sprite area
+                float topOffset = imageTop + (spriteAreaHeight - spriteHeight) / 2f;
+                RectF dst = new RectF(
+                        centerXLeft - spriteWidth / 2f,
+                        topOffset,
+                        centerXLeft + spriteWidth / 2f,
+                        topOffset + spriteHeight
+                );
                 canvas.drawBitmap(playerBitmap, null, dst, null);
             } else {
                 Paint fallback = new Paint(textPaint);
-                fallback.setTextSize(imageHeight * 0.6f);
+                fallback.setTextSize(spriteAreaHeight * 0.6f);
                 fallback.setTextAlign(Paint.Align.CENTER);
-                canvas.drawText("\uD83E\uDDD9\u200D\u2642\uFE0F", centerXLeft, imageTop + imageHeight * 0.7f, fallback);
+                canvas.drawText("\uD83E\uDDD9", centerXLeft, imageTop + spriteAreaHeight * 0.55f, fallback);
             }
-            Paint namePaint = new Paint(textPaint);
-            namePaint.setTextSize(28);
-            namePaint.setTextAlign(Paint.Align.CENTER);
-            namePaint.setColor(Color.parseColor("#00FF00"));
-            canvas.drawText(player.getName(), centerXLeft, imageBottom + 25, namePaint);
+
+            // === STATS BELOW SPRITE (replaces name) ===
+            Paint statsPaint = new Paint(textPaint);
+            statsPaint.setTextSize(Math.max(18, spriteAreaHeight * 0.05f));
+            statsPaint.setTextAlign(Paint.Align.CENTER);
+            statsPaint.setColor(Color.parseColor("#FFFFFF"));
+            String playerStats = "ATK " + player.getAttack() + "  DEF " + player.getArmor() + "  SPD " + player.getDodgeChance();
+            canvas.drawText(playerStats, centerXLeft, imageBottom - 5, statsPaint);
         }
 
         Enemy enemy = battle.getEnemy();
         if (enemy != null &amp;&amp; enemy.getCurrentHealth() &gt; 0 &amp;&amp; !enemy.isDefeated()) {
             if (imagesLoaded &amp;&amp; enemyBitmap != null &amp;&amp; enemyBitmap.getWidth() &gt; 0) {
-                RectF dst = new RectF(centerXRight - imageWidth / 2f, imageTop,
-                    centerXRight + imageWidth / 2f, imageBottom);
+                float bitmapAspect = (float) enemyBitmap.getWidth() / enemyBitmap.getHeight();
+                int spriteHeight = maxSpriteHeight;
+                int spriteWidth = (int)(spriteHeight * bitmapAspect);
+                if (spriteWidth &gt; maxSpriteWidth) {
+                    spriteWidth = maxSpriteWidth;
+                    spriteHeight = (int)(spriteWidth / bitmapAspect);
+                }
+                float topOffset = imageTop + (spriteAreaHeight - spriteHeight) / 2f;
+                RectF dst = new RectF(
+                        centerXRight - spriteWidth / 2f,
+                        topOffset,
+                        centerXRight + spriteWidth / 2f,
+                        topOffset + spriteHeight
+                );
                 canvas.drawBitmap(enemyBitmap, null, dst, null);
             } else {
                 Paint fallback = new Paint(textPaint);
-                fallback.setTextSize(imageHeight * 0.6f);
+                fallback.setTextSize(spriteAreaHeight * 0.6f);
                 fallback.setTextAlign(Paint.Align.CENTER);
                 String emoji = enemy.getEmoji();
-                if (emoji == null || emoji.isEmpty()) emoji = "\uD83D\uDC09";
-                canvas.drawText(emoji, centerXRight, imageTop + imageHeight * 0.7f, fallback);
+                if (emoji == null || emoji.isEmpty()) emoji = "\uD83D\uDC79";
+                canvas.drawText(emoji, centerXRight, imageTop + spriteAreaHeight * 0.55f, fallback);
             }
-            Paint namePaint = new Paint(textPaint);
-            namePaint.setTextSize(28);
-            namePaint.setTextAlign(Paint.Align.CENTER);
-            namePaint.setColor(Color.parseColor("#FF4444"));
-            canvas.drawText(enemy.getName(), centerXRight, imageBottom + 25, namePaint);
+
+            // === STATS BELOW SPRITE (replaces name/emoji) ===
+            Paint statsPaint = new Paint(textPaint);
+            statsPaint.setTextSize(Math.max(18, spriteAreaHeight * 0.05f));
+            statsPaint.setTextAlign(Paint.Align.CENTER);
+            statsPaint.setColor(Color.parseColor("#FF4444"));
+            String enemyStats = "ATK " + enemy.getAttack() + "  DEF " + enemy.getArmor() + "  SPD " + enemy.getDodgeChance();
+            canvas.drawText(enemyStats, centerXRight, imageBottom - 5, statsPaint);
         }
+    }
+
+    /**
+     * Draws the battle message. Uses enemy NAME (not emoji) in the default message.
+     */
+    private void drawMessage(Canvas canvas, int width, int messageTop, int messageAreaHeight) {
+        String message = battle.getLastMessage();
+        if (message == null || message.isEmpty()) {
+            Enemy enemy = battle.getEnemy();
+            String enemyName = (enemy != null) ? enemy.getName() : "Enemy";
+            message = "Battle started! " + enemyName + " appears.";
+        }
+
+        Paint messagePaint = new Paint(textPaint);
+        messagePaint.setColor(Color.YELLOW);
+        messagePaint.setTextSize(Math.max(24, messageAreaHeight * 0.35f));
+        messagePaint.setTextAlign(Paint.Align.CENTER);
+
+        float centerY = messageTop + messageAreaHeight / 2f;
+        canvas.drawText(message, width / 2f, centerY, messagePaint);
     }
 
     private void drawSkull(Canvas canvas, int x, int y, int size) {
@@ -604,22 +708,7 @@ public class BattleView extends View {
         canvas.drawCircle(x + size / 2, y + size / 3, size / 3, skullPaint);
         canvas.drawCircle(x + size / 4, y + size / 3, size / 5, skullPaint);
         canvas.drawCircle(x + 3 * size / 4, y + size / 3, size / 5, skullPaint);
-        canvas.drawRect(x + size / 4, y + 2 * size / 3, x + 3 * size / 4, y + size, skullPaint);
-        Paint eyePaint = new Paint();
-        eyePaint.setColor(Color.BLACK);
-        canvas.drawCircle(x + size / 4, y + size / 3, size / 10, eyePaint);
-        canvas.drawCircle(x + 3 * size / 4, y + size / 3, size / 10, eyePaint);
-    }
-
-    private void drawMessage(Canvas canvas, int y) {
-        if (battle == null) return;
-        String message = battle.getLastMessage();
-        if (message != null &amp;&amp; !message.isEmpty()) {
-            Paint messagePaint = new Paint(textPaint);
-            messagePaint.setTextSize(32);
-            messagePaint.setColor(Color.YELLOW);
-            canvas.drawText(message, 10, y, messagePaint);
-        }
+        canvas.drawArc(x, y + size / 2, x + size, y + size, 0, 180, true, skullPaint);
     }
 }</code></pre>
 </div>
