@@ -23,7 +23,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">30 files | 5620 lines | 2026-08-03 15:55</div>
+<div class="stats">30 files | 5774 lines | 2026-08-03 17:01</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -219,7 +219,7 @@ public class Battle implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="battleactivity">
-<div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">182 lines | 6998 bytes</span></div>
+<div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">177 lines | 6889 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -271,7 +271,6 @@ public class BattleActivity extends AppCompatActivity {
         }
 
         if (player != null &amp;&amp; enemy != null) {
-            // Get dungeon from MainActivity Game instance
             if (MainActivity.getInstance() != null &amp;&amp; MainActivity.getInstance().getGame() != null) {
                 dungeon = MainActivity.getInstance().getGame().getDungeon();
             }
@@ -281,14 +280,10 @@ public class BattleActivity extends AppCompatActivity {
             battleView.loadImages(R.drawable.player_battle, R.drawable.enemy_battle);
 
             combatSystem = battle.getCombatSystem();
+            // REMOVED: No need to set loot table - CombatSystem handles it in constructor
 
-            // FIXED: Use singleton — can never be null
-            LootTable lootTable = LootTable.getInstance();
-            combatSystem.setLootTable(lootTable);
-            Log.d(TAG, "✅ LootTable singleton connected: " + (lootTable != null));
-
-            Log.d(TAG, "Battle started: " + enemy.getName() + " | Floor: " + floorNumber +
-                  " | LootTable: " + (lootTable != null ? "YES" : "NO"));
+            Log.d(TAG, "✅ Battle started: " + enemy.getName() + " | Floor: " + floorNumber +
+                  " | LootTable connected in CombatSystem");
         } else {
             Log.e(TAG, "Missing player or enemy - finishing battle activity");
             setResult(RESULT_CANCELED);
@@ -361,8 +356,6 @@ public class BattleActivity extends AppCompatActivity {
         Log.d(TAG, "Battle result: " + state + " | Won=" + battleWon);
 
         if (battleWon &amp;&amp; combatSystem != null) {
-            Log.d(TAG, "Victory! Awarding rewards...");
-
             int actualFloor = floorNumber;
             if (dungeon != null &amp;&amp; MainActivity.getInstance() != null) {
                 try {
@@ -383,10 +376,12 @@ public class BattleActivity extends AppCompatActivity {
             if (enemy.isBoss() &amp;&amp; MainActivity.getInstance() != null) {
                 Log.d(TAG, "🐉 BOSS DEFEATED! Advancing to next floor...");
                 try {
-                    MainActivity.getInstance().getGame().progressToNextFloor();
-                    Toast.makeText(this, "🎉 BOSS DEFEATED! Next floor unlocked!", Toast.LENGTH_LONG).show();
+                    // NEW: Use stairs system instead of instant progression
+                    Toast.makeText(this, "🐉 BOSS DEFEATED! Find the 🚪 stairs to descend to Floor " + 
+                                   (MainActivity.getInstance().getGame().getDungeonManager().getCurrentFloor() + 1), 
+                                   Toast.LENGTH_LONG).show();
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to advance floor: " + e.getMessage());
+                    Log.e(TAG, "Failed to prepare next floor: " + e.getMessage());
                 }
             }
         } else if (!battleWon) {
@@ -2843,20 +2838,13 @@ public class ExperienceSystem implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="game">
-<div class="file-header"><h2>Game.java</h2><span class="file-meta">250 lines | 8453 bytes</span></div>
+<div class="file-header"><h2>Game.java</h2><span class="file-meta">269 lines | 9363 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Core game state manager.
- *
- * FIXED: Uses DungeonManager for progression instead of hardcoding everything.
- * FIXED: Enemy types from EnemyType enum, not raw arrays.
- * FIXED: Removed magic number constants - use GameBalance instead.
- */
 public class Game {
     public enum GameState { PLAYING, WON, LOST }
 
@@ -2867,6 +2855,7 @@ public class Game {
     private GameState state;
     private int turnCount;
     private Enemy encounteredEnemy;
+    private int stairsX = -1, stairsY = -1;
 
     public Game() {
         this.dungeon = new Dungeon(50, 50);
@@ -2878,13 +2867,13 @@ public class Game {
         this.state = GameState.PLAYING;
         this.turnCount = 0;
         this.encounteredEnemy = null;
+        this.stairsX = -1;
+        this.stairsY = -1;
 
         generateInitialEnemies();
+        generateStairs(); // NEW: Generate stairs for floor descent
     }
 
-    /**
-     * FIXED: Spawn initial enemies using DungeonLevel scaling and EnemyType enum.
-     */
     private void generateInitialEnemies() {
         int enemiesSpawned = 0;
         int maxAttempts = 100;
@@ -2901,7 +2890,6 @@ public class Game {
                 EnemyType type = EnemyType.getRandomRegularMonster();
                 Enemy enemy = new Enemy(x, y, dungeon, type, null);
 
-                // Scale enemy stats to floor
                 enemy.setAttack((int)(enemy.getAttack() * startingLevel.getEnemyDifficultyScaling()));
                 enemy.setCurrentHealth((int)(enemy.getMaxHealth() * startingLevel.getEnemyDifficultyScaling()));
 
@@ -2914,9 +2902,36 @@ public class Game {
         Log.d("Game", "Generated " + enemiesSpawned + " initial enemies on floor 1");
     }
 
-    /**
-     * Spawn an enemy at specific coordinates. Used for procedural spawning.
-     */
+    // NEW: Generate stairs far from player
+    private void generateStairs() {
+        if (dungeon == null || player == null) return;
+        
+        // Find walkable tile far from player
+        int minDistance = 10;
+        List&lt;int[]&gt; validTiles = new ArrayList&lt;&gt;();
+        
+        for (int y = 0; y &lt; dungeon.getHeight(); y++) {
+            for (int x = 0; x &lt; dungeon.getWidth(); x++) {
+                if (dungeon.isWalkable(x, y)) {
+                    int dist = Math.abs(x - player.getX()) + Math.abs(y - player.getY());
+                    if (dist &gt;= minDistance) {
+                        validTiles.add(new int[]{x, y});
+                    }
+                }
+            }
+        }
+        
+        if (!validTiles.isEmpty()) {
+            int[] pos = validTiles.get(SecureRandomUtil.nextInt(validTiles.size()));
+            stairsX = pos[0];
+            stairsY = pos[1];
+            dungeon.setTile(stairsX, stairsY, 'S');
+            Log.d("Game", "🚪 Stairs generated at (" + stairsX + "," + stairsY + ")");
+        } else {
+            Log.w("Game", "⚠️ No valid stairs location found!");
+        }
+    }
+
     public Enemy spawnEnemy(int x, int y) {
         if (!dungeon.isWalkable(x, y)) return null;
 
@@ -2924,7 +2939,6 @@ public class Game {
         EnemyType type = EnemyType.getRandomRegularMonster();
         Enemy enemy = new Enemy(x, y, dungeon, type, null);
 
-        // Apply floor scaling
         enemy.setAttack((int)(enemy.getAttack() * currentLevel.getEnemyDifficultyScaling()));
         enemy.setCurrentHealth((int)(enemy.getMaxHealth() * currentLevel.getEnemyDifficultyScaling()));
 
@@ -2945,13 +2959,20 @@ public class Game {
             return false;
         }
 
+        // NEW: Check for stairs BEFORE moving
+        char tile = dungeon.getTile(newX, newY);
+        if (tile == 'S') {
+            // Prevent moving onto stairs without intent - you need to be ON it already
+            // This keeps stairs as stationary objects you find
+        }
+
         player.move(dx, dy);
         turnCount++;
 
         // Check for gold pickup
-        char tile = dungeon.getTile(newX, newY);
+        tile = dungeon.getTile(newX, newY);
         if (tile == Dungeon.TILE_GOLD) {
-            int goldAmount = SecureRandomUtil.nextInt(5) + 5; // 5-10 gold
+            int goldAmount = SecureRandomUtil.nextInt(5) + 5;
             player.addGold(goldAmount);
             dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
             Log.d("Game", "Collected " + goldAmount + " gold! Total: " + player.getGoldCollected());
@@ -2970,42 +2991,32 @@ public class Game {
         return false;
     }
 
-    /**
-     * Process battle outcome. Called after battle activity returns.
-     */
     public void resolveEncounter(Enemy enemy, boolean playerWins) {
         if (enemy == null) return;
 
         if (playerWins) {
-            // Enemy already marked defeated by Battle/CombatSystem
             enemy.setDefeated(true);
             if (enemies.remove(enemy)) {
                 Log.d("Game", "✓ Removed defeated enemy from list. Remaining: " + enemies.size());
             }
 
-            // Remove from dungeon grid
             if (dungeon != null) {
                 dungeon.setTile(enemy.getX(), enemy.getY(), Dungeon.TILE_FLOOR);
             }
 
-            // Check win condition for bosses
             if (enemy.isBoss()) {
                 state = GameState.WON;
             }
         } else {
-            // Player lost battle - could apply penalty here
             if (!player.isAlive()) {
                 state = GameState.LOST;
             }
         }
     }
 
-    /**
-     * Advance to next floor. Called when player reaches exit.
-     */
-    public boolean progressToNextFloor() {
+    // NEW: Method to descend to next floor
+    public boolean descendStairs() {
         if (dungeonManager == null) return false;
-
         if (!dungeonManager.canProgress()) {
             Log.w("Game", "Already at max floor");
             return false;
@@ -3014,24 +3025,26 @@ public class Game {
         boolean progressed = dungeonManager.progressFloor();
         if (progressed) {
             Log.d("Game", "Advanced to floor " + dungeonManager.getCurrentFloor());
+            
+            // Clear old stairs from old floor
+            if (stairsX &gt;= 0 &amp;&amp; stairsY &gt;= 0) {
+                dungeon.setTile(stairsX, stairsY, Dungeon.TILE_FLOOR);
+            }
+            
             generateEnemiesForNewFloor();
+            generateStairs(); // New stairs for new floor
         }
         return progressed;
     }
 
-    /**
-     * Generate new enemies for the current floor.
-     */
     private void generateEnemiesForNewFloor() {
         if (dungeonManager == null || dungeon == null) return;
 
         DungeonLevel level = dungeonManager.getCurrentLevel();
         int enemyCount = level.getScaledEnemyCount();
 
-        // Clear old enemies
         enemies.clear();
 
-        // Spawn new enemies
         int attempts = 0;
         int maxAttempts = enemyCount * 10;
         while (enemies.size() &lt; enemyCount &amp;&amp; attempts &lt; maxAttempts) {
@@ -3042,7 +3055,6 @@ public class Game {
                 EnemyType type = EnemyType.getRandomRegularMonster(level.getFloorNumber());
                 Enemy enemy = new Enemy(x, y, dungeon, type, null);
 
-                // Apply floor scaling
                 int scaledHP = level.getScaledEnemyHP();
                 int scaledATK = level.getScaledEnemyAttack();
                 int scaledDEF = level.getScaledEnemyDefense();
@@ -3063,6 +3075,8 @@ public class Game {
     public Player getPlayer() { return player; }
     public Dungeon getDungeon() { return dungeon; }
     public DungeonManager getDungeonManager() { return dungeonManager; }
+    public int getStairsX() { return stairsX; }
+    public int getStairsY() { return stairsY; }
 
     public List&lt;Enemy&gt; getEnemies() {
         List&lt;Enemy&gt; living = new ArrayList&lt;&gt;();
@@ -3199,7 +3213,7 @@ public class GameBalance {
 }</code></pre>
 </div>
 <div class="file" id="gameview">
-<div class="file-header"><h2>GameView.java</h2><span class="file-meta">553 lines | 26105 bytes</span></div>
+<div class="file-header"><h2>GameView.java</h2><span class="file-meta">694 lines | 31985 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -3225,7 +3239,7 @@ public class GameView extends View {
     private Game game;
     private GameListener listener;
 
-    private Paint tileWallPaint, tileFloorPaint, tileGoldPaint;
+    private Paint tileWallPaint, tileFloorPaint, tileGoldPaint, tileStairsPaint;
     private Paint playerPaint, enemyPaint;
     private Paint textPaint, buttonLabelPaint, emojiPaint;
     private Paint overlayPaint, gameOverTextPaint;
@@ -3260,6 +3274,10 @@ public class GameView extends View {
     private Runnable[] moveRepeatables = new Runnable[9];
     private static final long INITIAL_DELAY_MS = 150;
     private static final long REPEAT_DELAY_MS = 100;
+
+    // === NEW: Map view toggle &amp; stairs ===
+    private boolean showFullMap = false;
+    private static final String TAG_STAIRS = "GameView/Stairs";
 
     public enum Direction {
         UP_LEFT(-1, -1), UP(0, -1), UP_RIGHT(1, -1), LEFT(-1, 0),
@@ -3302,6 +3320,11 @@ public class GameView extends View {
         tileGoldPaint = new Paint();
         tileGoldPaint.setColor(Color.parseColor("#FFD700"));
         tileGoldPaint.setStyle(Paint.Style.FILL);
+
+        // NEW: Stairs paint
+        tileStairsPaint = new Paint();
+        tileStairsPaint.setColor(Color.parseColor("#4488FF"));
+        tileStairsPaint.setStyle(Paint.Style.FILL);
 
         playerPaint = new Paint();
         playerPaint.setColor(Color.parseColor("#00FF00"));
@@ -3413,9 +3436,24 @@ public class GameView extends View {
         int buttonAreaHeight = (int) (height * BUTTON_AREA_HEIGHT_PERCENT / 100.0f);
         int gameAreaHeight = height - buttonAreaHeight;
 
+        // === NEW: Toggle full map view ===
+        if (showFullMap) {
+            drawFullMap(canvas);
+            // FIX #1: Added canvas parameter
+            drawStatus(canvas, gameAreaHeight, player);
+            drawDPadButtons(canvas, gameAreaHeight, buttonAreaHeight);
+            drawSideButtons(canvas, gameAreaHeight, buttonAreaHeight);
+            Game.GameState state = game.getState();
+            if (state != Game.GameState.PLAYING) {
+                drawGameOverOverlay(canvas, width, gameAreaHeight);
+            }
+            return;
+        }
+
         int playerX = player.getX(), playerY = player.getY();
         int viewportWidth = Math.min(VIEWPORT_TILES, dungeon.getWidth());
         int viewportHeight = Math.min(VIEWPORT_TILES, dungeon.getHeight());
+
         int camX = Math.max(0, Math.min(playerX - VIEWPORT_RADIUS, dungeon.getWidth() - viewportWidth));
         int camY = Math.max(0, Math.min(playerY - VIEWPORT_RADIUS, dungeon.getHeight() - viewportHeight));
 
@@ -3432,6 +3470,7 @@ public class GameView extends View {
         drawDungeon(canvas, dungeon, offsetX, offsetY, camX, camY, viewportWidth, viewportHeight);
         drawPlayer(canvas, offsetX, offsetY, playerX, playerY, camX, camY);
         drawEnemies(canvas, offsetX, offsetY, camX, camY, viewportWidth, viewportHeight);
+        // FIX #2: Added canvas parameter
         drawStatus(canvas, gameAreaHeight, player);
         drawDPadButtons(canvas, gameAreaHeight, buttonAreaHeight);
         drawSideButtons(canvas, gameAreaHeight, buttonAreaHeight);
@@ -3460,23 +3499,29 @@ public class GameView extends View {
             for (int x = 0; x &lt; vw; x++) {
                 int wx = camX + x, wy = camY + y;
                 if (wx &gt;= dungeon.getWidth() || wy &gt;= dungeon.getHeight()) continue;
+
                 float xp = offsetX + x * tileSize, yp = offsetY + y * tileSize;
+
                 char tile = dungeon.getTile(wx, wy);
                 tileRect.set((int)xp, (int)yp, (int)(xp + tileSize), (int)(yp + tileSize));
-                if (tile == Dungeon.TILE_WALL) { canvas.drawRect(tileRect, tileWallPaint); }
-                else if (tile == Dungeon.TILE_FLOOR) { canvas.drawRect(tileRect, tileFloorPaint); }
-                else if (tile == Dungeon.TILE_GOLD) {
+
+                if (tile == Dungeon.TILE_WALL) {
+                    canvas.drawRect(tileRect, tileWallPaint);
+                } else if (tile == Dungeon.TILE_FLOOR) {
+                    canvas.drawRect(tileRect, tileFloorPaint);
+                } else if (tile == Dungeon.TILE_GOLD) {
                     canvas.drawRect(tileRect, tileFloorPaint);
                     Paint ge = new Paint(emojiPaint); ge.setTextSize(tileSize * 0.7f);
-                    canvas.drawText("\uD83D\uDCB0", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.3f, ge);
+                    canvas.drawText("💰", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.3f, ge);
                 } else if (tile == 'B') {
                     canvas.drawRect(tileRect, tileFloorPaint);
                     Paint be = new Paint(emojiPaint); be.setTextSize(tileSize * 1.5f);
-                    canvas.drawText("\uD83D\uDC09", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, be);
-                } else if (tile == 'P') {
-                    canvas.drawRect(tileRect, tileFloorPaint);
-                    Paint pe = new Paint(emojiPaint); pe.setTextSize(tileSize * 0.7f);
-                    canvas.drawText("\u26D1\uFE0F", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.3f, pe);
+                    canvas.drawText("🐉", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, be);
+                } else if (tile == 'S') {
+                    // === NEW: Draw stairs ===
+                    canvas.drawRect(tileRect, tileStairsPaint);
+                    Paint se = new Paint(emojiPaint); se.setTextSize(tileSize * 1.5f);
+                    canvas.drawText("🚪", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, se);
                 } else {
                     canvas.drawRect(tileRect, tileFloorPaint);
                 }
@@ -3490,7 +3535,7 @@ public class GameView extends View {
         float x = offsetX + rx * tileSize + tileSize / 2;
         float y = offsetY + ry * tileSize + tileSize / 2;
         Paint he = new Paint(emojiPaint); he.setTextSize(tileSize * 0.8f);
-        canvas.drawText("\uD83E\uDDD9\u200D\u2642\uFE0F", x, y + tileSize * 0.3f, he);
+        canvas.drawText("🧙‍♂️", x, y + tileSize * 0.3f, he);
     }
 
     private void drawEnemies(Canvas canvas, float offsetX, float offsetY, int camX, int camY, int vw, int vh) {
@@ -3504,7 +3549,7 @@ public class GameView extends View {
             float y = offsetY + ry * tileSize + tileSize / 2;
             if (enemy.isDead()) {
                 Paint se = new Paint(emojiPaint); se.setTextSize(tileSize * 0.7f);
-                canvas.drawText("\u26B0\uFE0F", x, y + tileSize * 0.3f, se);
+                canvas.drawText("⚱️", x, y + tileSize * 0.3f, se);
             } else {
                 String emoji = enemy.getEmoji();
                 if (emoji != null &amp;&amp; !emoji.isEmpty()) {
@@ -3519,36 +3564,52 @@ public class GameView extends View {
 
     private void drawStatus(Canvas canvas, int gameAreaHeight, Player player) {
         if (player == null) return;
-        String status = String.format("LVL:%d (XP:%d) HP:%d/%d Gold:%d Potions:%d",
-            player.getLevel(), player.getExperience(), player.getCurrentHealth(),
-            player.getMaxHealth(), player.getGoldCollected(),
-            player.getInventory() != null ? player.getInventory().getHealthPotions() : 0);
+        int floor = (game != null &amp;&amp; game.getDungeonManager() != null)
+                            ? game.getDungeonManager().getCurrentFloor()
+                            : 1;
+        String status = String.format("LVL:%d (XP:%d) HP:%d/%d Gold:%d Potions:%d Floor:%d",
+                                            player.getLevel(), player.getExperience(), player.getCurrentHealth(),
+                                            player.getMaxHealth(), player.getGoldCollected(),
+                                            player.getInventory() != null ? player.getInventory().getHealthPotions() : 0,
+                                            floor);
         Paint sp = new Paint(textPaint); sp.setTextSize(24);
         canvas.drawText(status, 10, gameAreaHeight - 5, sp);
     }
 
+    // === COMPLETE REWRITE: D-pad takes LEFT 50% ===
     private void drawDPadButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
-        int sz = buttonAreaHeight / 3, dx = 10, dy = gameAreaHeight + 5;
-        btnUpLeft.set(dx, dy, dx+sz, dy+sz);
-        btnUp.set(dx+sz, dy, dx+sz*2, dy+sz);
-        btnUpRight.set(dx+sz*2, dy, dx+sz*3, dy+sz);
-        btnLeft.set(dx, dy+sz, dx+sz, dy+sz*2);
-        btnCenter.set(dx+sz, dy+sz, dx+sz*2, dy+sz*2);
-        btnRight.set(dx+sz*2, dy+sz, dx+sz*3, dy+sz*2);
-        btnDownLeft.set(dx, dy+sz*2, dx+sz, dy+sz*3);
-        btnDown.set(dx+sz, dy+sz*2, dx+sz*2, dy+sz*3);
-        btnDownRight.set(dx+sz*2, dy+sz*2, dx+sz*3, dy+sz*3);
+        int btnSize = buttonAreaHeight / 3;
+        int startY = gameAreaHeight + 5;
+
+        // D-pad takes exactly LEFT 50% of screen width
+        int dpadTotalWidth = getWidth() / 2;
+        int btnSpacing = dpadTotalWidth / 3;
+
+        int dx = 5;
+        int dy = startY;
+
+        btnUpLeft.set(dx, dy, dx+btnSpacing-5, dy+btnSize);
+        btnUp.set(dx+btnSpacing, dy, dx+btnSpacing*2-5, dy+btnSize);
+        btnUpRight.set(dx+btnSpacing*2, dy, dx+btnSpacing*3-5, dy+btnSize);
+
+        btnLeft.set(dx, dy+btnSize, dx+btnSpacing-5, dy+btnSize*2);
+        btnCenter.set(dx+btnSpacing, dy+btnSpacing, dx+btnSpacing*2-5, dy+btnSize*2);
+        btnRight.set(dx+btnSpacing*2, dy+btnSize, dx+btnSpacing*3-5, dy+btnSize*2);
+
+        btnDownLeft.set(dx, dy+btnSize*2, dx+btnSpacing-5, dy+btnSize*3);
+        btnDown.set(dx+btnSpacing, dy+btnSize*2, dx+btnSpacing*2-5, dy+btnSize*3);
+        btnDownRight.set(dx+btnSpacing*2, dy+btnSize*2, dx+btnSpacing*3-5, dy+btnSize*3);
 
         synchronized (buttonLock) {
-            drawCachedBtn(canvas, btnUpLeft, "\u2196\uFE0F", btnUpLeftPressedPaint, btnUpLeftPaint, btnUpLeftPressed);
-            drawCachedBtn(canvas, btnUp, "\u2B06\uFE0F", btnUpPressedPaint, btnUpPaint, btnUpPressed);
-            drawCachedBtn(canvas, btnUpRight, "\u2197\uFE0F", btnUpRightPressedPaint, btnUpRightPaint, btnUpRightPressed);
-            drawCachedBtn(canvas, btnLeft, "\u2B05\uFE0F", btnLeftPressedPaint, btnLeftPaint, btnLeftPressed);
-            drawCachedBtn(canvas, btnCenter, "\u23FA\uFE0F", btnCenterPaint, btnCenterPaint, false);
-            drawCachedBtn(canvas, btnRight, "\u27A1\uFE0F", btnRightPressedPaint, btnRightPaint, btnRightPressed);
-            drawCachedBtn(canvas, btnDownLeft, "\u2199\uFE0F", btnDownLeftPressedPaint, btnDownLeftPaint, btnDownLeftPressed);
-            drawCachedBtn(canvas, btnDown, "\u2B07\uFE0F", btnDownPressedPaint, btnDownPaint, btnDownPressed);
-            drawCachedBtn(canvas, btnDownRight, "\u2198\uFE0F", btnDownRightPressedPaint, btnDownRightPaint, btnDownRightPressed);
+            drawCachedBtn(canvas, btnUpLeft, "↖️", btnUpLeftPressedPaint, btnUpLeftPaint, btnUpLeftPressed);
+            drawCachedBtn(canvas, btnUp, "⬆️", btnUpPressedPaint, btnUpPaint, btnUpPressed);
+            drawCachedBtn(canvas, btnUpRight, "↗️", btnUpRightPressedPaint, btnUpRightPaint, btnUpRightPressed);
+            drawCachedBtn(canvas, btnLeft, "⬅️", btnLeftPressedPaint, btnLeftPaint, btnLeftPressed);
+            drawCachedBtn(canvas, btnCenter, "⏸️", btnCenterPaint, btnCenterPaint, false);
+            drawCachedBtn(canvas, btnRight, "➡️", btnRightPressedPaint, btnRightPaint, btnRightPressed);
+            drawCachedBtn(canvas, btnDownLeft, "↙️", btnDownLeftPressedPaint, btnDownLeftPaint, btnDownLeftPressed);
+            drawCachedBtn(canvas, btnDown, "⬇️", btnDownPressedPaint, btnDownPaint, btnDownPressed);
+            drawCachedBtn(canvas, btnDownRight, "↘️", btnDownRightPressedPaint, btnDownRightPaint, btnDownRightPressed);
         }
     }
 
@@ -3564,31 +3625,34 @@ public class GameView extends View {
         canvas.drawText(emoji, r.centerX(), cy, buttonLabelPaint);
     }
 
+    // === SIDE BUTTONS TAKE RIGHT 50% ===
     private void drawSideButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
-        int ss = buttonAreaHeight / 2 - 5;
-        int rightEdge = getWidth() - 10;
-        int topY = gameAreaHeight + 5;
+        int startY = gameAreaHeight + 5;
+        int rightHalfStart = getWidth() / 2;
 
-        btnHeal.set(rightEdge - ss*4, topY, rightEdge - ss*3, topY + ss);
-        btnInventory.set(rightEdge - ss*3, topY, rightEdge - ss*2, topY + ss);
-        btnQuit.set(rightEdge - ss*2, topY + ss + 5, rightEdge - ss, topY + ss*2 + 5);
-        btnInvincible.set(rightEdge - ss, topY + ss + 5, rightEdge, topY + ss*2 + 5);
+        int sidePanelWidth = rightHalfStart;
+        int btnWidth = sidePanelWidth / 4 - 10;
+        int btnHeight = buttonAreaHeight / 2 - 5;
+
+        int xOffset = rightHalfStart;
+
+        btnHeal.set(xOffset + 5, startY, xOffset + btnWidth + 5, startY + btnHeight);
+        btnInventory.set(xOffset + btnWidth + 15, startY, xOffset + btnWidth*2 + 10, startY + btnHeight);
+        btnQuit.set(xOffset + btnWidth*2 + 10, startY + btnHeight + 5, xOffset + btnWidth*3 + 15, startY + btnHeight*2 + 5);
+        btnInvincible.set(xOffset + btnWidth*3 + 15, startY + btnHeight + 5, xOffset + btnWidth*4 + 10, startY + btnHeight*2 + 5);
 
         canvas.drawRect(btnHeal, btnHealPressed ? healPaintPressed : healPaint);
         drawBtnBorder(canvas, btnHeal, "#008844");
-        drawBtnText(canvas, btnHeal, "\uD83E\uDDEC");
-
+        drawBtnText(canvas, btnHeal, "🧪");
         canvas.drawRect(btnInventory, btnInventoryPressed ? invPressedPaint : inventoryPaint);
         drawBtnBorder(canvas, btnInventory, "#6A0DAD");
-        drawBtnText(canvas, btnInventory, "\uD83C\uDF92");
-
+        drawBtnText(canvas, btnInventory, "🎒");
         canvas.drawRect(btnQuit, btnQuitPressed ? quitPressedPaint : quitPaint);
         drawBtnBorder(canvas, btnQuit, "#FF0000");
-        drawBtnText(canvas, btnQuit, "\uD83D\uDEAA");
-
+        drawBtnText(canvas, btnQuit, "🚪");
         canvas.drawRect(btnInvincible, btnInvinciblePressed ? invinciblePressedPaint : invinciblePaint);
         drawBtnBorder(canvas, btnInvincible, "#FF6600");
-        drawBtnText(canvas, btnInvincible, "\u26A1");
+        drawBtnText(canvas, btnInvincible, "⚡");
     }
 
     private void drawBtnBorder(Canvas canvas, Rect r, String color) {
@@ -3607,8 +3671,81 @@ public class GameView extends View {
 
     private void drawGameOverOverlay(Canvas canvas, int width, int gameAreaHeight) {
         canvas.drawRect(0, 0, width, gameAreaHeight, overlayPaint);
-        String msg = game.getState() == Game.GameState.WON ? "\uD83C\uDFC6 YOU WIN!" : "\uD83D\uDC80 GAME OVER";
+        String msg = game.getState() == Game.GameState.WON ? "🏆 YOU WIN!" : "💀 GAME OVER";
         canvas.drawText(msg, width / 2f, gameAreaHeight / 2f, gameOverTextPaint);
+    }
+
+    // === NEW: Full Map View ===
+    private void drawFullMap(Canvas canvas) {
+        Dungeon dungeon = game.getDungeon();
+        if (dungeon == null) return;
+
+        int width = getWidth();
+        int height = getHeight();
+
+        canvas.drawColor(Color.parseColor("#1a1a1a"));
+
+        // Leave 10% top for status bar, 20% bottom for controls
+        int statusHeight = (int)(height * 0.1);
+        int controlsHeight = (int)(height * 0.2);
+        int mapHeight = height - statusHeight - controlsHeight;
+
+        float tileW = (float)width / dungeon.getWidth();
+        float tileH = (float)mapHeight / dungeon.getHeight();
+        float tileSizeLocal = Math.min(tileW, tileH);
+
+        // FIX #3: Added int cast for offsetX
+        int offsetX = (int) ((width - dungeon.getWidth() * tileSizeLocal) / 2);
+        int offsetY = statusHeight;
+
+        Paint textPaintSmall = new Paint(textPaint);
+        textPaintSmall.setTextSize(14);
+        textPaintSmall.setColor(Color.WHITE);
+
+        for (int y = 0; y &lt; dungeon.getHeight(); y++) {
+            for (int x = 0; x &lt; dungeon.getWidth(); x++) {
+                float xp = offsetX + x * tileSizeLocal;
+                float yp = offsetY + y * tileSizeLocal;
+
+                char tile = dungeon.getTile(x, y);
+                if (tile == Dungeon.TILE_WALL) {
+                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileWallPaint);
+                } else if (tile == Dungeon.TILE_FLOOR) {
+                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileFloorPaint);
+                } else if (tile == Dungeon.TILE_GOLD) {
+                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileGoldPaint);
+                } else if (tile == 'B') {
+                    Paint be = new Paint(emojiPaint);
+                    be.setTextSize(tileSizeLocal * 1.2f);
+                    canvas.drawText("🐉", xp + tileSizeLocal/2, yp + tileSizeLocal/2 + tileSizeLocal*0.3f, be);
+                } else if (tile == 'S') {
+                    // NEW: Draw stairs
+                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileStairsPaint);
+                    Paint se = new Paint(emojiPaint);
+                    se.setTextSize(tileSizeLocal * 1.2f);
+                    canvas.drawText("🚪", xp + tileSizeLocal/2, yp + tileSizeLocal/2 + tileSizeLocal*0.3f, se);
+                }
+            }
+        }
+
+        Player player = game.getPlayer();
+        if (player != null) {
+            float px = offsetX + player.getX() * tileSizeLocal + tileSizeLocal/2;
+            float py = offsetY + player.getY() * tileSizeLocal + tileSizeLocal/2;
+
+            Paint he = new Paint(emojiPaint);
+            he.setTextSize(tileSizeLocal * 1.0f);
+            canvas.drawText("🧙‍♂️", px, py + tileSizeLocal*0.3f, he);
+
+            Paint highlight = new Paint();
+            highlight.setColor(Color.parseColor("#00FF00"));
+            highlight.setStyle(Paint.Style.STROKE);
+            highlight.setStrokeWidth(3);
+            canvas.drawCircle(px, py + tileSizeLocal*0.3f, tileSizeLocal/2, highlight);
+        }
+
+        canvas.drawText("FULL MAP - Tap center button to toggle | Stairs = 🚪 to descend floor",
+            width/2, height*0.95f, textPaintSmall);
     }
 
     private void startAutoMove(int idx, Direction dir) {
@@ -3629,18 +3766,33 @@ public class GameView extends View {
 
     private void handleSingleMove(Direction dir) {
         if (game == null || game.getState() != Game.GameState.PLAYING) return;
+
         Dungeon d = game.getDungeon();
         Player p = game.getPlayer();
         if (d == null || p == null) return;
 
         boolean encounter = false;
-        if (d.isWalkable(p.getX() + dir.dx, p.getY() + dir.dy)) {
+        boolean stairsFound = false;
+        int newX = p.getX() + dir.dx;
+        int newY = p.getY() + dir.dy;
+
+        if (d.isWalkable(newX, newY)) {
             encounter = game.playerMove(dir.dx, dir.dy);
+
+            // === NEW: Check for stairs after movement ===
+            char tile = d.getTile(newX, newY);
+            if (tile == 'S') {
+                stairsFound = true;
+                Log.d(TAG_STAIRS, "Stairs found! Floor: " + (game.getDungeonManager() != null ? game.getDungeonManager().getCurrentFloor() : 1));
+                Toast.makeText(getContext(), "🚪 Stairs found! Tap center button to descend", Toast.LENGTH_LONG).show();
+            }
         }
+
         if (encounter &amp;&amp; listener != null) {
             Enemy e = game.getAndClearEncounteredEnemy();
             if (e != null) listener.onEncounter(e);
         }
+
         Game.GameState st = game.getState();
         if (st != Game.GameState.PLAYING &amp;&amp; listener != null) listener.onGameOver(st);
     }
@@ -3676,6 +3828,7 @@ public class GameView extends View {
         else if (btnDownLeft.contains((int)x, (int)y)) { synchronized(buttonLock){btnDownLeftPressed=true;} bi=6; dir=Direction.DOWN_LEFT; }
         else if (btnDown.contains((int)x, (int)y)) { synchronized(buttonLock){btnDownPressed=true;} bi=7; dir=Direction.DOWN; }
         else if (btnDownRight.contains((int)x, (int)y)) { synchronized(buttonLock){btnDownRightPressed=true;} bi=8; dir=Direction.DOWN_RIGHT; }
+
         else if (btnHeal.contains((int)x, (int)y)) { synchronized(buttonLock){btnHealPressed=true;} if(listener!=null)listener.onHealRequested(); return; }
         else if (btnInventory.contains((int)x, (int)y)) { synchronized(buttonLock){btnInventoryPressed=true;} if(listener!=null)listener.onInventoryRequested(); return; }
         else if (btnQuit.contains((int)x, (int)y)) { synchronized(buttonLock){btnQuitPressed=true;} if(listener!=null)listener.onQuitRequested(); return; }
@@ -3702,16 +3855,18 @@ public class GameView extends View {
         if (y &lt; gameAreaHeight) {
             int viewportWidth = Math.min(VIEWPORT_TILES, dungeon.getWidth());
             int viewportHeight = Math.min(VIEWPORT_TILES, dungeon.getHeight());
+
             int camX = Math.max(0, Math.min(player.getX() - VIEWPORT_RADIUS, dungeon.getWidth() - viewportWidth));
             int camY = Math.max(0, Math.min(player.getY() - VIEWPORT_RADIUS, dungeon.getHeight() - viewportHeight));
+
             float availableWidth = getWidth();
             float availableHeight = gameAreaHeight - 30;
-            float tileSize = Math.min(availableWidth / viewportWidth, availableHeight / viewportHeight);
-            float offsetX = (availableWidth - viewportWidth * tileSize) / 2;
-            float offsetY = (gameAreaHeight - viewportHeight * tileSize) / 2;
+            float tileSizeCalc = Math.min(availableWidth / viewportWidth, availableHeight / viewportHeight);
+            float offsetX = (availableWidth - viewportWidth * tileSizeCalc) / 2;
+            float offsetY = (gameAreaHeight - viewportHeight * tileSizeCalc) / 2;
 
-            int tapTileX = (int)((x - offsetX) / tileSize);
-            int tapTileY = (int)((y - offsetY) / tileSize);
+            int tapTileX = (int)((x - offsetX) / tileSizeCalc);
+            int tapTileY = (int)((y - offsetY) / tileSizeCalc);
 
             if (tapTileX &gt;= 0 &amp;&amp; tapTileX &lt; viewportWidth &amp;&amp; tapTileY &gt;= 0 &amp;&amp; tapTileY &lt; viewportHeight) {
                 int targetX = camX + tapTileX;
@@ -3748,8 +3903,8 @@ public class GameView extends View {
             p.setAttack(10000);
             p.setMaxHealth(100000);
             p.setCurrentHealth(100000);
-            Log.d("INVINCIBLE", "\uD83D\uDEE1️ INVINCIBLE MODE ACTIVATED: ATK=10000, HP=100000");
-            Toast.makeText(getContext(), "\uD83D\uDEE1️ INVINCIBLE MODE ACTIVATED!", Toast.LENGTH_LONG).show();
+            Log.d("INVINCIBLE", "INVINCIBLE MODE ACTIVATED: ATK=10000, HP=100000");
+            Toast.makeText(getContext(), "🛡️ INVINCIBLE MODE ACTIVATED!", Toast.LENGTH_LONG).show();
         }
     }
 }</code></pre>
@@ -5063,10 +5218,12 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 }</code></pre>
 </div>
 <div class="file" id="player">
-<div class="file-header"><h2>Player.java</h2><span class="file-meta">188 lines | 6349 bytes</span></div>
+<div class="file-header"><h2>Player.java</h2><span class="file-meta">187 lines | 6330 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
+import java.io.ObjectInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -5078,8 +5235,8 @@ public class Player extends Character implements Serializable {
     private String name;
     private InventorySystem inventory;
 
-    // FIXED: Pending loot queue — prevents lost items when inventory is full
-    private transient List&lt;Equipment&gt; pendingLoot = new ArrayList&lt;&gt;();
+    // CRITICAL FIX: Not transient anymore! Must be serializable.
+    private List&lt;Equipment&gt; pendingLoot = new ArrayList&lt;&gt;();
 
     public Player(int x, int y) {
         super(x, y, 100, 15);
@@ -5111,13 +5268,18 @@ public class Player extends Character implements Serializable {
         initPendingLoot();
     }
 
+    // CRITICAL FIX: Ensure pendingLoot is never null after deserialization
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        initPendingLoot();
+    }
+
     private void initPendingLoot() {
         if (pendingLoot == null) {
             pendingLoot = new ArrayList&lt;&gt;();
         }
     }
 
-    // FIXED: Pending loot API
     public void addPendingLoot(Equipment item) {
         initPendingLoot();
         if (item != null) {
@@ -5132,10 +5294,6 @@ public class Player extends Character implements Serializable {
         return new ArrayList&lt;&gt;(pendingLoot);
     }
 
-    /**
-     * Attempts to move all pending loot into the inventory.
-     * Called when inventory is opened or after equipping/unequipping.
-     */
     public void processPendingLoot() {
         initPendingLoot();
         if (pendingLoot.isEmpty()) return;
@@ -5173,10 +5331,6 @@ public class Player extends Character implements Serializable {
     public void setMaxHealth(int maxHealth) { this.maxHealth = maxHealth; }
     public void setAttack(int attack) { this.attack = attack; }
 
-    /**
-     * FIXED: Proper XP addition with floor-scaling support
-     * Returns number of levels gained
-     */
     public int addExperience(int amount) {
         if (amount &lt; 0) return 0;
         int oldLevel = this.level;
