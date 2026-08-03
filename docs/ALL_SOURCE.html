@@ -23,7 +23,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">30 files | 5338 lines | 2026-08-03 13:12</div>
+<div class="stats">30 files | 5436 lines | 2026-08-03 13:44</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -740,12 +740,14 @@ public class BattleView extends View {
 }</code></pre>
 </div>
 <div class="file" id="character">
-<div class="file-header"><h2>Character.java</h2><span class="file-meta">51 lines | 1823 bytes</span></div>
+<div class="file-header"><h2>Character.java</h2><span class="file-meta">53 lines | 1916 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
 
 public class Character implements Serializable {
+    private static final long serialVersionUID = 1L;  // ADDED - Critical for serialization
+
     protected int x;
     protected int y;
     protected int maxHealth;
@@ -2223,7 +2225,7 @@ public class Equipment implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="equipmentactivity">
-<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">329 lines | 16200 bytes</span></div>
+<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">425 lines | 19432 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.app.Activity;
@@ -2282,30 +2284,58 @@ public class EquipmentActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_equipment);
-
-        // CRITICAL FIX: Get player from intent OR MainActivity singleton
-        player = (Player) getIntent().getSerializableExtra("player");
         
-        if (player == null) {
-            Log.w(TAG, "Player null from Intent — trying MainActivity fallback");
-            if (MainActivity.getInstance() != null &amp;&amp; MainActivity.getInstance().getGame() != null) {
-                player = MainActivity.getInstance().getGame().getPlayer();
-            }
+        // CRITICAL: Check if MainActivity/Game exists FIRST
+        if (MainActivity.getInstance() == null || MainActivity.getInstance().getGame() == null) {
+            Log.e(TAG, "MainActivity/Game not available yet");
+            Toast.makeText(this, "Game not ready. Please restart game.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
         }
         
-        if (player == null) {
-            Toast.makeText(this, "Error: No player data available", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "CRITICAL: No player data found!");
+        try {
+            setContentView(R.layout.activity_equipment);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load layout: " + e.getMessage());
+            Toast.makeText(this, "UI Error: Cannot load equipment screen", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-        inventorySystem = player.getInventory();
-        if (inventorySystem == null) {
-            Log.w(TAG, "WARNING: player.getInventory() returned null, creating new instance");
-            inventorySystem = new InventorySystem();
-            // Note: Don't try to set it back on player - just use for display
+        // Try multiple sources for player data
+        player = (Player) getIntent().getSerializableExtra("player");
+        
+        if (player == null) {
+            Log.w(TAG, "Player null from Intent — trying MainActivity fallback");
+            try {
+                if (MainActivity.getInstance() != null &amp;&amp; MainActivity.getInstance().getGame() != null) {
+                    player = MainActivity.getInstance().getGame().getPlayer();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to get player from MainActivity: " + e.getMessage());
+                Toast.makeText(this, "Player data unavailable", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
+        }
+        
+        if (player == null) {
+            Log.e(TAG, "CRITICAL: No player data found after all attempts!");
+            Toast.makeText(this, "Critical Error: No player data. Game may be corrupted.", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        // Initialize inventory system safely
+        try {
+            inventorySystem = player.getInventory();
+            if (inventorySystem == null) {
+                Log.w(TAG, "WARNING: player.getInventory() returned null, creating new instance");
+                inventorySystem = new InventorySystem();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize inventory: " + e.getMessage());
+            inventorySystem = new InventorySystem(); // Fallback
         }
 
         equipmentView = findViewById(R.id.equipment_layout);
@@ -2325,7 +2355,7 @@ public class EquipmentActivity extends Activity {
         }
 
         Log.d(TAG, "EquipmentActivity ready — Player Lvl " + player.getLevel() +
-              " | Inventory items: " + inventorySystem.getItemCount());
+              " | Inventory items: " + (inventorySystem != null ? inventorySystem.getItemCount() : "NULL"));
     }
 
     private void initViews() {
@@ -2391,40 +2421,50 @@ public class EquipmentActivity extends Activity {
             Log.w(TAG, "Unknown slot ID: " + slotId);
             return;
         }
-        Intent intent = new Intent(this, InventoryActivity.class);
-        intent.putExtra("filter_type", itemType.name());
-        intent.putExtra("player_serialized", player);
-        startActivityForResult(intent, INVENTORY_REQUEST_CODE);
+        try {
+            Intent intent = new Intent(this, InventoryActivity.class);
+            intent.putExtra("filter_type", itemType.name());
+            intent.putExtra("player_serialized", player);
+            startActivityForResult(intent, INVENTORY_REQUEST_CODE);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to open inventory: " + e.getMessage());
+            Toast.makeText(this, "Error opening inventory", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showStatDetails(int statId) {
         StringBuilder details = new StringBuilder();
-        if (statId == R.id.stat_health) {
-            details.append("Base HP: ").append(player.getMaxHealth()).append("\n");
-            details.append("Gear Bonus: +").append(calculateTotalHealthBonus()).append("\n");
-            details.append("Total: ").append(calculateTotalHealth());
-        } else if (statId == R.id.stat_attack) {
-            details.append("Base ATK: ").append(player.getAttack()).append("\n");
-            details.append("Gear Bonus: +").append(calculateTotalAttackBonus()).append("\n");
-            details.append("Total: ").append(calculateTotalAttack());
-        } else if (statId == R.id.stat_defense) {
-            details.append("Base DEF: ").append(player.getArmor()).append("\n");
-            details.append("Gear Bonus: +").append(calculateTotalDefenseBonus()).append("\n");
-            details.append("Total: ").append(calculateTotalDefense());
-        } else if (statId == R.id.stat_crit) {
-            details.append("Base CRIT: 15%\n");
-            details.append("Gear Bonus: +").append(calculateTotalCritBonus()).append("%\n");
-            details.append("Total: ").append((int)(calculateTotalCrit() * 100)).append("%");
-        } else if (statId == R.id.stat_dodge) {
-            details.append("Base DODGE: ").append(player.getDodgeChance()).append("%\n");
-            details.append("Gear Bonus: +").append(calculateTotalDodgeBonus()).append("%\n");
-            details.append("Total: ").append((int)(calculateTotalDodge() * 100)).append("%");
+        try {
+            if (statId == R.id.stat_health) {
+                details.append("Base HP: ").append(player.getMaxHealth()).append("\n");
+                details.append("Gear Bonus: +").append(calculateTotalHealthBonus()).append("\n");
+                details.append("Total: ").append(calculateTotalHealth());
+            } else if (statId == R.id.stat_attack) {
+                details.append("Base ATK: ").append(player.getAttack()).append("\n");
+                details.append("Gear Bonus: +").append(calculateTotalAttackBonus()).append("\n");
+                details.append("Total: ").append(calculateTotalAttack());
+            } else if (statId == R.id.stat_defense) {
+                details.append("Base DEF: ").append(player.getArmor()).append("\n");
+                details.append("Gear Bonus: +").append(calculateTotalDefenseBonus()).append("\n");
+                details.append("Total: ").append(calculateTotalDefense());
+            } else if (statId == R.id.stat_crit) {
+                details.append("Base CRIT: 15%\n");
+                details.append("Gear Bonus: +").append(calculateTotalCritBonus()).append("%\n");
+                details.append("Total: ").append((int)(calculateTotalCrit() * 100)).append("%");
+            } else if (statId == R.id.stat_dodge) {
+                details.append("Base DODGE: ").append(player.getDodgeChance()).append("%\n");
+                details.append("Gear Bonus: +").append(calculateTotalDodgeBonus()).append("%\n");
+                details.append("Total: ").append((int)(calculateTotalDodge() * 100)).append("%");
+            }
+            new AlertDialog.Builder(this)
+                .setTitle(getStatTitle(statId))
+                .setMessage(details.toString())
+                .setPositiveButton("OK", null)
+                .show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing stat details: " + e.getMessage());
+            Toast.makeText(this, "Error loading stats", Toast.LENGTH_SHORT).show();
         }
-        new AlertDialog.Builder(this)
-            .setTitle(getStatTitle(statId))
-            .setMessage(details.toString())
-            .setPositiveButton("OK", null)
-            .show();
     }
 
     private String getStatTitle(int statId) {
@@ -2434,33 +2474,42 @@ public class EquipmentActivity extends Activity {
 
     private void updateEquippedItems() {
         if (inventorySystem == null) return;
-        if (helmetSlot != null) updateSlotVisual(helmetSlot, inventorySystem.getEquipped(ItemType.HELMET));
-        if (chestplateSlot != null) updateSlotVisual(chestplateSlot, inventorySystem.getEquipped(ItemType.CHESTPLATE));
-        if (leggingsSlot != null) updateSlotVisual(leggingsSlot, inventorySystem.getEquipped(ItemType.LEGGINGS));
-        if (bootsSlot != null) updateSlotVisual(bootsSlot, inventorySystem.getEquipped(ItemType.BOOTS));
-        if (glovesSlot != null) updateSlotVisual(glovesSlot, inventorySystem.getEquipped(ItemType.GLOVES));
-        if (weaponSlot != null) updateSlotVisual(weaponSlot, inventorySystem.getEquipped(ItemType.WEAPON));
-        if (shieldSlot != null) updateSlotVisual(shieldSlot, inventorySystem.getEquipped(ItemType.SHIELD));
-        if (amuletSlot != null) updateSlotVisual(amuletSlot, inventorySystem.getEquipped(ItemType.AMULET));
-        if (ringSlot != null) updateSlotVisual(ringSlot, inventorySystem.getEquipped(ItemType.RING));
-        if (cloakSlot != null) updateSlotVisual(cloakSlot, inventorySystem.getEquipped(ItemType.CLOAK));
-        if (artifactSlot != null) updateSlotVisual(artifactSlot, inventorySystem.getEquipped(ItemType.fromSlotId(ItemType.SLOT_ARTIFACT)));
+        try {
+            if (helmetSlot != null) updateSlotVisual(helmetSlot, inventorySystem.getEquipped(ItemType.HELMET));
+            if (chestplateSlot != null) updateSlotVisual(chestplateSlot, inventorySystem.getEquipped(ItemType.CHESTPLATE));
+            if (leggingsSlot != null) updateSlotVisual(leggingsSlot, inventorySystem.getEquipped(ItemType.LEGGINGS));
+            if (bootsSlot != null) updateSlotVisual(bootsSlot, inventorySystem.getEquipped(ItemType.BOOTS));
+            if (glovesSlot != null) updateSlotVisual(glovesSlot, inventorySystem.getEquipped(ItemType.GLOVES));
+            if (weaponSlot != null) updateSlotVisual(weaponSlot, inventorySystem.getEquipped(ItemType.WEAPON));
+            if (shieldSlot != null) updateSlotVisual(shieldSlot, inventorySystem.getEquipped(ItemType.SHIELD));
+            if (amuletSlot != null) updateSlotVisual(amuletSlot, inventorySystem.getEquipped(ItemType.AMULET));
+            if (ringSlot != null) updateSlotVisual(ringSlot, inventorySystem.getEquipped(ItemType.RING));
+            if (cloakSlot != null) updateSlotVisual(cloakSlot, inventorySystem.getEquipped(ItemType.CLOAK));
+            if (artifactSlot != null) updateSlotVisual(artifactSlot, inventorySystem.getEquipped(ItemType.fromSlotId(ItemType.SLOT_ARTIFACT)));
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating equipped items: " + e.getMessage());
+        }
     }
 
     private void updateSlotVisual(View slotView, Equipment equipment) {
         if (slotView == null) return;
-        if (equipment == null) {
-            slotView.setBackgroundColor(0xFF333333);
-            slotView.setAlpha(0.5f);
-            return;
+        try {
+            if (equipment == null) {
+                slotView.setBackgroundColor(0xFF333333);
+                slotView.setAlpha(0.5f);
+                return;
+            }
+            slotView.setAlpha(1.0f);
+            slotView.setTag(equipment.getName());
+            int rarityColor = getRarityColor(equipment.getRarity());
+            slotView.setBackgroundTintList(ColorStateList.valueOf(rarityColor));
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating slot visual: " + e.getMessage());
         }
-        slotView.setAlpha(1.0f);
-        slotView.setTag(equipment.getName());
-        int rarityColor = getRarityColor(equipment.getRarity());
-        slotView.setBackgroundTintList(ColorStateList.valueOf(rarityColor));
     }
 
     private int getRarityColor(Rarity rarity) {
+        if (rarity == null) return 0xFF808080;
         switch (rarity) {
             case MYTHIC: return 0xFFFFD700;
             case UNOBTAINIUM: return 0xFFFFFFFF;
@@ -2474,65 +2523,110 @@ public class EquipmentActivity extends Activity {
     }
 
     private void updateStats() {
-        if (healthStat != null) healthStat.setText("❤️ " + calculateTotalHealth());
-        if (attackStat != null) attackStat.setText("⚔️ " + calculateTotalAttack());
-        if (defenseStat != null) defenseStat.setText("🛡️ " + calculateTotalDefense());
-        if (speedStat != null) speedStat.setText("⚡ " + player.getDodgeChance());
-        if (critStat != null) critStat.setText("⭐ " + (int)(calculateTotalCrit() * 100) + "%");
-        if (dodgeStat != null) dodgeStat.setText("💨 " + (int)(calculateTotalDodge() * 100) + "%");
+        try {
+            if (healthStat != null) healthStat.setText("❤️ " + calculateTotalHealth());
+            if (attackStat != null) attackStat.setText("⚔️ " + calculateTotalAttack());
+            if (defenseStat != null) defenseStat.setText("🛡️ " + calculateTotalDefense());
+            if (speedStat != null) speedStat.setText("⚡ " + player.getDodgeChance());
+            if (critStat != null) critStat.setText("⭐ " + (int)(calculateTotalCrit() * 100) + "%");
+            if (dodgeStat != null) dodgeStat.setText("💨 " + (int)(calculateTotalDodge() * 100) + "%");
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating stats: " + e.getMessage());
+        }
     }
 
     private void updateSetBonusDisplay() {
         if (setBonusText == null || inventorySystem == null) return;
-        Equipment.SetBonus[] activeBonuses = inventorySystem.getActiveSetBonuses();
-        if (activeBonuses.length == 0) {
-            setBonusText.setVisibility(View.GONE);
-            return;
+        try {
+            Equipment.SetBonus[] activeBonuses = inventorySystem.getActiveSetBonuses();
+            if (activeBonuses.length == 0) {
+                setBonusText.setVisibility(View.GONE);
+                return;
+            }
+            setBonusText.setVisibility(View.VISIBLE);
+            StringBuilder bonuses = new StringBuilder("🔥 Active Set Bonuses:\n");
+            for (Equipment.SetBonus bonus : activeBonuses) {
+                bonuses.append(bonus.getDescription()).append("\n");
+            }
+            setBonusText.setText(bonuses.toString());
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating set bonuses: " + e.getMessage());
         }
-        setBonusText.setVisibility(View.VISIBLE);
-        StringBuilder bonuses = new StringBuilder("🔥 Active Set Bonuses:\n");
-        for (Equipment.SetBonus bonus : activeBonuses) {
-            bonuses.append(bonus.getDescription()).append("\n");
-        }
-        setBonusText.setText(bonuses.toString());
     }
 
-    private int calculateTotalHealth() { return player.getMaxHealth() + calculateTotalHealthBonus(); }
+    private int calculateTotalHealth() { 
+        if (player == null) return 100;
+        return player.getMaxHealth() + calculateTotalHealthBonus(); 
+    }
     private int calculateTotalHealthBonus() {
         int bonus = 0;
-        if (inventorySystem != null) for (Equipment eq : inventorySystem.getAllEquipment()) if (eq != null) bonus += eq.getHealthBonus();
+        if (inventorySystem != null) {
+            for (Equipment eq : inventorySystem.getAllEquipment()) {
+                if (eq != null) bonus += eq.getHealthBonus();
+            }
+        }
         return bonus;
     }
-    private int calculateTotalAttack() { return player.getAttack() + calculateTotalAttackBonus(); }
+    private int calculateTotalAttack() { 
+        if (player == null) return 15;
+        return player.getAttack() + calculateTotalAttackBonus(); 
+    }
     private int calculateTotalAttackBonus() {
         int bonus = 0;
-        if (inventorySystem != null) for (Equipment eq : inventorySystem.getAllEquipment()) if (eq != null) bonus += eq.getAttackBonus();
+        if (inventorySystem != null) {
+            for (Equipment eq : inventorySystem.getAllEquipment()) {
+                if (eq != null) bonus += eq.getAttackBonus();
+            }
+        }
         return bonus;
     }
-    private int calculateTotalDefense() { return player.getArmor() + calculateTotalDefenseBonus(); }
+    private int calculateTotalDefense() { 
+        if (player == null) return 0;
+        return player.getArmor() + calculateTotalDefenseBonus(); 
+    }
     private int calculateTotalDefenseBonus() {
         int bonus = 0;
-        if (inventorySystem != null) for (Equipment eq : inventorySystem.getAllEquipment()) if (eq != null) bonus += eq.getDefenseBonus();
+        if (inventorySystem != null) {
+            for (Equipment eq : inventorySystem.getAllEquipment()) {
+                if (eq != null) bonus += eq.getDefenseBonus();
+            }
+        }
         return bonus;
     }
     private float calculateTotalCrit() {
         float base = 0.15f;
-        if (inventorySystem != null) for (Equipment eq : inventorySystem.getAllEquipment()) if (eq != null) base += eq.getCritChance() / 100f;
+        if (inventorySystem != null) {
+            for (Equipment eq : inventorySystem.getAllEquipment()) {
+                if (eq != null) base += eq.getCritChance() / 100f;
+            }
+        }
         return Math.min(1.0f, base);
     }
     private int calculateTotalCritBonus() {
         int bonus = 0;
-        if (inventorySystem != null) for (Equipment eq : inventorySystem.getAllEquipment()) if (eq != null) bonus += eq.getCritChance();
+        if (inventorySystem != null) {
+            for (Equipment eq : inventorySystem.getAllEquipment()) {
+                if (eq != null) bonus += eq.getCritChance();
+            }
+        }
         return bonus;
     }
     private float calculateTotalDodge() {
-        float base = player.getDodgeChance() / 100f;
-        if (inventorySystem != null) for (Equipment eq : inventorySystem.getAllEquipment()) if (eq != null) base += eq.getDodgeChance() / 100f;
+        float base = (player != null) ? player.getDodgeChance() / 100f : 0f;
+        if (inventorySystem != null) {
+            for (Equipment eq : inventorySystem.getAllEquipment()) {
+                if (eq != null) base += eq.getDodgeChance() / 100f;
+            }
+        }
         return Math.min(1.0f, base);
     }
     private int calculateTotalDodgeBonus() {
         int bonus = 0;
-        if (inventorySystem != null) for (Equipment eq : inventorySystem.getAllEquipment()) if (eq != null) bonus += eq.getDodgeChance();
+        if (inventorySystem != null) {
+            for (Equipment eq : inventorySystem.getAllEquipment()) {
+                if (eq != null) bonus += eq.getDodgeChance();
+            }
+        }
         return bonus;
     }
 
@@ -2541,10 +2635,14 @@ public class EquipmentActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == INVENTORY_REQUEST_CODE &amp;&amp; resultCode == RESULT_OK) {
             if (data != null) {
-                Player updatedPlayer = (Player) data.getSerializableExtra("player_updated");
-                if (updatedPlayer != null) {
-                    player = updatedPlayer;
-                    inventorySystem = player.getInventory();
+                try {
+                    Player updatedPlayer = (Player) data.getSerializableExtra("player_updated");
+                    if (updatedPlayer != null) {
+                        player = updatedPlayer;
+                        inventorySystem = player.getInventory();
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error processing inventory result: " + e.getMessage());
                 }
             }
             updateEquippedItems();
@@ -3082,7 +3180,7 @@ import java.util.List;
 
 public class GameView extends View {
     private static final float ENEMY_RADIUS = 0.4f;
-    private static final int BUTTON_AREA_HEIGHT_PERCENT = 12;
+    private static final int BUTTON_AREA_HEIGHT_PERCENT = 20;
     private static final int VIEWPORT_TILES = 7;
     private static final int VIEWPORT_RADIUS = 3;
 
