@@ -1,89 +1,1060 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- ===== ESSENTIAL META ===== -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>John Upchurch | IAM & Authentication Security Analyst</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  
+  <!-- ===== SEO BASICS ===== -->
+  <title>John H. Upchurch | IAM & Authentication Security Analyst</title>
+  <meta name="description" content="IAM & Authentication Security Analyst who deployed MFA across 30+ servers for 150+ AD users. Expert in SOC 2 compliance, Windows automation, and identity infrastructure.">
+  <meta name="keywords" content="IAM, Authentication, Security Analyst, MFA, SOC 2, Cybersecurity, Windows Administration, Identity Management, Active Directory, Security Architecture">
+  <meta name="author" content="John H. Upchurch">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://upchurchj.github.io/Roguelike/index.html">
+  <meta name="language" content="en-US">
+  <meta name="theme-color" content="#1E2761">
+  
+  <!-- ===== OPEN GRAPH (Facebook, LinkedIn, WhatsApp, Discord) ===== -->
+  <meta property="og:title" content="John H. Upchurch | IAM & Authentication Security Analyst">
+  <meta property="og:description" content="Architecting identity infrastructure that ships faster than threats evolve. MFA deployments, SOC 2 compliance, Windows automation expert.">
+  <meta property="og:url" content="https://upchurchj.github.io/Roguelike/index.html">
+  <meta property="og:image" content="https://upchurchj.github.io/Roguelike/john-profile.jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="John H. Upchurch - IAM Security Analyst">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="John H. Upchurch Portfolio">
+  <meta property="og:locale" content="en_US">
+  
+  <!-- ===== TWITTER CARDS ===== -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="John H. Upchurch | IAM & Authentication Security Analyst">
+  <meta name="twitter:description" content="Architecting identity infrastructure that ships faster than threats evolve. MFA deployments, SOC 2 compliance, Windows automation expert.">
+  <meta name="twitter:image" content="https://upchurchj.github.io/Roguelike/john-profile.jpeg">
+  <meta name="twitter:image:alt" content="John H. Upchurch - IAM Security Analyst">
+  
+  <!-- ===== SECURITY HEADERS ===== -->
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  
+  <!-- ===== STRUCTURED DATA (Schema.org JSON-LD) ===== -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "John H. Upchurch",
+    "jobTitle": "IAM & Authentication Security Analyst",
+    "url": "https://upchurchj.github.io/Roguelike/index.html",
+    "email": "mailto:john@example.com",
+    "sameAs": [
+      "https://www.linkedin.com/in/Patient",
+      "https://github.com/upchurchj"
+    ],
+    "knowsAbout": [
+      "Identity and Access Management",
+      "Multi-Factor Authentication",
+      "SOC 2 Compliance",
+      "Windows Automation",
+      "Cybersecurity",
+      "Active Directory",
+      "Security Architecture",
+      "Incident Response"
+    ],
+    "hasCredential": [
+      {"@type": "ProfessionalDegree", "name": "Google AI Professional Certificate"},
+      {"@type": "ProfessionalDegree", "name": "Google Cybersecurity Professional Certificate"},
+      {"@type": "ProfessionalDegree", "name": "Google Project Management Professional Certificate"},
+      {"@type": "ProfessionalDegree", "name": "Duo Security Level 1 Administrator"},
+      {"@type": "ProfessionalDegree", "name": "HDI Service Center Analyst"},
+      {"@type": "ProfessionalDegree", "name": "HDI Service Center Team Lead"},
+      {"@type": "ProfessionalDegree", "name": "HIPAA Privacy and Security Executive"}
+    ]
+  }
+  </script>
+  
+  <!-- Favicon (update paths if you have actual favicon files) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  
+  <!-- ===== GSAP FROM CDN ===== -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <style>
+    /* ===== RESET & BASE ===== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html {
+      scroll-behavior: smooth;
+      scroll-snap-type: y proximity;
+    }
     body {
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       line-height: 1.6;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 2rem;
       color: #333;
-      background: #fafafa;
+      background: #F0F4F8;
+      overflow-x: hidden;
+      cursor: none;
     }
-    h1 {
-      font-size: 1.8rem;
-      margin-bottom: 1.5rem;
-      color: #1a1a1a;
+
+    /* ===== SCROLL PROGRESS BAR ===== */
+    .scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0%;
+      height: 3px;
+      background: linear-gradient(90deg, #1E2761, #408EC6, #8CBDD0);
+      z-index: 9999;
+      transition: width 0.1s ease-out;
     }
-    p {
-      margin-bottom: 1rem;
-      font-size: 1.05rem;
+
+    /* ===== CUSTOM CURSOR ===== */
+    .cursor-dot {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background: #408EC6;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+      transition: width 0.3s, height 0.3s, background 0.3s;
     }
-    .metrics {
-      background: #f0f0f0;
-      border-left: 4px solid #6d4aff;
-      padding: 1.5rem;
-      margin: 2rem 0;
-      border-radius: 0 8px 8px 0;
+    .cursor-ring {
+      position: fixed;
+      width: 36px;
+      height: 36px;
+      border: 2px solid rgba(64, 142, 198, 0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: width 0.3s, height 0.3s, border-color 0.3s, opacity 0.3s;
     }
-    .metrics div {
-      margin-bottom: 0.5rem;
-      padding-bottom: 0.5rem;
+    .cursor-ring.hover {
+      width: 60px;
+      height: 60px;
+      border-color: #1E2761;
+      background: rgba(64, 142, 198, 0.1);
     }
-    .metrics div:last-child {
-      margin-bottom: 0;
-      padding-bottom: 0;
+    .cursor-dot.hover {
+      width: 16px;
+      height: 16px;
+      background: #1E2761;
     }
-    .current-project {
-      border-top: 2px dashed #ddd;
-      margin: 2rem 0;
-      padding-top: 1.5rem;
+
+    /* ===== THEME VARIABLES ===== */
+    [data-theme='dark'] {
+      --bg-color: #0F1528;
+      --card-bg: #1A2238;
+      --text-color: #e0e0e0;
+      --accent-primary: #1E2761;
+      --accent-secondary: #408EC6;
+      --accent-pastel: #8CBDD0;
+      --border: rgba(64, 142, 198, 0.2);
+      --snap-bg: #0F1528;
     }
-    .cta {
-      margin-top: 2.5rem;
-      padding: 1.5rem;
-      background: #fff;
-      border: 1px solid #ddd;
+    [data-theme='light'] {
+      --bg-color: #F0F4F8;
+      --card-bg: white;
+      --text-color: #2c3e50;
+      --accent-primary: #2B4066;
+      --accent-secondary: #5A8BB5;
+      --accent-pastel: #A8D5E2;
+      --border: rgba(43, 64, 102, 0.15);
+      --snap-bg: #F0F4F8;
+    }
+
+    [data-theme='dark'] body { background: var(--bg-color); color: var(--text-color); }
+    [data-theme='dark'] .flip-card-front { background: var(--card-bg); border-color: var(--border); }
+    [data-theme='dark'] .terminal { background: #0F1528; }
+    [data-theme='dark'] .terminal-bar { background: #161E32; }
+
+    /* ===== SCROLL SNAP SECTIONS ===== */
+    .snap-section {
+      min-height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      padding: 2rem;
+    }
+
+    /* ===== THEME TOGGLE ===== */
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      width: 44px;
+      height: 44px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      cursor: none;
+      z-index: 1000;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .theme-toggle:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(64, 142, 198, 0.2); }
+
+    /* ===== HERO SECTION ===== */
+    .hero-section {
+      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+      color: white;
+      overflow: hidden;
+    }
+    .hero-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 500px;
+      height: 500px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+      animation: float 8s ease-in-out infinite;
+    }
+    .hero-section::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 400px;
+      height: 400px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 50%;
+      animation: float 10s ease-in-out infinite reverse;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-30px) rotate(5deg); }
+    }
+
+    /* ===== 3D CUBE AVATAR CONTAINER ===== */
+    .cube-container {
+      perspective: 1000px;
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 2rem auto;
+      z-index: 2;
+    }
+    .cube {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: cube-rotate 20s linear infinite;
+    }
+    .cube-face {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      border: 3px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(4px);
+      overflow: hidden;
+    }
+    .cube-face img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
       border-radius: 8px;
     }
-    .cta a {
-      color: #6d4aff;
-      text-decoration: none;
-      font-weight: 500;
+    .face-front  { transform: rotateY(0deg) translateZ(100px); }
+    .face-back   { transform: rotateY(180deg) translateZ(100px); }
+    .face-right  { transform: rotateY(90deg) translateZ(100px); }
+    .face-left   { transform: rotateY(-90deg) translateZ(100px); }
+    .face-top    { transform: rotateX(90deg) translateZ(100px); }
+    .face-bottom { transform: rotateX(-90deg) translateZ(100px); }
+    @keyframes cube-rotate {
+      0% { transform: rotateX(-15deg) rotateY(0deg); }
+      100% { transform: rotateX(-15deg) rotateY(360deg); }
     }
-    .cta a:hover {
-      text-decoration: underline;
+    .cube-glow {
+      position: absolute;
+      inset: -20px;
+      background: radial-gradient(circle at 50% 50%, rgba(64, 142, 198, 0.3), transparent 70%);
+      animation: glow-pulse 3s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes glow-pulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      max-width: 800px;
+    }
+
+    /* ===== KINETIC TEXT ===== */
+    .kinetic-title {
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 800;
+      color: white;
+      letter-spacing: -1px;
+      overflow: hidden;
+    }
+    .kinetic-char {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(100%) rotate(10deg);
+    }
+    .kinetic-subtitle {
+      font-size: clamp(0.9rem, 2.5vw, 1.4rem);
+      font-weight: 600;
+      color: #A8D5E2;
+      opacity: 0;
+      transform: translateY(20px);
+      margin-top: 0.5rem;
+    }
+    .hero-tagline {
+      font-size: clamp(0.85rem, 2vw, 1.1rem);
+      opacity: 0;
+      margin-top: 1rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      padding: 0.6rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      margin-top: 1.5rem;
+      opacity: 0;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.6);
+      font-size: 0.8rem;
+      opacity: 0;
+      animation: bounce-hint 2s ease-in-out infinite 3s;
+    }
+    @keyframes bounce-hint {
+      0%, 100% { opacity: 0.6; transform: translateX(-50%) translateY(0); }
+      50% { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+    }
+
+    /* ===== ABOUT SECTION ===== */
+    .about-section {
+      background: var(--snap-bg);
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .about-section p {
+      margin-bottom: 1.25rem;
+      font-size: 1.1rem;
+      max-width: 700px;
+      text-align: center;
+    }
+    .section-heading {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: var(--accent-secondary);
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    /* ===== FLIP CARDS ===== */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      width: 100%;
+      max-width: 900px;
+      margin: 2rem 0;
+    }
+    .flip-card {
+      perspective: 1000px;
+      height: 180px;
+    }
+    .flip-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+    .flip-card:hover .flip-card-inner {
+      transform: rotateY(180deg);
+    }
+    .flip-card-front, .flip-card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .flip-card-front {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-left: 4px solid #408EC6;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .flip-card-back {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+      transform: rotateY(180deg);
+    }
+    .flip-card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #408EC6;
+      margin-bottom: 0.3rem;
+    }
+    .flip-card-back .flip-card-value { color: white; }
+    .metric-label { font-size: 0.9rem; color: #666; }
+    [data-theme='dark'] .metric-label { color: #999; }
+    .flip-card-detail { font-size: 0.85rem; line-height: 1.4; }
+
+    /* ===== CERTS SECTION ===== */
+    .certs-section {
+      background: var(--snap-bg);
+    }
+    .certs-container {
+      max-width: 800px;
+      width: 100%;
+      padding: 2rem;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--card-bg);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.06);
+    }
+    .certs-container h3 {
+      color: #408EC6;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+      text-align: center;
+    }
+    .certs-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+    .cert-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(64, 142, 198, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      color: inherit;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    .cert-badge.in-view {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .cert-badge:hover {
+      border-color: #408EC6;
+      background: rgba(64, 142, 198, 0.15);
+      transform: translateY(-2px) scale(1.03);
+    }
+
+    /* ===== TERMINAL SECTION ===== */
+    .terminal-section {
+      background: var(--snap-bg);
+    }
+    .terminal {
+      background: #1A2238;
+      border-radius: 12px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 700px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+      font-family: 'Courier New', monospace;
+    }
+    .terminal-bar {
+      background: #161E32;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .terminal-dot.red { background: #ff5f56; }
+    .terminal-dot.yellow { background: #ffbd2e; }
+    .terminal-dot.green { background: #27c93f; }
+    .terminal-title { color: #888; font-size: 0.8rem; margin-left: 0.5rem; font-family: system-ui, sans-serif; }
+    .terminal-body { padding: 1.5rem; color: #e0e0e0; font-size: 0.9rem; min-height: 260px; }
+    .terminal-line { margin-bottom: 0.5rem; opacity: 0; animation: terminal-fade 0.3s forwards; }
+    .terminal-prompt { color: #408EC6; }
+    .terminal-output { color: #27c93f; }
+    .terminal-comment { color: #666; font-style: italic; }
+    .terminal-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: #408EC6;
+      animation: cursor-blink 1s infinite;
+      vertical-align: text-bottom;
+    }
+    @keyframes cursor-blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+    @keyframes terminal-fade { to { opacity: 1; } }
+
+    /* ===== PROJECT SECTION ===== */
+    .project-section {
+      background: var(--snap-bg);
+      max-width: 800px;
+    }
+    .project-card {
+      border-top: 2px dashed var(--border);
+      padding-top: 1.5rem;
+      text-align: center;
+      max-width: 700px;
+    }
+    .project-card p {
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+    }
+    .project-link {
+      color: #408EC6;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .project-link:hover { color: #1E2761; text-decoration: underline; }
+
+    /* ===== CTA SECTION (Subtle - No desperation) ===== */
+    .cta-section {
+      background: var(--snap-bg);
+    }
+    .cta-glass {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(64, 142, 198, 0.2);
+      border-radius: 20px;
+      padding: 3rem;
+      max-width: 700px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    }
+    .cta-glass::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 30%, rgba(64, 142, 198, 0.08), transparent 50%);
+      pointer-events: none;
+    }
+    .cta-glass h2 { margin-bottom: 1rem; text-align: center; }
+    .cta-glass p { margin-bottom: 1.5rem; text-align: center; }
+
+    /* ===== MAGNETIC BUTTON ===== */
+    .magnetic-wrap {
+      display: inline-block;
+      position: relative;
+    }
+    .cta-button {
+      display: inline-block;
+      background: #408EC6;
+      color: white;
+      padding: 1rem 2.5rem;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 15px rgba(64, 142, 198, 0.3);
+    }
+    .cta-button:hover {
+      background: #1E2761;
+      box-shadow: 0 8px 30px rgba(64, 142, 198, 0.4);
+    }
+    .social-links {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .social-links a {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #408EC6;
+      text-decoration: none;
+      padding: 0.75rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      transition: all 0.3s;
+    }
+    .social-links a:hover {
+      border-color: #408EC6;
+      background: rgba(64, 142, 198, 0.08);
+      transform: translateY(-2px);
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: #888;
+      font-size: 0.9rem;
+      scroll-snap-align: start;
+    }
+
+    /* ===== MOBILE ===== */
+    @media (max-width: 768px) {
+      body { cursor: auto; }
+      .cursor-dot, .cursor-ring { display: none; }
+      html { scroll-snap-type: none; }
+      .snap-section { min-height: auto; padding: 3rem 1.5rem; }
+      .hero-section { min-height: 100vh; }
+      .metrics-grid { grid-template-columns: 1fr; }
+      .flip-card { height: 160px; }
+      .social-links { flex-direction: column; align-items: stretch; }
+      .social-links a { justify-content: center; }
+      .cta-glass { padding: 2rem 1.5rem; }
+      .terminal-body { min-height: 200px; font-size: 0.8rem; }
+
+      /* Smaller cube on mobile */
+      .cube-container { width: 140px; height: 140px; }
+      .cube-face { width: 140px; height: 140px; }
+      .face-front  { transform: rotateY(0deg) translateZ(70px); }
+      .face-back   { transform: rotateY(180deg) translateZ(70px); }
+      .face-right  { transform: rotateY(90deg) translateZ(70px); }
+      .face-left   { transform: rotateY(-90deg) translateZ(70px); }
+      .face-top    { transform: rotateX(90deg) translateZ(70px); }
+      .face-bottom { transform: rotateX(-90deg) translateZ(70px); }
     }
   </style>
 </head>
 <body>
-  <h1>IAM and Authentication Security Analyst</h1>
-  
-  <p>Deployed MFA across 30 servers, for 150 users, in a 46-client MSP environment. Built compliance baselines for automated Windows deployments with 333% efficiency increase. All before AI.</p>
-  
-  <p>This project? Different story. I designed the architecture, AI coded it, and I validated the integration. Testing how fast identity solutions can move when architecting instead of typing. Because good security shouldn't have to wait on legacy workflows.</p>
-  
-  <div class="metrics">
-    <div><strong>MFA Deployment</strong> — 150 users, 30 servers, $0 licensing cost</div>
-    <div><strong>Windows Automation</strong> — 333% efficiency gain, SOC 2/ISO 27001 compliant</div>
-    <div><strong>Security Training</strong> — 180+ engagements, 12-song awareness series</div>
-  </div>
-  
-  <div class="current-project">
-    <p><strong>Current Project: AI-Augmented Development</strong><br>
-    Building this roguelike game to test a hypothesis: architect + AI-coding + validation = faster delivery.<br>
-    Source: <a href="game.html" class="cta">upchurchj.github.io/Roguelike</a><br>
-    APK build in progress, F-Droid submission pending.</p>
-  </div>
-  
-  <div class="cta">
-    <p><strong>Hiring managers:</strong> If this speaks to you, let's talk.</p>
-    <p>LinkedIn: <a href="https://www.linkedin.com/in/Patient">linkedin.com/in/Patient</a></p>
-  </div>
+
+  <!-- Scroll Progress Bar -->
+  <div class="scroll-progress" id="scrollProgress"></div>
+
+  <!-- Custom Cursor -->
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- Theme Toggle -->
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode" id="theme-toggle">🌙</button>
+
+  <!-- ===== HERO SECTION ===== -->
+  <section class="snap-section hero-section" id="hero">
+    <div class="hero-content">
+      <div class="cube-container" data-reveal>
+        <div class="cube-glow"></div>
+        <div class="cube" id="avatarCube">
+          <div class="cube-face face-front"><img src="john-profile.jpeg" alt="John H. Upchurch"></div>
+          <div class="cube-face face-back"><img src="john-profile.jpeg" alt="John H. Upchurch"></div>
+          <div class="cube-face face-right"><img src="john-profile.jpeg" alt="John H. Upchurch"></div>
+          <div class="cube-face face-left"><img src="john-profile.jpeg" alt="John H. Upchurch"></div>
+          <div class="cube-face face-top"><img src="john-profile.jpeg" alt="John H. Upchurch"></div>
+          <div class="cube-face face-bottom"><img src="john-profile.jpeg" alt="John H. Upchurch"></div>
+        </div>
+      </div>
+      <h1 class="kinetic-title" id="kineticName">John H. Upchurch</h1>
+      <p class="kinetic-subtitle" id="kineticRole">IAM &amp; Authentication Security Analyst</p>
+      <p class="hero-tagline" id="heroTagline">Architecting identity infrastructure that ships faster than threats evolve.</p>
+      <span class="hero-badge" id="heroBadge">🛡️ MFA across 30+ servers • 150+ AD users</span>
+    </div>
+    <div class="scroll-hint">↓ scroll to explore ↓</div>
+  </section>
+
+  <!-- ===== ABOUT SECTION ===== -->
+  <section class="snap-section about-section" id="about">
+    <h2 class="section-heading" data-reveal>The Mission</h2>
+    <div data-reveal>
+      <p>Deployed MFA across 30+ servers, for 150+ AD users, across a 46-client MSP environment. Built compliance baselines for automated Windows deployments with 333% efficiency increase. All before AI.</p>
+      <p>This project? Different story. I designed the architecture, AI coded it, and I validated the integration. Testing how fast identity solutions can move when architecting instead of typing. Because good security shouldn't have to wait on legacy workflows.</p>
+    </div>
+  </section>
+
+  <!-- ===== METRICS SECTION ===== -->
+  <section class="snap-section about-section" id="metrics">
+    <h2 class="section-heading" data-reveal>Impact by the Numbers</h2>
+    <div class="metrics-grid" data-reveal>
+      <div class="flip-card">
+        <div class="flip-card-inner">
+          <div class="flip-card-front">
+            <div class="flip-card-value">$0</div>
+            <div class="metric-label">MFA licensing cost (full deployment)</div>
+          </div>
+          <div class="flip-card-back">
+            <div class="flip-card-value">Details</div>
+            <div class="flip-card-detail">Evaluated 3 MFA tools, selected a cost-effective free implementation. Deployed across entire MSP client base with zero licensing burden. Eliminated shared admin credentials for 150+ AD users.</div>
+          </div>
+        </div>
+      </div>
+      <div class="flip-card">
+        <div class="flip-card-inner">
+          <div class="flip-card-front">
+            <div class="flip-card-value">333%</div>
+            <div class="metric-label">Windows deployment efficiency gain (20hr→6hr)</div>
+          </div>
+          <div class="flip-card-back">
+            <div class="flip-card-value">Details</div>
+            <div class="flip-card-detail">Created golden image using Windows Automated Installation Kit (WAIK). Eliminated configuration drift, established auditable compliance baseline for SOC 2 &amp; ISO 27001 reviews.</div>
+          </div>
+        </div>
+      </div>
+      <div class="flip-card">
+        <div class="flip-card-inner">
+          <div class="flip-card-front">
+            <div class="flip-card-value">180+</div>
+            <div class="metric-label">Security awareness training engagements</div>
+          </div>
+          <div class="flip-card-back">
+            <div class="flip-card-value">Details</div>
+            <div class="flip-card-detail">Built a 12-song AI-powered security awareness series covering phishing, social engineering, password hygiene, incident response, and compliance. Replaced checkbox training with memorable storytelling.</div>
+          </div>
+        </div>
+      </div>
+      <div class="flip-card">
+        <div class="flip-card-inner">
+          <div class="flip-card-front">
+            <div class="flip-card-value">30+</div>
+            <div class="metric-label">Servers secured, zero downtime</div>
+          </div>
+          <div class="flip-card-back">
+            <div class="flip-card-value">Details</div>
+            <div class="flip-card-detail">Rolled out MFA across 30+ production servers at an MSP. Staged deployment with zero unplanned outages. Resolved post-deployment clock drift with automated NTP sync script.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CERTS SECTION ===== -->
+  <section class="snap-section certs-section" id="certs">
+    <h2 class="section-heading" data-reveal>Certifications &amp; Credentials</h2>
+    <div class="certs-container" data-reveal>
+      <div class="certs-list" id="certsList">
+        <div class="cert-badge">📘 Google AI Professional Certificate (Mar 2026)</div>
+        <div class="cert-badge">🔒 Elicitation Toolbox Training (Feb 2026)</div>
+        <div class="cert-badge">🎯 Elicitation Specialist (Covert Access Team)</div>
+        <div class="cert-badge">📋 Google Project Management V2 (Nov 2025)</div>
+        <div class="cert-badge">🔐 Google Cybersecurity V2 (Oct 2025)</div>
+        <div class="cert-badge">🛡️ Duo Security L1 Admin (Cisco/Duo)</div>
+        <div class="cert-badge">⚡ IR: Windows Endpoint Triage (BHIS)</div>
+        <div class="cert-badge">🏥 HIPAA Privacy &amp; Security Executive (HCPro)</div>
+        <div class="cert-badge">📞 HDI-KCSP v6 Service Center (Jun 2023)</div>
+        <div class="cert-badge">👥 HDI-SCTL Team Lead (Apr 2023)</div>
+        <div class="cert-badge">🔧 HDI-SCA Service Analyst (Jul 2021)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TERMINAL SECTION ===== -->
+  <section class="snap-section terminal-section" id="terminal-section">
+    <h2 class="section-heading" data-reveal>Live Deployment Simulation</h2>
+    <div data-reveal>
+      <div class="terminal" id="terminal-demo">
+        <div class="terminal-bar">
+          <div class="terminal-dot red"></div>
+          <div class="terminal-dot yellow"></div>
+          <div class="terminal-dot green"></div>
+          <span class="terminal-title">john@secure-msp: ~</span>
+        </div>
+        <div class="terminal-body" id="terminal-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PROJECT SECTION ===== -->
+  <section class="snap-section project-section" id="project">
+    <h2 class="section-heading" data-reveal>Current Project</h2>
+    <div class="project-card" data-reveal>
+      <p><strong>AI-Augmented Development</strong></p>
+      <p>Building a roguelike game to test a hypothesis: architect + AI-coding + validation = faster delivery.</p>
+      <p>Source: <a href="https://upchurchj.github.io/Roguelike/game.html" class="project-link" target="_blank">upchurchj.github.io/Roguelike/game.html</a></p>
+      <p>APK build in progress, F-Droid submission pending.</p>
+    </div>
+  </section>
+
+  <!-- ===== CTA SECTION (Subtle, No Desperation) ===== -->
+  <section class="snap-section cta-section" id="contact">
+    <div class="cta-glass" data-reveal>
+      <h2>Open to Collaboration</h2>
+      <p>If my work resonates with your team's needs, I'd welcome the opportunity to discuss how we might work together.</p>
+      <div style="text-align: center;">
+        <div class="magnetic-wrap" id="magneticBtn">
+          <a href="mailto:john@example.com" class="cta-button">Get in Touch →</a>
+        </div>
+      </div>
+      <div class="social-links">
+        <a href="https://www.linkedin.com/in/Patient" target="_blank">💼 LinkedIn</a>
+        <a href="https://github.com/upchurchj" target="_blank">🐙 GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 John H. Upchurch. Built with purpose.</p>
+  </footer>
+
+  <script>
+    // ===== DARK MODE =====
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light'));
+    updateToggleIcon();
+
+    function toggleTheme() {
+      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      updateToggleIcon();
+    }
+    function updateToggleIcon() {
+      const icon = document.getElementById('theme-toggle');
+      icon.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+    }
+
+    // ===== SCROLL PROGRESS BAR =====
+    const progressBar = document.getElementById('scrollProgress');
+    window.addEventListener('scroll', () => {
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrolled = (window.scrollY / scrollHeight) * 100;
+      progressBar.style.width = scrolled + '%';
+    });
+
+    // ===== CUSTOM CURSOR =====
+    const cursorDot = document.getElementById('cursorDot');
+    const cursorRing = document.getElementById('cursorRing');
+    let mouseX = 0, mouseY = 0;
+    let ringX = 0, ringY = 0;
+
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      cursorDot.style.left = mouseX + 'px';
+      cursorDot.style.top = mouseY + 'px';
+    });
+
+    function animateRing() {
+      ringX += (mouseX - ringX) * 0.15;
+      ringY += (mouseY - ringY) * 0.15;
+      cursorRing.style.left = ringX + 'px';
+      cursorRing.style.top = ringY + 'px';
+      requestAnimationFrame(animateRing);
+    }
+    animateRing();
+
+    document.querySelectorAll('a, button, .flip-card, .cert-badge').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        cursorRing.classList.add('hover');
+        cursorDot.classList.add('hover');
+      });
+      el.addEventListener('mouseleave', () => {
+        cursorRing.classList.remove('hover');
+        cursorDot.classList.remove('hover');
+      });
+    });
+
+    // ===== KINETIC TEXT =====
+    function splitText(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return [];
+      const text = el.textContent;
+      el.innerHTML = '';
+      const chars = [];
+      for (let i = 0; i < text.length; i++) {
+        const span = document.createElement('span');
+        span.className = 'kinetic-char';
+        span.textContent = text[i] === ' ' ? '\u00A0' : text[i];
+        el.appendChild(span);
+        chars.push(span);
+      }
+      return chars;
+    }
+
+    window.addEventListener('load', () => {
+      if (typeof gsap !== 'undefined') {
+        gsap.registerPlugin(ScrollTrigger);
+
+        const nameChars = splitText('kineticName');
+
+        const tl = gsap.timeline({ delay: 0.3 });
+        tl.to(nameChars, {
+          opacity: 1,
+          y: 0,
+          rotation: 0,
+          stagger: 0.04,
+          duration: 0.6,
+          ease: 'back.out(1.7)'
+        })
+        .to('#kineticRole', { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3')
+        .to('#heroTagline', { opacity: 0.92, y: 0, duration: 0.6, ease: 'power2.out' }, '-=0.3')
+        .to('#heroBadge', { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }, '-=0.2');
+
+        gsap.utils.toArray('[data-reveal]').forEach(el => {
+          gsap.from(el, {
+            opacity: 0,
+            y: 40,
+            duration: 0.8,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 80%',
+              toggleActions: 'play none none reverse'
+            }
+          });
+        });
+
+        ScrollTrigger.create({
+          trigger: '#certsList',
+          start: 'top 80%',
+          onEnter: () => {
+            const badges = document.querySelectorAll('.cert-badge');
+            badges.forEach((badge, i) => {
+              setTimeout(() => badge.classList.add('in-view'), i * 80);
+            });
+          }
+        });
+
+        gsap.to('.cube-container', {
+          yPercent: 20,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: '.hero-section',
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 1
+          }
+        });
+
+      } else {
+        // Fallback if GSAP doesn't load
+        document.getElementById('kineticName').style.opacity = '1';
+        document.getElementById('kineticRole').style.opacity = '1';
+        document.getElementById('kineticRole').style.transform = 'translateY(0)';
+        document.getElementById('heroTagline').style.opacity = '0.92';
+        document.getElementById('heroBadge').style.opacity = '1';
+        document.querySelectorAll('[data-reveal]').forEach(el => el.style.opacity = '1');
+        document.querySelectorAll('.cert-badge').forEach(b => b.classList.add('in-view'));
+      }
+    });
+
+    // ===== MOUSE TRACK FOR CUBE =====
+    const cube = document.getElementById('avatarCube');
+    if (cube && typeof window !== 'undefined') {
+      document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth - 0.5) * 30;
+        const y = (e.clientY / window.innerHeight - 0.5) * 20;
+        cube.style.transform = `rotateX(${y}deg) rotateY(${x + 360}deg)`;
+      });
+    }
+
+    // ===== MAGNETIC BUTTON =====
+    const magneticBtn = document.getElementById('magneticBtn');
+    if (magneticBtn) {
+      magneticBtn.addEventListener('mousemove', (e) => {
+        const rect = magneticBtn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        const btn = magneticBtn.querySelector('.cta-button');
+        btn.style.transform = `translate(${x * 0.3}px, ${y * 0.3}px)`;
+      });
+      magneticBtn.addEventListener('mouseleave', () => {
+        const btn = magneticBtn.querySelector('.cta-button');
+        btn.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        btn.style.transform = 'translate(0, 0)';
+        setTimeout(() => btn.style.transition = '', 400);
+      });
+    }
+
+    // ===== TERMINAL ANIMATION =====
+    const terminalLines = [
+      { type: 'prompt', text: '$ deploy-mfa --servers=30 --users=150' },
+      { type: 'comment', text: '# Rolling MFA deployment across MSP client base' },
+      { type: 'output', text: '✓ Phase 1: Evaluated 3 MFA tools, selected free-tier solution' },
+      { type: 'output', text: '✓ Phase 2: Enrolled 150+ AD users across 30+ servers' },
+      { type: 'output', text: '✓ Phase 3: Resolved server clock drift (automated NTP sync script)' },
+      { type: 'output', text: '✓ Verification: All servers enforcing MFA, shared admin eliminated' },
+      { type: 'output', text: '✓ Downtime: 0 seconds | Cost: $0 licensing' },
+      { type: 'prompt', text: '$ deploy-image --tool=WAIK --type=golden' },
+      { type: 'output', text: '✓ Golden image created via Windows Automated Installation Kit' },
+      { type: 'output', text: '✓ Configuration drift eliminated across all deployments' },
+      { type: 'output', text: '✓ Baseline ready for SOC 2 & ISO 27001 compliance reviews' },
+      { type: 'comment', text: '# Mission complete. Coffee earned.' }
+    ];
+
+    const termBody = document.getElementById('terminal-body');
+    let lineIndex = 0;
+    let terminalStarted = false;
+
+    function startTerminal() {
+      if (terminalStarted) return;
+      terminalStarted = true;
+      typeNextLine();
+    }
+
+    function typeNextLine() {
+      if (lineIndex >= terminalLines.length) {
+        setTimeout(() => {
+          termBody.innerHTML = '';
+          lineIndex = 0;
+          typeNextLine();
+        }, 4000);
+        return;
+      }
+
+      const line = terminalLines[lineIndex];
+      const div = document.createElement('div');
+      div.className = 'terminal-line';
+
+      const span = document.createElement('span');
+      span.className = `terminal-${line.type}`;
+      span.textContent = line.text;
+      div.appendChild(span);
+
+      const cursor = document.createElement('span');
+      cursor.className = 'terminal-cursor';
+      div.appendChild(cursor);
+
+      if (lineIndex < terminalLines.length - 1) {
+        setTimeout(() => cursor.remove(), 500);
+      }
+
+      termBody.appendChild(div);
+      lineIndex++;
+
+      setTimeout(typeNextLine, 600 + Math.random() * 400);
+    }
+
+    const termObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !terminalStarted) {
+          startTerminal();
+        }
+      });
+    }, { threshold: 0.3 });
+
+    termObserver.observe(document.getElementById('terminal-demo'));
+  </script>
+
 </body>
 </html>
