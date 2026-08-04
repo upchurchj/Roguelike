@@ -23,7 +23,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">30 files | 6101 lines | 2026-08-03 18:32</div>
+<div class="stats">30 files | 6082 lines | 2026-08-03 19:29</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -3200,7 +3200,7 @@ public class GameBalance {
 }</code></pre>
 </div>
 <div class="file" id="gameview">
-<div class="file-header"><h2>GameView.java</h2><span class="file-meta">901 lines | 38522 bytes</span></div>
+<div class="file-header"><h2>GameView.java</h2><span class="file-meta">882 lines | 38023 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -3382,7 +3382,6 @@ public class GameView extends View {
         healPaintPressed = new Paint(healPaint);
         healPaintPressed.setColor(Color.parseColor("#00AA55"));
 
-        // Save button (gray)
         btnSavePaint = new Paint();
         btnSavePaint.setColor(Color.parseColor("#666666"));
         btnSavePaint.setStyle(Paint.Style.FILL);
@@ -3390,7 +3389,6 @@ public class GameView extends View {
         btnSavePressedPaint = new Paint(btnSavePaint);
         btnSavePressedPaint.setColor(Color.parseColor("#444444"));
 
-        // Stairs button (orange)
         btnStairsPaint = new Paint();
         btnStairsPaint.setColor(Color.parseColor("#FF6600"));
         btnStairsPaint.setStyle(Paint.Style.FILL);
@@ -3398,7 +3396,6 @@ public class GameView extends View {
         btnStairsPressedPaint = new Paint(btnStairsPaint);
         btnStairsPressedPaint.setColor(Color.parseColor("#CC5200"));
 
-        // Zoom button (blue)
         btnZoomPaint = new Paint();
         btnZoomPaint.setColor(Color.parseColor("#2266DD"));
         btnZoomPaint.setStyle(Paint.Style.FILL);
@@ -3406,7 +3403,6 @@ public class GameView extends View {
         btnZoomPressedPaint = new Paint(btnZoomPaint);
         btnZoomPressedPaint.setColor(Color.parseColor("#1144BB"));
 
-        // Quit button (red) - kept for emergency
         quitPaint = new Paint();
         quitPaint.setColor(Color.parseColor("#CC0000"));
         quitPaint.setStyle(Paint.Style.FILL);
@@ -3421,7 +3417,6 @@ public class GameView extends View {
         invinciblePressedPaint = new Paint(invinciblePaint);
         invinciblePressedPaint.setColor(Color.parseColor("#CC5200"));
 
-        // Debug mode button (yellow lightning)
         debugModePaint = new Paint();
         debugModePaint.setColor(Color.parseColor("#FFDD00"));
         debugModePaint.setStyle(Paint.Style.FILL);
@@ -3429,7 +3424,6 @@ public class GameView extends View {
         debugModePressedPaint = new Paint(debugModePaint);
         debugModePressedPaint.setColor(Color.parseColor("#CCAA00"));
 
-        // Overlay
         overlayPaint = new Paint();
         overlayPaint.setColor(Color.argb(200, 0, 0, 0));
 
@@ -3438,7 +3432,6 @@ public class GameView extends View {
         gameOverTextPaint.setTextSize(64);
         gameOverTextPaint.setTextAlign(Paint.Align.CENTER);
 
-        // D-pad paints
         btnUpLeftPaint = new Paint(buttonPaint);
         btnUpPaint = new Paint(buttonPaint);
         btnUpRightPaint = new Paint(buttonPaint);
@@ -3499,22 +3492,16 @@ public class GameView extends View {
         if (width &lt;= 0 || height &lt;= 0) return;
 
         int buttonAreaHeight = (int) (height * BUTTON_AREA_HEIGHT_PERCENT / 100.0f);
-        int statusBarHeight = STATUS_BAR_HEIGHT;        // CALCULATE AREAS
+        int statusBarHeight = STATUS_BAR_HEIGHT;
         int gameAreaHeight = height - buttonAreaHeight;
 
-        // DRAW GAME AREA (viewport)
         drawGameViewport(canvas, gameAreaHeight, player);
-
-        // DRAW STATUS BAR
         drawStatusBar(canvas, statusBarHeight, player);
-
-        // DRAW CONTROLS
         drawDPadButtons(canvas, gameAreaHeight, buttonAreaHeight);
         drawActionButtons(canvas, gameAreaHeight, buttonAreaHeight);
         drawEquipmentSlots(canvas, gameAreaHeight, buttonAreaHeight);
         drawDebugModeButton(canvas);
 
-        // GAME OVER OVERLAY
         Game.GameState state = game.getState();
         if (state != Game.GameState.PLAYING) {
             drawGameOverOverlay(canvas, width, gameAreaHeight + statusBarHeight);
@@ -3665,7 +3652,6 @@ public class GameView extends View {
     private void drawDPadButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
         int startY = gameAreaHeight + 5;
 
-        // D-pad takes exactly LEFT 45% of screen width
         int dpadTotalWidth = (int)(getWidth() * 0.45);
         int btnSpacing = dpadTotalWidth / 3;
 
@@ -3706,17 +3692,14 @@ public class GameView extends View {
         int btnWidth = rightSideWidth / 3;
         int btnHeight = 50;
 
-        // Row 1: Heal, Inventory, Zoom
         btnHeal.set(leftMargin, startY, leftMargin + btnWidth, startY + btnHeight);
         btnInventory.set(leftMargin + btnWidth + 5, startY, leftMargin + btnWidth*2 + 5, startY + btnHeight);
         btnZoom.set(leftMargin + btnWidth*2 + 10, startY, leftMargin + btnWidth*3 + 10, startY + btnHeight);
 
-        // Row 2: Stairs, Save
         int row2Y = startY + btnHeight + 5;
         btnStairs.set(leftMargin, row2Y, leftMargin + btnWidth, row2Y + btnHeight);
         btnSave.set(leftMargin + btnWidth + 5, row2Y, leftMargin + btnWidth*2 + 5, row2Y + btnHeight);
 
-        // DRAW BUTTONS
         canvas.drawRect(btnHeal, btnHealPressed ? healPaintPressed : healPaint);
         drawBtnBorder(canvas, btnHeal, "#008844");
         drawBtnText(canvas, btnHeal, "🧪");
@@ -3832,14 +3815,13 @@ public class GameView extends View {
         canvas.drawText(msg, width / 2f, gameAreaHeight / 2f, gameOverTextPaint);
     }
 
+    // ✅ FIXED: Removed canvas.drawColor() that overwrote status bar!
     private void drawFullMap(Canvas canvas) {
         Dungeon dungeon = game.getDungeon();
         if (dungeon == null) return;
 
         int width = getWidth();
         int height = getHeight();
-
-        canvas.drawColor(Color.parseColor("#1a1a1a"));
 
         int statusHeight = STATUS_BAR_HEIGHT;
         int controlsHeight = (int)(height * BUTTON_AREA_HEIGHT_PERCENT);
@@ -3856,6 +3838,11 @@ public class GameView extends View {
         textPaintSmall.setTextSize(14);
         textPaintSmall.setColor(Color.WHITE);
 
+        // ✅ Draw dark background ONLY for map area, NOT entire canvas
+        Paint bgPaint = new Paint();
+        bgPaint.setColor(Color.parseColor("#1a1a1a"));
+        canvas.drawRect(0, offsetY, width, offsetY + mapHeight, bgPaint);
+
         for (int y = 0; y &lt; dungeon.getHeight(); y++) {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
                 float xp = offsetX + x * tileSizeLocal;
@@ -3871,12 +3858,12 @@ public class GameView extends View {
                 } else if (tile == 'B') {
                     Paint be = new Paint(emojiPaint);
                     be.setTextSize(tileSizeLocal * 1.2f);
-                    canvas.drawText("🐉", xp + tileSizeLocal/2, yp + tileSizeLocal/2 + tileSizeLocal*0.3f, be);
+                    canvas.drawText("🐉", xp + tileSizeLocal/2, yp + tileSizeLocal*0.3f, be);
                 } else if (tile == 'S') {
                     canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileStairsPaint);
                     Paint se = new Paint(emojiPaint);
                     se.setTextSize(tileSizeLocal * 1.2f);
-                    canvas.drawText("🚪", xp + tileSizeLocal/2, yp + tileSizeLocal/2 + tileSizeLocal*0.3f, se);
+                    canvas.drawText("🚪", xp + tileSizeLocal/2, yp + tileSizeLocal*0.3f, se);
                 }
             }
         }
@@ -3884,21 +3871,21 @@ public class GameView extends View {
         Player player = game.getPlayer();
         if (player != null) {
             float px = offsetX + player.getX() * tileSizeLocal + tileSizeLocal/2;
-            float py = offsetY + player.getY() * tileSizeLocal + tileSizeLocal/2;
+            float py = offsetY + player.getY() * tileSizeLocal + tileSizeLocal*0.5f;
 
             Paint he = new Paint(emojiPaint);
             he.setTextSize(tileSizeLocal * 1.0f);
-            canvas.drawText("🧙‍♂️", px, py + tileSizeLocal*0.3f, he);
+            canvas.drawText("🧙‍♂️", px, py, he);
 
             Paint highlight = new Paint();
             highlight.setColor(Color.parseColor("#00FF00"));
             highlight.setStyle(Paint.Style.STROKE);
             highlight.setStrokeWidth(3);
-            canvas.drawCircle(px, py + tileSizeLocal*0.3f, tileSizeLocal/2, highlight);
+            canvas.drawCircle(px, py, tileSizeLocal/2, highlight);
         }
 
         canvas.drawText("FULL MAP - Tap 🔍 to toggle back | Stairs = 🚪 to descend",
-            width/2, height*0.95f, textPaintSmall);
+            width/2, height - 30, textPaintSmall);
     }
 
     private final Object buttonLock = new Object();
@@ -3926,7 +3913,6 @@ public class GameView extends View {
         if (game == null) return;
         int bi = -1; Direction dir = null;
 
-        // D-PAD
         if (btnUpLeft.contains((int)x, (int)y)) { synchronized(buttonLock){btnUpLeftPressed=true;} bi=0; dir=Direction.UP_LEFT; }
         else if (btnUp.contains((int)x, (int)y)) { synchronized(buttonLock){btnUpPressed=true;} bi=1; dir=Direction.UP; }
         else if (btnUpRight.contains((int)x, (int)y)) { synchronized(buttonLock){btnUpRightPressed=true;} bi=2; dir=Direction.UP_RIGHT; }
@@ -3936,14 +3922,12 @@ public class GameView extends View {
         else if (btnDown.contains((int)x, (int)y)) { synchronized(buttonLock){btnDownPressed=true;} bi=7; dir=Direction.DOWN; }
         else if (btnDownRight.contains((int)x, (int)y)) { synchronized(buttonLock){btnDownRightPressed=true;} bi=8; dir=Direction.DOWN_RIGHT; }
 
-        // ACTION BUTTONS
         else if (btnHeal.contains((int)x, (int)y)) { synchronized(buttonLock){btnHealPressed=true;} if(listener!=null)listener.onHealRequested(); return; }
         else if (btnInventory.contains((int)x, (int)y)) { synchronized(buttonLock){btnInventoryPressed=true;} if(listener!=null)listener.onInventoryRequested(); return; }
         else if (btnZoom.contains((int)x, (int)y)) { synchronized(buttonLock){btnZoomPressed=true;} showFullMap = !showFullMap; Toast.makeText(getContext(), showFullMap ? "Full Map ON" : "Normal View", Toast.LENGTH_SHORT).show(); return; }
         else if (btnStairs.contains((int)x, (int)y)) { synchronized(buttonLock){btnStairsPressed=true;} if(listener!=null)listener.onStairsRequested(); return; }
         else if (btnSave.contains((int)x, (int)y)) { synchronized(buttonLock){btnSavePressed=true;} if(listener!=null)listener.onSaveRequested(); return; }
 
-        // EQUIPMENT SLOTS
         for (int i = 0; i &lt; 11; i++) {
             if (equipmentSlots[i].contains((int)x, (int)y)) {
                 synchronized(buttonLock){slotPressed[i]=true;}
@@ -3952,7 +3936,6 @@ public class GameView extends View {
             }
         }
 
-        // DEBUG MODE BUTTON
         if (btnDebugMode.contains((int)x, (int)y)) {
             synchronized(buttonLock){debugModeActive=!debugModeActive;}
             if(listener!=null)listener.onToggleDebugMode();
@@ -3960,7 +3943,6 @@ public class GameView extends View {
             return;
         }
 
-        // TAP TO MOVE
         int buttonAreaHeight = (int)(getHeight() * BUTTON_AREA_HEIGHT_PERCENT / 100.0f);
         int statusBarHeight = STATUS_BAR_HEIGHT;
         int gameAreaHeight = getHeight() - buttonAreaHeight;
@@ -3969,7 +3951,6 @@ public class GameView extends View {
             return;
         }
 
-        // START AUTO-MOVE
         if (dir != null &amp;&amp; bi &gt;= 0) {
             handleSingleMove(dir);
             startAutoMove(bi, dir);
@@ -4045,7 +4026,7 @@ public class GameView extends View {
         if (st != Game.GameState.PLAYING &amp;&amp; listener != null) listener.onGameOver(st);
     }
 
-    private void handleTapMove(int x, int y) {
+    private void handleTapMove(int x, float y) {
         if (game == null) return;
         Player player = game.getPlayer();
         Dungeon dungeon = game.getDungeon();
