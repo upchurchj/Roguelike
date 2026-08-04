@@ -23,7 +23,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">30 files | 6082 lines | 2026-08-03 19:29</div>
+<div class="stats">30 files | 6176 lines | 2026-08-04 13:58</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -1112,7 +1112,7 @@ public class CombatSystem {
 }</code></pre>
 </div>
 <div class="file" id="dungeon">
-<div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">248 lines | 7406 bytes</span></div>
+<div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">245 lines | 7377 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -1120,14 +1120,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * FIXED: Added STAIRS tile to walkable areas and added TILE_STAIRS constant
- */
 public class Dungeon {
     public static final char TILE_WALL = '#';
     public static final char TILE_FLOOR = '.';
     public static final char TILE_GOLD = 'G';
-    public static final char TILE_STAIRS = 'S'; // NEW: Added stairs tile constant
+    public static final char TILE_STAIRS = 'S';
+    public static final char TILE_CHEST = 'C'; // NEW: chest tile constant
 
     private char[][] tiles;
     private int width;
@@ -1264,15 +1262,14 @@ public class Dungeon {
               (placed * 100.0 / floorTiles.size()) + "%)");
     }
 
-    /**
-     * FIXED: Added 'S' (stairs) to walkable tiles!
-     */
+    // FIXED: Added 'C' (chest) to walkable tiles
     public boolean isWalkable(int x, int y) {
         if (x &lt; 0 || x &gt;= width || y &lt; 0 || y &gt;= height) {
             return false;
         }
         char tile = tiles[y][x];
-        return tile == TILE_FLOOR || tile == TILE_GOLD || tile == 'B' || tile == TILE_STAIRS;
+        return tile == TILE_FLOOR || tile == TILE_GOLD || tile == 'B'
+            || tile == TILE_STAIRS || tile == TILE_CHEST;
     }
 
     public char getTile(int x, int y) {
@@ -2825,7 +2822,7 @@ public class ExperienceSystem implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="game">
-<div class="file-header"><h2>Game.java</h2><span class="file-meta">269 lines | 9363 bytes</span></div>
+<div class="file-header"><h2>Game.java</h2><span class="file-meta">339 lines | 12037 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -2844,6 +2841,9 @@ public class Game {
     private Enemy encounteredEnemy;
     private int stairsX = -1, stairsY = -1;
 
+    // NEW: Pickup message for GameView to display as toast
+    private String lastPickupMessage = null;
+
     public Game() {
         this.dungeon = new Dungeon(50, 50);
         this.dungeonManager = DungeonManager.builder().maxFloor(99).build();
@@ -2858,7 +2858,7 @@ public class Game {
         this.stairsY = -1;
 
         generateInitialEnemies();
-        generateStairs(); // NEW: Generate stairs for floor descent
+        generateStairs();
     }
 
     private void generateInitialEnemies() {
@@ -2886,17 +2886,54 @@ public class Game {
             }
             attempts++;
         }
-        Log.d("Game", "Generated " + enemiesSpawned + " initial enemies on floor 1");
+        Log.d("Game", "Generated " + enemiesSpawned + " initial enemies on floor " + dungeonManager.getCurrentFloor());
+
+        // NEW: Spawn 1-3 item chests per floor
+        spawnChests();
     }
 
-    // NEW: Generate stairs far from player
+    // NEW: Spawn 1-3 chests on walkable tiles
+    private void spawnChests() {
+        if (dungeon == null || player == null) return;
+
+        int chestCount = 1 + SecureRandomUtil.nextInt(3);
+        int placed = 0;
+
+        for (int i = 0; i &lt; chestCount; i++) {
+            int attempts = 0;
+            while (attempts &lt; 50) {
+                int cx = SecureRandomUtil.nextInt(dungeon.getWidth());
+                int cy = SecureRandomUtil.nextInt(dungeon.getHeight());
+
+                if (dungeon.isWalkable(cx, cy) &amp;&amp; !(cx == player.getX() &amp;&amp; cy == player.getY())) {
+                    boolean occupied = false;
+                    for (Enemy e : enemies) {
+                        if (e.getX() == cx &amp;&amp; e.getY() == cy) { occupied = true; break; }
+                    }
+                    char existing = dungeon.getTile(cx, cy);
+                    if (existing == 'C' || existing == 'S' || existing == 'B') {
+                        occupied = true;
+                    }
+
+                    if (!occupied) {
+                        dungeon.setTile(cx, cy, 'C');
+                        placed++;
+                        Log.d("Game", "📦 Chest placed at (" + cx + "," + cy + ")");
+                        break;
+                    }
+                }
+                attempts++;
+            }
+        }
+        Log.d("Game", "Placed " + placed + " chests on this floor");
+    }
+
     private void generateStairs() {
         if (dungeon == null || player == null) return;
-        
-        // Find walkable tile far from player
+
         int minDistance = 10;
         List&lt;int[]&gt; validTiles = new ArrayList&lt;&gt;();
-        
+
         for (int y = 0; y &lt; dungeon.getHeight(); y++) {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
                 if (dungeon.isWalkable(x, y)) {
@@ -2907,7 +2944,7 @@ public class Game {
                 }
             }
         }
-        
+
         if (!validTiles.isEmpty()) {
             int[] pos = validTiles.get(SecureRandomUtil.nextInt(validTiles.size()));
             stairsX = pos[0];
@@ -2946,15 +2983,37 @@ public class Game {
             return false;
         }
 
-        // NEW: Check for stairs BEFORE moving
-        char tile = dungeon.getTile(newX, newY);
-        if (tile == 'S') {
-            // Prevent moving onto stairs without intent - you need to be ON it already
-            // This keeps stairs as stationary objects you find
-        }
-
         player.move(dx, dy);
         turnCount++;
+
+        // NEW: Check for chest pickup
+        char tile = dungeon.getTile(newX, newY);
+        if (tile == 'C') {
+            LootTable lootTable = LootTable.getInstance();
+            int currentFloor = dungeonManager != null ? dungeonManager.getCurrentFloor() : 1;
+            Equipment chestLoot = lootTable.generateLoot(currentFloor, 0.5);
+
+            if (chestLoot == null) {
+                Log.e("Game", "LootTable returned null for chest!");
+                chestLoot = new Equipment("Rusty Sword", ItemType.WEAPON, Rarity.COMMON);
+            }
+
+            InventorySystem inv = player.getInventory();
+            if (inv != null) {
+                boolean added = inv.addEquipmentWithAutoEquip(chestLoot);
+                if (added) {
+                    lastPickupMessage = "🎁 Opened chest: " + chestLoot.getName()
+                        + " [" + chestLoot.getRarity() + "]";
+                    Log.d("Game", lastPickupMessage);
+                } else {
+                    player.addPendingLoot(chestLoot);
+                    lastPickupMessage = "📦 Inventory full! Queued: "
+                        + chestLoot.getName() + " [" + chestLoot.getRarity() + "]";
+                    Log.d("Game", "Chest looted (queued): " + chestLoot.getName());
+                }
+            }
+            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+        }
 
         // Check for gold pickup
         tile = dungeon.getTile(newX, newY);
@@ -3001,7 +3060,6 @@ public class Game {
         }
     }
 
-    // NEW: Method to descend to next floor
     public boolean descendStairs() {
         if (dungeonManager == null) return false;
         if (!dungeonManager.canProgress()) {
@@ -3012,14 +3070,13 @@ public class Game {
         boolean progressed = dungeonManager.progressFloor();
         if (progressed) {
             Log.d("Game", "Advanced to floor " + dungeonManager.getCurrentFloor());
-            
-            // Clear old stairs from old floor
+
             if (stairsX &gt;= 0 &amp;&amp; stairsY &gt;= 0) {
                 dungeon.setTile(stairsX, stairsY, Dungeon.TILE_FLOOR);
             }
-            
+
             generateEnemiesForNewFloor();
-            generateStairs(); // New stairs for new floor
+            generateStairs();
         }
         return progressed;
     }
@@ -3057,6 +3114,16 @@ public class Game {
         }
 
         Log.d("Game", "Generated " + enemies.size() + " enemies for floor " + level.getFloorNumber());
+
+        // NEW: Spawn chests on new floor
+        spawnChests();
+    }
+
+    // NEW: Consume pickup message (called by GameView to show toast)
+    public String consumePickupMessage() {
+        String msg = lastPickupMessage;
+        lastPickupMessage = null;
+        return msg;
     }
 
     public Player getPlayer() { return player; }
@@ -3200,7 +3267,7 @@ public class GameBalance {
 }</code></pre>
 </div>
 <div class="file" id="gameview">
-<div class="file-header"><h2>GameView.java</h2><span class="file-meta">882 lines | 38023 bytes</span></div>
+<div class="file-header"><h2>GameView.java</h2><span class="file-meta">903 lines | 39122 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -3229,7 +3296,7 @@ public class GameView extends View {
     private GameListener listener;
 
     // Tile paints
-    private Paint tileWallPaint, tileFloorPaint, tileGoldPaint, tileStairsPaint;
+    private Paint tileWallPaint, tileFloorPaint, tileGoldPaint, tileStairsPaint, tileChestPaint;
     private Paint playerPaint, enemyPaint;
     private Paint textPaint, buttonLabelPaint, emojiPaint;
     private Paint overlayPaint, gameOverTextPaint;
@@ -3338,6 +3405,10 @@ public class GameView extends View {
         tileStairsPaint = new Paint();
         tileStairsPaint.setColor(Color.parseColor("#4488FF"));
         tileStairsPaint.setStyle(Paint.Style.FILL);
+
+        tileChestPaint = new Paint();
+        tileChestPaint.setColor(Color.parseColor("#FF8844"));
+        tileChestPaint.setStyle(Paint.Style.FILL);
 
         playerPaint = new Paint();
         playerPaint.setColor(Color.parseColor("#00FF00"));
@@ -3502,6 +3573,12 @@ public class GameView extends View {
         drawEquipmentSlots(canvas, gameAreaHeight, buttonAreaHeight);
         drawDebugModeButton(canvas);
 
+        // NEW: Show pickup toast if available
+        String pickupMsg = game.consumePickupMessage();
+        if (pickupMsg != null &amp;&amp; getContext() != null) {
+            Toast.makeText(getContext(), pickupMsg, Toast.LENGTH_LONG).show();
+        }
+
         Game.GameState state = game.getState();
         if (state != Game.GameState.PLAYING) {
             drawGameOverOverlay(canvas, width, gameAreaHeight + statusBarHeight);
@@ -3564,15 +3641,15 @@ public class GameView extends View {
         Paint sp = new Paint(textPaint);
         sp.setTextSize(22);
         sp.setColor(Color.WHITE);
-        
+
         Paint bgPaint = new Paint();
         bgPaint.setColor(Color.argb(180, 0, 0, 0));
         canvas.drawRect(0, 0, getWidth(), statusHeight, bgPaint);
-        
+
         canvas.drawText(status, 10, statusHeight - 8, sp);
     }
 
-    private void drawDungeon(Canvas canvas, Dungeon dungeon, float offsetX, float offsetY, 
+    private void drawDungeon(Canvas canvas, Dungeon dungeon, float offsetX, float offsetY,
                              int camX, int camY, int vw, int vh) {
         canvas.drawRect(0, 0, getWidth(), getHeight(), tileWallPaint);
         for (int y = 0; y &lt; vh; y++) {
@@ -3604,6 +3681,12 @@ public class GameView extends View {
                     Paint se = new Paint(emojiPaint);
                     se.setTextSize(tileSize * 1.5f);
                     canvas.drawText("🚪", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, se);
+                } else if (tile == 'C') {
+                    // FIXED: Draw chests in normal viewport too!
+                    canvas.drawRect(tileRect, tileChestPaint);
+                    Paint ce = new Paint(emojiPaint);
+                    ce.setTextSize(tileSize * 1.5f);
+                    canvas.drawText("📦", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, ce);
                 } else {
                     canvas.drawRect(tileRect, tileFloorPaint);
                 }
@@ -3611,7 +3694,7 @@ public class GameView extends View {
         }
     }
 
-    private void drawPlayer(Canvas canvas, float offsetX, float offsetY, int px, int py, 
+    private void drawPlayer(Canvas canvas, float offsetX, float offsetY, int px, int py,
                             int camX, int camY) {
         int rx = px - camX, ry = py - camY;
         if (rx &lt; 0 || ry &lt; 0) return;
@@ -3622,7 +3705,7 @@ public class GameView extends View {
         canvas.drawText("🧙‍♂️", x, y + tileSize * 0.3f, he);
     }
 
-    private void drawEnemies(Canvas canvas, float offsetX, float offsetY, int camX, int camY, 
+    private void drawEnemies(Canvas canvas, float offsetX, float offsetY, int camX, int camY,
                              int vw, int vh) {
         List&lt;Enemy&gt; enemies = game.getEnemies();
         if (enemies == null) return;
@@ -3665,7 +3748,7 @@ public class GameView extends View {
 
         btnLeft.set(dx, dy+btnSpacing, dx+btnSize, dy+btnSpacing+btnSize);
         btnCenter.set(dx+btnSpacing, dy+btnSpacing, dx+btnSpacing+btnSize, dy+btnSpacing+btnSize);
-        btnRight.set(dx+btnSpacing*2, dy+btnSpacing, dx+btnSpacing*2+btnSize, dy+btnSpacing+btnSize);
+        btnRight.set(dx+btnSpacing*2, dy+btnSpacing, dx+btnSpacing*3, dy+btnSpacing+btnSize);
 
         btnDownLeft.set(dx, dy+btnSpacing*2, dx+btnSize, dy+btnSpacing*3);
         btnDown.set(dx+btnSpacing, dy+btnSpacing*2, dx+btnSpacing+btnSize, dy+btnSpacing*3);
@@ -3733,6 +3816,7 @@ public class GameView extends View {
         int totalHeight = rows * slotSize + (rows-1) * slotGap;
 
         int startX = rightMargin - totalWidth;
+        // Kept original offset to avoid pushing off-screen
         int startYOffset = startY + 55;
 
         String[] slotEmojis = {"🪖","👕","👖","👢","🧤","⚔️","🛡️","📿","💍","🧥","✨"};
@@ -3778,7 +3862,7 @@ public class GameView extends View {
         drawBtnText(canvas, x+size/2, y+size*0.7f, "⚡");
     }
 
-    private void drawCachedBtn(Canvas canvas, Rect r, String emoji, 
+    private void drawCachedBtn(Canvas canvas, Rect r, String emoji,
                                Paint pressed, Paint normal, boolean isPressed) {
         canvas.drawRect(r, isPressed ? pressed : normal);
         Paint border = new Paint();
@@ -3815,7 +3899,6 @@ public class GameView extends View {
         canvas.drawText(msg, width / 2f, gameAreaHeight / 2f, gameOverTextPaint);
     }
 
-    // ✅ FIXED: Removed canvas.drawColor() that overwrote status bar!
     private void drawFullMap(Canvas canvas) {
         Dungeon dungeon = game.getDungeon();
         if (dungeon == null) return;
@@ -3824,7 +3907,7 @@ public class GameView extends View {
         int height = getHeight();
 
         int statusHeight = STATUS_BAR_HEIGHT;
-        int controlsHeight = (int)(height * BUTTON_AREA_HEIGHT_PERCENT);
+        int controlsHeight = (int)(height * BUTTON_AREA_HEIGHT_PERCENT / 100.0f);
         int mapHeight = height - statusHeight - controlsHeight;
 
         float tileW = (float)width / dungeon.getWidth();
@@ -3838,10 +3921,9 @@ public class GameView extends View {
         textPaintSmall.setTextSize(14);
         textPaintSmall.setColor(Color.WHITE);
 
-        // ✅ Draw dark background ONLY for map area, NOT entire canvas
         Paint bgPaint = new Paint();
-        bgPaint.setColor(Color.parseColor("#1a1a1a"));
-        canvas.drawRect(0, offsetY, width, offsetY + mapHeight, bgPaint);
+        bgPaint.setColor(Color.parseColor("#2a2a2a"));
+        canvas.drawRect(offsetX, offsetY, width, offsetY + mapHeight, bgPaint);
 
         for (int y = 0; y &lt; dungeon.getHeight(); y++) {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
@@ -3864,6 +3946,12 @@ public class GameView extends View {
                     Paint se = new Paint(emojiPaint);
                     se.setTextSize(tileSizeLocal * 1.2f);
                     canvas.drawText("🚪", xp + tileSizeLocal/2, yp + tileSizeLocal*0.3f, se);
+                } else if (tile == 'C') {
+                    // FIXED: Draw chests in full map too
+                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileChestPaint);
+                    Paint ce = new Paint(emojiPaint);
+                    ce.setTextSize(tileSizeLocal * 1.2f);
+                    canvas.drawText("📦", xp + tileSizeLocal/2, yp + tileSizeLocal*0.3f, ce);
                 }
             }
         }
@@ -3947,7 +4035,7 @@ public class GameView extends View {
         int statusBarHeight = STATUS_BAR_HEIGHT;
         int gameAreaHeight = getHeight() - buttonAreaHeight;
         if (y &gt;= statusBarHeight &amp;&amp; y &lt; gameAreaHeight + statusBarHeight) {
-            handleTapMove((int)x, (int)y);
+            handleTapMove((int)x, y);
             return;
         }
 
@@ -4543,7 +4631,7 @@ public class InventoryActivity extends Activity {
 }</code></pre>
 </div>
 <div class="file" id="inventorysystem">
-<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">222 lines | 7422 bytes</span></div>
+<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">231 lines | 7852 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -4578,38 +4666,47 @@ public class InventorySystem implements Serializable {
     }
 
     /**
-     * NEW: Auto-equip items if their slot is empty
-     * Returns true if item was added or auto-equipped
+     * FIXED: Auto-equip with smart swapping.
+     * Checks inventory space BEFORE overwriting slot to prevent item loss.
+     * Returns true if item was added, auto-equipped, or swapped in.
      */
     public boolean addEquipmentWithAutoEquip(Equipment item) {
         if (item == null) return false;
-        
+
         // Handle artifacts directly
         if (item.getType().getSlotId() == ItemType.SLOT_ARTIFACT) {
             equipmentSlots.put(ItemType.SLOT_ARTIFACT, item);
             android.util.Log.d("InventorySystem", "✅ Artifacts auto-equipped: " + item.getName());
             return true;
         }
-        
-        // Check if slot is already occupied
+
         ItemType type = item.getType();
+
+        // Check if slot is empty - auto-equip
         if (!hasEquipped(type)) {
-            // Slot is empty - auto-equip!
             equipmentSlots.put(type.getSlotId(), item);
-            android.util.Log.d("InventorySystem", "✨ AUTO-EQUIPPED: " + item.getName() + 
-                  " to " + type.getDisplayName() + " slot");
+            android.util.Log.d("InventorySystem", "✨ AUTO-EQUIPPED: " + item.getName()
+                + " to " + type.getDisplayName() + " slot");
             return true;
         }
-        
-        // Slot occupied - add to regular inventory
-        if (inventory.size() &gt;= maxItemCapacity) {
-            android.util.Log.w("InventorySystem", "⚠️ Inventory full, cannot add " + item.getName());
-            return false;
+
+        // Slot occupied - check if we can swap safely
+        Equipment currentlyEquipped = equipmentSlots.get(type.getSlotId());
+
+        // FIXED: Check inventory space BEFORE removing equipped item
+        if (inventory.size() &lt; maxItemCapacity) {
+            // Safe to swap: put new item in slot, move old item to inventory
+            equipmentSlots.put(type.getSlotId(), item);
+            inventory.add(currentlyEquipped);
+            android.util.Log.d("InventorySystem", "💫 SWAPPED: " + item.getName()
+                + " FOR " + currentlyEquipped.getName());
+            return true;
         }
-        
-        inventory.add(item);
-        android.util.Log.d("InventorySystem", "📦 Added to inventory (slot occupied): " + item.getName());
-        return true;
+
+        // Both slot AND inventory full - queue to pending
+        android.util.Log.w("InventorySystem", "⚠️ FULL - cannot add " + item.getName()
+            + ", queuing to pending loot");
+        return false;
     }
 
     public boolean equip(ItemType type, int index) {
@@ -4985,7 +5082,7 @@ public class LootTable {
 }</code></pre>
 </div>
 <div class="file" id="mainactivity">
-<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">538 lines | 22003 bytes</span></div>
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">535 lines | 21783 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -5351,7 +5448,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
     @Override
     public void onQuitRequested() {
-        // Moved to save dialog - quit requires confirmation
         new AlertDialog.Builder(this)
             .setTitle("Quit Game")
             .setMessage("Are you sure? Your progress will be saved.")
@@ -5386,6 +5482,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     public void onHealRequested() {
         Player player = game.getPlayer();
         if (player != null) {
+            player.processPendingLoot();
+
             boolean usedPotion = player.usePotion();
             if (usedPotion) {
                 Toast.makeText(this, "Used potion! +25 HP", Toast.LENGTH_SHORT).show();
@@ -5398,7 +5496,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
     }
 
-    // ===================== NEW: STAIRS HANDLER =====================
+    // ===================== STAIRS HANDLER WITH BOSS RESET =====================
 
     @Override
     public void onStairsRequested() {
@@ -5413,7 +5511,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             return;
         }
 
-        // Check if player is standing ON the stairs tile
         int px = player.getX();
         int py = player.getY();
         char currentTile = game.getDungeon().getTile(px, py);
@@ -5423,25 +5520,26 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         android.util.Log.d(TAG, "Stairs requested - Player at (" + px + "," + py + "), Stairs at (" + stairsX + "," + stairsY + "), Tile='" + currentTile + "'");
 
         if (currentTile != 'S' || (px != stairsX || py != stairsY)) {
-            Toast.makeText(this, 
-                "🚪 You must stand ON the stairs (🚪) to descend!", 
+            Toast.makeText(this,
+                "🚪 You must stand ON the stairs (🚪) to descend!",
                 Toast.LENGTH_LONG).show();
             return;
         }
 
-        // Proceed with floor descent
+        // FIXED: Reset boss flags BEFORE descending
+        bossSpawned = false;
+        totalEnemiesDefeated = 0;
+
         if (game.descendStairs()) {
             int newFloor = game.getDungeonManager().getCurrentFloor();
-            Toast.makeText(this, 
-                "Descending to Floor " + newFloor + "! Enemies respawning...", 
+            Toast.makeText(this,
+                "Descending to Floor " + newFloor + "! Enemies respawning...",
                 Toast.LENGTH_SHORT).show();
             gameView.invalidate();
         } else {
             Toast.makeText(this, "Already at deepest floor (99)! 🏆", Toast.LENGTH_SHORT).show();
         }
     }
-
-    // ===================== NEW: SAVE GAME HANDLER =====================
 
     @Override
     public void onSaveRequested() {
@@ -5488,13 +5586,12 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
     }
 
-    // ===================== NEW: DEBUG MODE HANDLER =====================
+    // ===================== DEBUG MODE HANDLER =====================
 
     @Override
     public void onToggleDebugMode() {
         debugModeActive = !debugModeActive;
         if (debugModeActive) {
-            // Activate invincible mode
             Player player = game.getPlayer();
             if (player != null) {
                 player.setAttack(10000);
@@ -5504,7 +5601,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 Log.d(TAG, "DEBUG MODE ACTIVATED");
             }
         } else {
-            // Deactivate (reset stats)
             Player player = game.getPlayer();
             if (player != null) {
                 player.setAttack(15);
@@ -5517,8 +5613,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         gameView.invalidate();
     }
 
-    // ===================== EXISTING METHODS =====================
-
     private void saveAndQuit() {
         saveGameAndToast();
         finish();
@@ -5526,7 +5620,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 }</code></pre>
 </div>
 <div class="file" id="player">
-<div class="file-header"><h2>Player.java</h2><span class="file-meta">187 lines | 6330 bytes</span></div>
+<div class="file-header"><h2>Player.java</h2><span class="file-meta">187 lines | 6343 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -5610,7 +5704,7 @@ public class Player extends Character implements Serializable {
         List&lt;Equipment&gt; stillPending = new ArrayList&lt;&gt;();
 
         for (Equipment item : pendingLoot) {
-            if (inventory != null &amp;&amp; inventory.addEquipment(item)) {
+            if (inventory != null &amp;&amp; inventory.addEquipmentWithAutoEquip(item)) {
                 android.util.Log.d("PLAYER", "✅ Moved pending → inventory: " + item.getName());
             } else {
                 android.util.Log.d("PLAYER", "⚠️ Still full, keeping in queue: " + item.getName());
