@@ -23,7 +23,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">30 files | 6176 lines | 2026-08-04 13:58</div>
+<div class="stats">30 files | 6363 lines | 2026-08-05 16:59</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -219,8 +219,9 @@ public class Battle implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="battleactivity">
-<div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">177 lines | 6889 bytes</span></div>
+<div class="file-header"><h2>BattleActivity.java</h2><span class="file-meta">196 lines | 7747 bytes</span></div>
 <pre><code>package com.knightlight.game;
+import java.util.List;
 
 import android.util.Log;
 import android.widget.Toast;
@@ -372,6 +373,24 @@ public class BattleActivity extends AppCompatActivity {
             Log.d(TAG, "Rewards done. XP=" + player.getExperience() +
                   " Level=" + player.getLevel() +
                   " Gold=" + player.getGoldCollected());
+
+            // ========== NEW: Show loot Toast directly in battle ==========
+            List&lt;String&gt; log = combatSystem.getCombatLog();
+            for (String entry : log) {
+                if (entry.contains("Found") &amp;&amp; (entry.contains("AUTO-EQUIPPED") || entry.contains("backpack"))) {
+                    Toast.makeText(this, entry, Toast.LENGTH_LONG).show();
+                    Log.d(TAG, "Displayed loot Toast: " + entry);
+                    break;
+                }
+            }
+            // =============================================================
+
+
+            // NEW: Show loot notification
+            String lastLog = combatSystem.getLastLogEntry();
+            if (lastLog != null &amp;&amp; lastLog.contains("Found")) {
+                Toast.makeText(this, "💎 " + lastLog, Toast.LENGTH_LONG).show();
+            }
 
             if (enemy.isBoss() &amp;&amp; MainActivity.getInstance() != null) {
                 Log.d(TAG, "🐉 BOSS DEFEATED! Advancing to next floor...");
@@ -854,7 +873,7 @@ public class CombatResult {
 }</code></pre>
 </div>
 <div class="file" id="combatsystem">
-<div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">255 lines | 9515 bytes</span></div>
+<div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">287 lines | 11948 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -925,14 +944,10 @@ public class CombatSystem {
             Log.w(TAG, "playerAttack called with null player or enemy");
             return;
         }
-        int playerAttackVal = player.getAttack();
+        // ========== FIXED: Player stats now include equipment via recalculateStatsFromEquipment() ==========
+        int playerAttackVal = player.getAttack();  // Already includes all equipped bonuses
         int enemyDefense = enemy.getArmor();
-
-        InventorySystem inv = player.getInventory();
-        if (inv != null) {
-            Equipment weapon = inv.getEquippedWeapon();
-            if (weapon != null) playerAttackVal += weapon.getAttackBonus();
-        }
+        // ===================================================================================================
 
         int damage = calculateDamage(playerAttackVal, enemyDefense);
         boolean isCritical = SecureRandomUtil.nextDouble() &lt; GameBalance.CRIT_CHANCE_PLAYER;
@@ -962,14 +977,9 @@ public class CombatSystem {
         }
 
         int enemyAttackVal = enemy.getAttack();
-        int playerDefense = player.getArmor();
-
-        InventorySystem inv = player.getInventory();
-        if (inv != null) {
-            for (Equipment eq : inv.getAllEquipment()) {
-                if (eq != null) playerDefense += eq.getDefenseBonus();
-            }
-        }
+        // ========== FIXED: Player defense now includes equipment via recalculateStatsFromEquipment() ==========
+        int playerDefense = player.getArmor();  // Already includes all equipped bonuses
+        // ======================================================================================================
 
         int damage = calculateDamage(enemyAttackVal, playerDefense);
         boolean isCritical = SecureRandomUtil.nextDouble() &lt; GameBalance.CRIT_CHANCE_ENEMY;
@@ -1001,6 +1011,7 @@ public class CombatSystem {
     /**
      * FIXED: 100% loot drop when DEBUG_FORCE_LOOT is enabled
      * Uses auto-equip to fill empty slots automatically
+     * NOW WITH COMPREHENSIVE LOGGING FOR DEBUGGING
      */
     public void awardRewards(Player player, int floorNumber) {
         if (player == null || enemy == null) {
@@ -1015,7 +1026,7 @@ public class CombatSystem {
         int scaledXp = baseXp + (floor * 10);
         int gold = enemy.getGoldReward();
 
-        Log.d(TAG, "=== AWARDING REWARDS ===");
+        Log.d(TAG, "=== AWARDING REWARDS START ===");
         Log.d(TAG, "  Enemy: " + enemy.getName() + " | BaseXP=" + baseXp
               + " | ScaledXP=" + scaledXp + " | Gold=" + gold + " | Floor=" + floor);
 
@@ -1051,6 +1062,9 @@ public class CombatSystem {
             Log.d(TAG, "  ★ BOSS KILL — guaranteed loot drop!");
         }
 
+        Log.d(TAG, "  Loot roll: " + lootRoll + " | Should drop: " + shouldDrop
+              + " | DEBUG_FORCE_LOOT: " + GameBalance.DEBUG_FORCE_LOOT);
+
         if (shouldDrop) {
             Equipment item = null;
             try {
@@ -1085,12 +1099,28 @@ public class CombatSystem {
                 boolean autoEquipped = playerInv.addEquipmentWithAutoEquip(item);
                 
                 if (autoEquipped) {
+                    // Check if it was actually equipped (not just added to backpack)
+                    boolean wasActuallyEquipped = playerInv.getEquipped(item.getType()) == item;
+                    
                     appendLog("💎 Found " + item.getName() + " (" + item.getRarity() + ")!");
-                    if (playerInv.hasEquipped(item.getType())) {
+                    
+                    if (wasActuallyEquipped) {
                         appendLog("✨ AUTO-EQUIPPED to " + item.getType().getDisplayName() + " slot!");
+                        Log.d(TAG, "  ✅ SUCCESS: " + item.getName() + " EQUIPPED. Equip count="
+                              + playerInv.getEquippedItems().size());
+                    } else {
+                        appendLog("📦 Added to inventory (backpack)");
+                        Log.d(TAG, "  ✅ SUCCESS: " + item.getName() + " in BACKPACK. Inventory count="
+                              + playerInv.getItemCount());
                     }
-                    Log.d(TAG, "  ✅ SUCCESS: " + item.getName() + " added/equipped. Count="
-                          + playerInv.getItemCount() + "/" + playerInv.getMaxItemCapacity());
+                    
+                    Log.d(TAG, "  Final state - Backpack: " + playerInv.getItemCount() 
+                        + " | Equipped: " + playerInv.getEquippedItems().size());
+                    
+                    // ========== CRITICAL: Recalculate stats immediately after loot ==========
+                    player.recalculateStatsFromEquipment();
+                    Log.d(TAG, "  ⚡ Stats recalculated after loot acquisition");
+                    // =========================================================================
                 } else {
                     appendLog("📦 Inventory full! " + item.getName() + " queued.");
                     Log.w(TAG, "  ⚠️ Inventory full - queuing " + item.getName());
@@ -1103,6 +1133,27 @@ public class CombatSystem {
 
         Log.d(TAG, "=== REWARDS DONE === Player: Lvl=" + player.getLevel()
               + " XP=" + player.getExperience() + " Gold=" + player.getGoldCollected());
+        
+        // ========== ADDITIONAL VERIFICATION LOG ==========
+        if (player.getInventory() != null) {
+            Log.d(TAG, "=== POST-REWARDS INVENTORY STATE ===");
+            Log.d(TAG, "  Backpack items: " + player.getInventory().getItemCount());
+            Log.d(TAG, "  Equipped items: " + player.getInventory().getEquippedItems().size());
+            Log.d(TAG, "  Pending items: " + player.getPendingLoot().size());
+            
+            List&lt;Equipment&gt; allEquip = player.getInventory().getAllEquipment();
+            if (!allEquip.isEmpty()) {
+                Log.d(TAG, "  All equipment:");
+                for (Equipment eq : allEquip) {
+                    Log.d(TAG, "    - " + eq.getName() + " [" + eq.getRarity() + "] ATK+" 
+                        + eq.getAttackBonus() + " DEF+" + eq.getDefenseBonus());
+                }
+            }
+            
+            Log.d(TAG, "  Player final stats: ATK=" + player.getAttack() + " DEF=" + player.getArmor() 
+                + " HP=" + player.getCurrentHealth() + "/" + player.getMaxHealth());
+        }
+        // ================================================
     }
 
     public boolean isVictory() {
@@ -1112,7 +1163,7 @@ public class CombatSystem {
 }</code></pre>
 </div>
 <div class="file" id="dungeon">
-<div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">245 lines | 7377 bytes</span></div>
+<div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">256 lines | 7644 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -1243,7 +1294,7 @@ public class Dungeon {
             return;
         }
 
-        int targetPercent = 18;
+        int targetPercent = 8;
         int maxGold = Math.max(1, (int)(floorTiles.size() * targetPercent / 100.0));
         int goldCount = Math.min(maxGold, floorTiles.size());
         goldCount = Math.max(1, goldCount);
@@ -1352,6 +1403,17 @@ public class Dungeon {
         return currentFloor;
     }
 
+
+    public void resetForFloor() {
+        rooms.clear();
+        for (int y = 0; y &lt; height; y++) {
+            for (int x = 0; x &lt; width; x++) {
+                tiles[y][x] = '.';
+            }
+        }
+        initializeDungeon();
+        generateDungeon();
+    }
     public void setCurrentFloor(int floor) {
         if (floor &gt; 0) {
             this.currentFloor = floor;
@@ -2242,7 +2304,7 @@ public class Equipment implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="equipmentactivity">
-<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">425 lines | 19432 bytes</span></div>
+<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">440 lines | 20818 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.app.Activity;
@@ -2372,7 +2434,8 @@ public class EquipmentActivity extends Activity {
         }
 
         Log.d(TAG, "EquipmentActivity ready — Player Lvl " + player.getLevel() +
-              " | Inventory items: " + (inventorySystem != null ? inventorySystem.getItemCount() : "NULL"));
+              " | Inventory items: " + (inventorySystem != null ? inventorySystem.getItemCount() : "NULL")
+              + " | Equipped items: " + (inventorySystem != null ? inventorySystem.getEquippedItems().size() : "NULL"));
     }
 
     private void initViews() {
@@ -2578,9 +2641,11 @@ public class EquipmentActivity extends Activity {
     private int calculateTotalHealthBonus() {
         int bonus = 0;
         if (inventorySystem != null) {
-            for (Equipment eq : inventorySystem.getAllEquipment()) {
+            // ========== FIXED: Use getEquippedItems() NOT getEquippedItems() ==========
+            for (Equipment eq : inventorySystem.getEquippedItems()) {
                 if (eq != null) bonus += eq.getHealthBonus();
             }
+            // ==========================================================================
         }
         return bonus;
     }
@@ -2591,9 +2656,11 @@ public class EquipmentActivity extends Activity {
     private int calculateTotalAttackBonus() {
         int bonus = 0;
         if (inventorySystem != null) {
-            for (Equipment eq : inventorySystem.getAllEquipment()) {
+            // ========== FIXED: Use getEquippedItems() NOT getEquippedItems() ==========
+            for (Equipment eq : inventorySystem.getEquippedItems()) {
                 if (eq != null) bonus += eq.getAttackBonus();
             }
+            // ==========================================================================
         }
         return bonus;
     }
@@ -2604,45 +2671,55 @@ public class EquipmentActivity extends Activity {
     private int calculateTotalDefenseBonus() {
         int bonus = 0;
         if (inventorySystem != null) {
-            for (Equipment eq : inventorySystem.getAllEquipment()) {
+            // ========== FIXED: Use getEquippedItems() NOT getEquippedItems() ==========
+            for (Equipment eq : inventorySystem.getEquippedItems()) {
                 if (eq != null) bonus += eq.getDefenseBonus();
             }
+            // ==========================================================================
         }
         return bonus;
     }
     private float calculateTotalCrit() {
         float base = 0.15f;
         if (inventorySystem != null) {
-            for (Equipment eq : inventorySystem.getAllEquipment()) {
+            // ========== FIXED: Use getEquippedItems() NOT getEquippedItems() ==========
+            for (Equipment eq : inventorySystem.getEquippedItems()) {
                 if (eq != null) base += eq.getCritChance() / 100f;
             }
+            // ==========================================================================
         }
         return Math.min(1.0f, base);
     }
     private int calculateTotalCritBonus() {
         int bonus = 0;
         if (inventorySystem != null) {
-            for (Equipment eq : inventorySystem.getAllEquipment()) {
+            // ========== FIXED: Use getEquippedItems() NOT getEquippedItems() ==========
+            for (Equipment eq : inventorySystem.getEquippedItems()) {
                 if (eq != null) bonus += eq.getCritChance();
             }
+            // ==========================================================================
         }
         return bonus;
     }
     private float calculateTotalDodge() {
         float base = (player != null) ? player.getDodgeChance() / 100f : 0f;
         if (inventorySystem != null) {
-            for (Equipment eq : inventorySystem.getAllEquipment()) {
+            // ========== FIXED: Use getEquippedItems() NOT getEquippedItems() ==========
+            for (Equipment eq : inventorySystem.getEquippedItems()) {
                 if (eq != null) base += eq.getDodgeChance() / 100f;
             }
+            // ==========================================================================
         }
         return Math.min(1.0f, base);
     }
     private int calculateTotalDodgeBonus() {
         int bonus = 0;
         if (inventorySystem != null) {
-            for (Equipment eq : inventorySystem.getAllEquipment()) {
+            // ========== FIXED: Use getEquippedItems() NOT getEquippedItems() ==========
+            for (Equipment eq : inventorySystem.getEquippedItems()) {
                 if (eq != null) bonus += eq.getDodgeChance();
             }
+            // ==========================================================================
         }
         return bonus;
     }
@@ -2822,7 +2899,7 @@ public class ExperienceSystem implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="game">
-<div class="file-header"><h2>Game.java</h2><span class="file-meta">339 lines | 12037 bytes</span></div>
+<div class="file-header"><h2>Game.java</h2><span class="file-meta">312 lines | 10873 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -2840,8 +2917,6 @@ public class Game {
     private int turnCount;
     private Enemy encounteredEnemy;
     private int stairsX = -1, stairsY = -1;
-
-    // NEW: Pickup message for GameView to display as toast
     private String lastPickupMessage = null;
 
     public Game() {
@@ -2859,6 +2934,12 @@ public class Game {
 
         generateInitialEnemies();
         generateStairs();
+
+        if (player != null) {
+            player.recalculateStatsFromEquipment();
+            Log.d("Game", "Initial stat recalculation complete: ATK=" + player.getAttack()
+                    + " DEF=" + player.getArmor() + " HP=" + player.getMaxHealth());
+        }
     }
 
     private void generateInitialEnemies() {
@@ -2877,8 +2958,10 @@ public class Game {
                 EnemyType type = EnemyType.getRandomRegularMonster();
                 Enemy enemy = new Enemy(x, y, dungeon, type, null);
 
-                enemy.setAttack((int)(enemy.getAttack() * startingLevel.getEnemyDifficultyScaling()));
-                enemy.setCurrentHealth((int)(enemy.getMaxHealth() * startingLevel.getEnemyDifficultyScaling()));
+                int scaledInitHP = (int)(type.getBaseHealth() * startingLevel.getEnemyDifficultyScaling());
+                enemy.maxHealth = scaledInitHP;
+                enemy.setCurrentHealth(scaledInitHP);
+                enemy.setAttack((int)(type.getBaseAttack() * startingLevel.getEnemyDifficultyScaling()));
 
                 enemies.add(enemy);
                 enemiesSpawned++;
@@ -2888,11 +2971,9 @@ public class Game {
         }
         Log.d("Game", "Generated " + enemiesSpawned + " initial enemies on floor " + dungeonManager.getCurrentFloor());
 
-        // NEW: Spawn 1-3 item chests per floor
         spawnChests();
     }
 
-    // NEW: Spawn 1-3 chests on walkable tiles
     private void spawnChests() {
         if (dungeon == null || player == null) return;
 
@@ -2938,7 +3019,29 @@ public class Game {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
                 if (dungeon.isWalkable(x, y)) {
                     int dist = Math.abs(x - player.getX()) + Math.abs(y - player.getY());
-                    if (dist &gt;= minDistance) {
+                    if (dist &gt;= minDistance) validTiles.add(new int[]{x, y});
+                }
+            }
+        }
+
+        if (validTiles.isEmpty()) {
+            Log.w("Game", "⚠ No tiles at distance " + minDistance + ", relaxing to 5...");
+            minDistance = 5;
+            for (int y = 0; y &lt; dungeon.getHeight(); y++) {
+                for (int x = 0; x &lt; dungeon.getWidth(); x++) {
+                    if (dungeon.isWalkable(x, y)) {
+                        int dist = Math.abs(x - player.getX()) + Math.abs(y - player.getY());
+                        if (dist &gt;= minDistance) validTiles.add(new int[]{x, y});
+                    }
+                }
+            }
+        }
+
+        if (validTiles.isEmpty()) {
+            Log.w("Game", "⚠ No tiles at distance " + minDistance + ", using ANY floor tile...");
+            for (int y = 0; y &lt; dungeon.getHeight(); y++) {
+                for (int x = 0; x &lt; dungeon.getWidth(); x++) {
+                    if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
                         validTiles.add(new int[]{x, y});
                     }
                 }
@@ -2952,133 +3055,8 @@ public class Game {
             dungeon.setTile(stairsX, stairsY, 'S');
             Log.d("Game", "🚪 Stairs generated at (" + stairsX + "," + stairsY + ")");
         } else {
-            Log.w("Game", "⚠️ No valid stairs location found!");
+            Log.e("Game", "❌ FAILED: No valid stairs location found anywhere!");
         }
-    }
-
-    public Enemy spawnEnemy(int x, int y) {
-        if (!dungeon.isWalkable(x, y)) return null;
-
-        DungeonLevel currentLevel = dungeonManager.getCurrentLevel();
-        EnemyType type = EnemyType.getRandomRegularMonster();
-        Enemy enemy = new Enemy(x, y, dungeon, type, null);
-
-        enemy.setAttack((int)(enemy.getAttack() * currentLevel.getEnemyDifficultyScaling()));
-        enemy.setCurrentHealth((int)(enemy.getMaxHealth() * currentLevel.getEnemyDifficultyScaling()));
-
-        enemies.add(enemy);
-        Log.d("Game", "Spawned enemy " + type.name() + " at (" + x + "," + y + ")");
-        return enemy;
-    }
-
-    public boolean playerMove(int dx, int dy) {
-        if (player == null || dungeon == null) {
-            return false;
-        }
-
-        int newX = player.getX() + dx;
-        int newY = player.getY() + dy;
-
-        if (!dungeon.isWalkable(newX, newY)) {
-            return false;
-        }
-
-        player.move(dx, dy);
-        turnCount++;
-
-        // NEW: Check for chest pickup
-        char tile = dungeon.getTile(newX, newY);
-        if (tile == 'C') {
-            LootTable lootTable = LootTable.getInstance();
-            int currentFloor = dungeonManager != null ? dungeonManager.getCurrentFloor() : 1;
-            Equipment chestLoot = lootTable.generateLoot(currentFloor, 0.5);
-
-            if (chestLoot == null) {
-                Log.e("Game", "LootTable returned null for chest!");
-                chestLoot = new Equipment("Rusty Sword", ItemType.WEAPON, Rarity.COMMON);
-            }
-
-            InventorySystem inv = player.getInventory();
-            if (inv != null) {
-                boolean added = inv.addEquipmentWithAutoEquip(chestLoot);
-                if (added) {
-                    lastPickupMessage = "🎁 Opened chest: " + chestLoot.getName()
-                        + " [" + chestLoot.getRarity() + "]";
-                    Log.d("Game", lastPickupMessage);
-                } else {
-                    player.addPendingLoot(chestLoot);
-                    lastPickupMessage = "📦 Inventory full! Queued: "
-                        + chestLoot.getName() + " [" + chestLoot.getRarity() + "]";
-                    Log.d("Game", "Chest looted (queued): " + chestLoot.getName());
-                }
-            }
-            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
-        }
-
-        // Check for gold pickup
-        tile = dungeon.getTile(newX, newY);
-        if (tile == Dungeon.TILE_GOLD) {
-            int goldAmount = SecureRandomUtil.nextInt(5) + 5;
-            player.addGold(goldAmount);
-            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
-            Log.d("Game", "Collected " + goldAmount + " gold! Total: " + player.getGoldCollected());
-        }
-
-        // Check for enemy encounter
-        for (Enemy enemy : enemies) {
-            if (enemy != null &amp;&amp; !enemy.isDead() &amp;&amp; enemy.getX() == newX &amp;&amp; enemy.getY() == newY) {
-                encounteredEnemy = enemy;
-                Log.d("Game", "Encounter initiated with " + enemy.getName());
-                return true;
-            }
-        }
-
-        encounteredEnemy = null;
-        return false;
-    }
-
-    public void resolveEncounter(Enemy enemy, boolean playerWins) {
-        if (enemy == null) return;
-
-        if (playerWins) {
-            enemy.setDefeated(true);
-            if (enemies.remove(enemy)) {
-                Log.d("Game", "✓ Removed defeated enemy from list. Remaining: " + enemies.size());
-            }
-
-            if (dungeon != null) {
-                dungeon.setTile(enemy.getX(), enemy.getY(), Dungeon.TILE_FLOOR);
-            }
-
-            if (enemy.isBoss()) {
-                state = GameState.WON;
-            }
-        } else {
-            if (!player.isAlive()) {
-                state = GameState.LOST;
-            }
-        }
-    }
-
-    public boolean descendStairs() {
-        if (dungeonManager == null) return false;
-        if (!dungeonManager.canProgress()) {
-            Log.w("Game", "Already at max floor");
-            return false;
-        }
-
-        boolean progressed = dungeonManager.progressFloor();
-        if (progressed) {
-            Log.d("Game", "Advanced to floor " + dungeonManager.getCurrentFloor());
-
-            if (stairsX &gt;= 0 &amp;&amp; stairsY &gt;= 0) {
-                dungeon.setTile(stairsX, stairsY, Dungeon.TILE_FLOOR);
-            }
-
-            generateEnemiesForNewFloor();
-            generateStairs();
-        }
-        return progressed;
     }
 
     private void generateEnemiesForNewFloor() {
@@ -3103,8 +3081,8 @@ public class Game {
                 int scaledATK = level.getScaledEnemyAttack();
                 int scaledDEF = level.getScaledEnemyDefense();
 
-                enemy.setCurrentHealth(scaledHP);
                 enemy.maxHealth = scaledHP;
+                enemy.setCurrentHealth(scaledHP);
                 enemy.setAttack(scaledATK);
                 enemy.setArmor(scaledDEF);
 
@@ -3115,11 +3093,9 @@ public class Game {
 
         Log.d("Game", "Generated " + enemies.size() + " enemies for floor " + level.getFloorNumber());
 
-        // NEW: Spawn chests on new floor
         spawnChests();
     }
 
-    // NEW: Consume pickup message (called by GameView to show toast)
     public String consumePickupMessage() {
         String msg = lastPickupMessage;
         lastPickupMessage = null;
@@ -3161,6 +3137,80 @@ public class Game {
     }
 
     public boolean isPlaying() { return state == GameState.PLAYING; }
+
+    // === ADDED METHODS ===
+    public boolean playerMove(int dx, int dy) {
+        if (player == null || dungeon == null || !isPlaying()) return false;
+
+        int newX = player.getX() + dx;
+        int newY = player.getY() + dy;
+
+        if (newX &lt; 0 || newX &gt;= dungeon.getWidth() || newY &lt; 0 || newY &gt;= dungeon.getHeight()) {
+            return false;
+        }
+
+        if (!dungeon.isWalkable(newX, newY)) {
+            return false;
+        }
+
+        for (Enemy e : enemies) {
+            if (e != null &amp;&amp; !e.isDead() &amp;&amp; e.getX() == newX &amp;&amp; e.getY() == newY) {
+                encounteredEnemy = e;
+                return false;
+            }
+        }
+
+        char currentTile = dungeon.getTile(newX, newY);
+        if (currentTile == Dungeon.TILE_GOLD) {
+            lastPickupMessage = "🪙 Picked up gold!";
+            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+        } else if (currentTile == 'C') {
+            lastPickupMessage = "📦 Opened chest!";
+            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+        }
+
+        player.setX(newX);
+        player.setY(newY);
+        turnCount++;
+
+        return true;
+    }
+
+    public boolean descendStairs() {
+        if (player == null || dungeon == null) return false;
+
+        if (player.getX() != stairsX || player.getY() != stairsY) {
+            return false;
+        }
+
+        DungeonManager mgr = getDungeonManager();
+        if (mgr == null) return false;
+
+        int currentFloor = mgr.getCurrentFloor();
+        if (currentFloor &gt;= 99) {
+            state = GameState.WON;
+            return true;
+        }
+
+        // FIXED: Use progressFloor() instead of goToNextFloor()
+        if (!mgr.progressFloor()) {
+            Log.e("Game", "Failed to advance floor");
+            return false;
+        }
+
+        // FIXED: Use generateDungeon() instead of generateLevel()
+        dungeon.resetForFloor();
+        dungeon.setCurrentFloor(mgr.getCurrentFloor());
+
+        generateEnemiesForNewFloor();
+        generateStairs();
+
+        encounteredEnemy = null;
+
+        Log.d("Game", "Descended to floor " + mgr.getCurrentFloor());
+        return true;
+    }
+    // ====================
 }</code></pre>
 </div>
 <div class="file" id="gamebalance">
@@ -3267,7 +3317,7 @@ public class GameBalance {
 }</code></pre>
 </div>
 <div class="file" id="gameview">
-<div class="file-header"><h2>GameView.java</h2><span class="file-meta">903 lines | 39122 bytes</span></div>
+<div class="file-header"><h2>GameView.java</h2><span class="file-meta">917 lines | 39786 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -3972,6 +4022,20 @@ public class GameView extends View {
             canvas.drawCircle(px, py, tileSizeLocal/2, highlight);
         }
 
+        // FIXED: Draw enemies on full map
+        List&lt;Enemy&gt; enemies = game.getEnemies();
+        if (enemies != null) {
+            for (Enemy enemy : enemies) {
+                if (enemy == null || enemy.isDead()) continue;
+                float ex = offsetX + enemy.getX() * tileSizeLocal + tileSizeLocal/2;
+                float ey = offsetY + enemy.getY() * tileSizeLocal + tileSizeLocal*0.5f;
+                String emoji = enemy.getEmoji();
+                Paint ee = new Paint(emojiPaint);
+                ee.setTextSize(tileSizeLocal * 0.9f);
+                canvas.drawText(emoji != null ? emoji : "\ud83d\udc79", ex, ey, ee);
+            }
+        }
+
         canvas.drawText("FULL MAP - Tap 🔍 to toggle back | Stairs = 🚪 to descend",
             width/2, height - 30, textPaintSmall);
     }
@@ -4631,7 +4695,7 @@ public class InventoryActivity extends Activity {
 }</code></pre>
 </div>
 <div class="file" id="inventorysystem">
-<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">231 lines | 7852 bytes</span></div>
+<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">252 lines | 8701 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -4770,12 +4834,33 @@ public class InventorySystem implements Serializable {
         return false;
     }
 
+    // ========== NEW: Get only equipped items (NOT backpack) ==========
+    /**
+     * Returns ONLY currently equipped items (not backpack).
+     * Use this for stat calculations — getAllEquipment() is WRONG for that.
+     */
+    public List&lt;Equipment&gt; getEquippedItems() {
+        return new ArrayList&lt;&gt;(equipmentSlots.values());
+    }
+    // ================================================================
+
+    /**
+     * NEW: Force equip an item directly into its slot.
+     * Used for battle result sync and save/load operations.
+     */
+    public void forceEquip(Equipment item) {
+        if (item == null || item.getType() == null) return;
+        equipmentSlots.put(item.getType().getSlotId(), item);
+        android.util.Log.d("InventorySystem", "⚡ FORCE EQUIP: " + item.getName() + " to " + item.getType().getDisplayName());
+    }
+
     // Utility methods for filtering
     public List&lt;Equipment&gt; getAllEquipment() {
         List&lt;Equipment&gt; all = new ArrayList&lt;&gt;(inventory);
         all.addAll(equipmentSlots.values());
         return all;
     }
+
 
     public List&lt;Equipment&gt; getWeapons() {
         List&lt;Equipment&gt; weapons = new ArrayList&lt;&gt;();
@@ -5082,7 +5167,7 @@ public class LootTable {
 }</code></pre>
 </div>
 <div class="file" id="mainactivity">
-<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">535 lines | 21783 bytes</span></div>
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">562 lines | 23267 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -5258,6 +5343,13 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
         totalEnemiesDefeated = saveData.totalEnemiesDefeated;
         bossSpawned = saveData.bossSpawned;
+        
+        // ========== CRITICAL FIX: Recalculate stats after load ==========
+        Player gamePlayer = game.getPlayer();
+        if (gamePlayer != null) {
+            gamePlayer.recalculateStatsFromEquipment();
+        }
+        // ================================================================
     }
 
     @Override
@@ -5315,13 +5407,26 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                         Log.w(TAG, "Reflection failed, copying manually: " + e.getMessage());
                         InventorySystem gameInv = gamePlayer.getInventory();
                         if (gameInv != null) {
+                            // Copy backpack items
                             for (Equipment eq : battleInv.getInventory()) {
                                 gameInv.addEquipment(eq);
                             }
+                            
+                            // ========== CRITICAL FIX: Copy equipped items too ==========
+                            for (Equipment eq : battleInv.getEquippedItems()) {
+                                if (eq != null &amp;&amp; eq.getType() != null) {
+                                    gameInv.forceEquip(eq);
+                                    Log.d(TAG, "Force-equipped from battle: " + eq.getName());
+                                }
+                            }
+                            // =========================================================
+                            
+                            // Copy pending loot
                             for (Equipment eq : updatedPlayer.getPendingLoot()) {
                                 gameInv.addEquipment(eq);
                             }
-                            Log.d(TAG, "Manual inventory copy: " + gameInv.getItemCount() + " items");
+                            Log.d(TAG, "Manual inventory copy completed. Backpack: " + gameInv.getItemCount() 
+                                + " | Equipped: " + gameInv.getEquippedItems().size());
                         }
                     }
                 }
@@ -5356,6 +5461,13 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     }
                 }
             }
+
+            // ========== CRITICAL FIX: Always recalculate stats after battle ==========
+            if (gamePlayer != null) {
+                gamePlayer.recalculateStatsFromEquipment();
+                Log.d(TAG, "战后 recalculateStatsFromEquipment() called");
+            }
+            // ==========================================================================
 
             gameView.invalidate();
         } catch (Exception e) {
@@ -5462,7 +5574,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         if (state == Game.GameState.WON) {
             Toast.makeText(this, "YOU DEFEATED THE DRAGON!", Toast.LENGTH_LONG).show();
         } else if (state == Game.GameState.LOST) {
-            Toast.makeText(this, "You have been defeated...", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "You have been defeated...", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -5620,7 +5732,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 }</code></pre>
 </div>
 <div class="file" id="player">
-<div class="file-header"><h2>Player.java</h2><span class="file-meta">187 lines | 6343 bytes</span></div>
+<div class="file-header"><h2>Player.java</h2><span class="file-meta">257 lines | 9493 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -5639,6 +5751,15 @@ public class Player extends Character implements Serializable {
 
     // CRITICAL FIX: Not transient anymore! Must be serializable.
     private List&lt;Equipment&gt; pendingLoot = new ArrayList&lt;&gt;();
+
+    // ========== NEW: Base stats for equipment recalculation ==========
+    private int baseAttack;
+    private int baseArmor;
+    private int baseMaxHealth;
+    private int baseDodgeChance;
+    private int baseCritChance;
+    private boolean hasBaseStatsStored = false;
+    // ==================================================================
 
     public Player(int x, int y) {
         super(x, y, 100, 15);
@@ -5791,6 +5912,67 @@ public class Player extends Character implements Serializable {
             maxHealthIncrease, this.currentHealth, this.maxHealth, attackIncrease, this.attack));
     }
 
+    // ========== NEW: Equipment stats recalculation system ==========
+    /**
+     * Recalculates all player stats from equipped gear ONLY.
+     * MUST be called after every equip/unequip/load/battle sync.
+     * This is the BRIDGE between equipmentSlots and player combat stats.
+     */
+    public void recalculateStatsFromEquipment() {
+        if (inventory == null) {
+            android.util.Log.w("PLAYER", "recalculateStatsFromEquipment(): inventory is NULL");
+            return;
+        }
+        
+        android.util.Log.d("PLAYER", "=== Recalculating stats from equipment ===");
+        
+        // Store base stats on first call
+        if (!hasBaseStatsStored) {
+            baseAttack = this.attack;
+            baseArmor = this.armor;
+            baseMaxHealth = this.maxHealth;
+            baseDodgeChance = this.dodgeChance;
+            baseCritChance = this.criticalChance;
+            hasBaseStatsStored = true;
+            android.util.Log.d("PLAYER", "Stored base stats: ATK=" + baseAttack + " DEF=" + baseArmor + " HP=" + baseMaxHealth);
+        }
+        
+        // Reset to base stats
+        this.attack = baseAttack;
+        this.armor = baseArmor;
+        this.maxHealth = baseMaxHealth;
+        this.dodgeChance = baseDodgeChance;
+        this.criticalChance = baseCritChance;
+        
+        // Add equipped bonuses ONLY (NOT backpack items!)
+        int prevMaxHealth = this.maxHealth;
+        for (Equipment eq : inventory.getEquippedItems()) {
+            if (eq == null) continue;
+            this.attack += eq.getAttackBonus();
+            this.armor += eq.getDefenseBonus();
+            this.maxHealth += eq.getHealthBonus();
+            this.dodgeChance += (int) eq.getDodgeChance();
+            this.criticalChance += (int) eq.getCritChance();
+        }
+        
+        // Clamp percentages to reasonable limits
+        this.dodgeChance = Math.min(75, this.dodgeChance);
+        this.criticalChance = Math.min(75, this.criticalChance);
+        
+        // Preserve health ratio when max health changes
+        if (this.maxHealth &gt; prevMaxHealth) {
+            // Equipping new gear - add the HP difference
+            this.currentHealth += (this.maxHealth - prevMaxHealth);
+            this.currentHealth = Math.min(this.currentHealth, this.maxHealth);
+        } else if (this.maxHealth &lt; prevMaxHealth) {
+            // Unequipping gear - don't exceed new max
+            this.currentHealth = Math.min(this.currentHealth, this.maxHealth);
+        }
+        
+        android.util.Log.d("PLAYER", "✅ Stats recalculated: ATK=" + this.attack + " DEF=" + this.armor + " HP=" + this.currentHealth + "/" + this.maxHealth + " DODGE=" + this.dodgeChance + " CRIT=" + this.criticalChance);
+    }
+    // ================================================================
+
     public boolean usePotion() {
         if (inventory != null &amp;&amp; inventory.getHealthPotions() &gt; 0) {
             if (currentHealth &lt; maxHealth) {
@@ -5857,7 +6039,7 @@ public enum Rarity {
 }</code></pre>
 </div>
 <div class="file" id="savegamemanager">
-<div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">290 lines | 12628 bytes</span></div>
+<div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">295 lines | 12923 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -6008,6 +6190,8 @@ public class SaveGameManager {
             sb.append("equipCount=0\n");
         }
 
+        sb.append("potions=").append(data.inventory != null ? data.inventory.getHealthPotions() : 5).append("\n");
+
         if (data.enemies != null) {
             sb.append("enemyCount=").append(data.enemies.size()).append("\n");
         } else {
@@ -6019,11 +6203,11 @@ public class SaveGameManager {
 
     private String escapeValue(String value) {
         if (value == null) return "";
-        return value.replace("=", "_").replace("\n", "_");
+        return value.replace("=", "_EQUALS_").replace("\n", "_NEWLINE_");
     }
 
     private String unescapeValue(String value) {
-        return value.replace("_", "=").replace("_", "\n");
+        return value.replace("_EQUALS_", "=").replace("_NEWLINE_", "\n");
     }
 
     /**
@@ -6120,6 +6304,9 @@ public class SaveGameManager {
                                 result.inventory.addEquipment(eq);
                             }
                             break;
+                    case "potions":
+                        result.inventory.addHealthPotions(Integer.parseInt(val));
+                        break;
                     }
                 }
 
