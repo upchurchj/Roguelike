@@ -23,7 +23,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">30 files | 6363 lines | 2026-08-05 16:59</div>
+<div class="stats">30 files | 6357 lines | 2026-08-06 16:54</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> </nav>
 <div id="files">
@@ -2304,7 +2304,7 @@ public class Equipment implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="equipmentactivity">
-<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">440 lines | 20818 bytes</span></div>
+<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">442 lines | 20938 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.app.Activity;
@@ -2424,6 +2424,7 @@ public class EquipmentActivity extends Activity {
 
         initViews();
         bindClickListeners();
+                    player.recalculateStatsFromEquipment();
         updateEquippedItems();
         updateStats();
         updateSetBonusDisplay();
@@ -2739,6 +2740,7 @@ public class EquipmentActivity extends Activity {
                     Log.e(TAG, "Error processing inventory result: " + e.getMessage());
                 }
             }
+                    player.recalculateStatsFromEquipment();
             updateEquippedItems();
             updateStats();
             updateSetBonusDisplay();
@@ -2899,7 +2901,7 @@ public class ExperienceSystem implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="game">
-<div class="file-header"><h2>Game.java</h2><span class="file-meta">312 lines | 10873 bytes</span></div>
+<div class="file-header"><h2>Game.java</h2><span class="file-meta">299 lines | 11314 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -2922,7 +2924,6 @@ public class Game {
     public Game() {
         this.dungeon = new Dungeon(50, 50);
         this.dungeonManager = DungeonManager.builder().maxFloor(99).build();
-
         int[] spawnPos = dungeon.findSpawnPosition();
         this.player = new Player(spawnPos[0], spawnPos[1]);
         this.enemies = new ArrayList&lt;&gt;();
@@ -2931,14 +2932,12 @@ public class Game {
         this.encounteredEnemy = null;
         this.stairsX = -1;
         this.stairsY = -1;
-
         generateInitialEnemies();
         generateStairs();
-
         if (player != null) {
             player.recalculateStatsFromEquipment();
             Log.d("Game", "Initial stat recalculation complete: ATK=" + player.getAttack()
-                    + " DEF=" + player.getArmor() + " HP=" + player.getMaxHealth());
+                + " DEF=" + player.getArmor() + " HP=" + player.getMaxHealth());
         }
     }
 
@@ -2946,23 +2945,19 @@ public class Game {
         int enemiesSpawned = 0;
         int maxAttempts = 100;
         int attempts = 0;
-
         DungeonLevel startingLevel = dungeonManager.getCurrentLevel();
         int enemyCount = startingLevel.getScaledEnemyCount();
 
         while (enemiesSpawned &lt; enemyCount &amp;&amp; attempts &lt; maxAttempts) {
             int x = SecureRandomUtil.nextInt(dungeon.getWidth());
             int y = SecureRandomUtil.nextInt(dungeon.getHeight());
-
             if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
                 EnemyType type = EnemyType.getRandomRegularMonster();
                 Enemy enemy = new Enemy(x, y, dungeon, type, null);
-
                 int scaledInitHP = (int)(type.getBaseHealth() * startingLevel.getEnemyDifficultyScaling());
                 enemy.maxHealth = scaledInitHP;
                 enemy.setCurrentHealth(scaledInitHP);
                 enemy.setAttack((int)(type.getBaseAttack() * startingLevel.getEnemyDifficultyScaling()));
-
                 enemies.add(enemy);
                 enemiesSpawned++;
                 Log.d("Game", "Spawned " + type.getEmoji() + " " + type.name() + " at (" + x + "," + y + ")");
@@ -2970,13 +2965,11 @@ public class Game {
             attempts++;
         }
         Log.d("Game", "Generated " + enemiesSpawned + " initial enemies on floor " + dungeonManager.getCurrentFloor());
-
         spawnChests();
     }
 
     private void spawnChests() {
         if (dungeon == null || player == null) return;
-
         int chestCount = 1 + SecureRandomUtil.nextInt(3);
         int placed = 0;
 
@@ -2985,7 +2978,6 @@ public class Game {
             while (attempts &lt; 50) {
                 int cx = SecureRandomUtil.nextInt(dungeon.getWidth());
                 int cy = SecureRandomUtil.nextInt(dungeon.getHeight());
-
                 if (dungeon.isWalkable(cx, cy) &amp;&amp; !(cx == player.getX() &amp;&amp; cy == player.getY())) {
                     boolean occupied = false;
                     for (Enemy e : enemies) {
@@ -2995,11 +2987,10 @@ public class Game {
                     if (existing == 'C' || existing == 'S' || existing == 'B') {
                         occupied = true;
                     }
-
                     if (!occupied) {
                         dungeon.setTile(cx, cy, 'C');
                         placed++;
-                        Log.d("Game", "📦 Chest placed at (" + cx + "," + cy + ")");
+                        Log.d("Game", "Chest placed at (" + cx + "," + cy + ")");
                         break;
                     }
                 }
@@ -3011,7 +3002,6 @@ public class Game {
 
     private void generateStairs() {
         if (dungeon == null || player == null) return;
-
         int minDistance = 10;
         List&lt;int[]&gt; validTiles = new ArrayList&lt;&gt;();
 
@@ -3025,7 +3015,7 @@ public class Game {
         }
 
         if (validTiles.isEmpty()) {
-            Log.w("Game", "⚠ No tiles at distance " + minDistance + ", relaxing to 5...");
+            Log.w("Game", "No tiles at distance " + minDistance + ", relaxing to 5...");
             minDistance = 5;
             for (int y = 0; y &lt; dungeon.getHeight(); y++) {
                 for (int x = 0; x &lt; dungeon.getWidth(); x++) {
@@ -3038,7 +3028,7 @@ public class Game {
         }
 
         if (validTiles.isEmpty()) {
-            Log.w("Game", "⚠ No tiles at distance " + minDistance + ", using ANY floor tile...");
+            Log.w("Game", "No tiles at distance " + minDistance + ", using ANY floor tile...");
             for (int y = 0; y &lt; dungeon.getHeight(); y++) {
                 for (int x = 0; x &lt; dungeon.getWidth(); x++) {
                     if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
@@ -3053,48 +3043,91 @@ public class Game {
             stairsX = pos[0];
             stairsY = pos[1];
             dungeon.setTile(stairsX, stairsY, 'S');
-            Log.d("Game", "🚪 Stairs generated at (" + stairsX + "," + stairsY + ")");
+            Log.d("Game", "Stairs generated at (" + stairsX + "," + stairsY + ")");
         } else {
-            Log.e("Game", "❌ FAILED: No valid stairs location found anywhere!");
+            Log.e("Game", "FAILED: No valid stairs location found anywhere!");
         }
     }
 
     private void generateEnemiesForNewFloor() {
         if (dungeonManager == null || dungeon == null) return;
-
         DungeonLevel level = dungeonManager.getCurrentLevel();
         int enemyCount = level.getScaledEnemyCount();
 
         enemies.clear();
-
         int attempts = 0;
         int maxAttempts = enemyCount * 10;
+
         while (enemies.size() &lt; enemyCount &amp;&amp; attempts &lt; maxAttempts) {
             int x = SecureRandomUtil.nextInt(dungeon.getWidth());
             int y = SecureRandomUtil.nextInt(dungeon.getHeight());
-
             if (dungeon.isWalkable(x, y) &amp;&amp; !(x == player.getX() &amp;&amp; y == player.getY())) {
                 EnemyType type = EnemyType.getRandomRegularMonster(level.getFloorNumber());
                 Enemy enemy = new Enemy(x, y, dungeon, type, null);
-
                 int scaledHP = level.getScaledEnemyHP();
                 int scaledATK = level.getScaledEnemyAttack();
                 int scaledDEF = level.getScaledEnemyDefense();
-
                 enemy.maxHealth = scaledHP;
                 enemy.setCurrentHealth(scaledHP);
                 enemy.setAttack(scaledATK);
                 enemy.setArmor(scaledDEF);
-
                 enemies.add(enemy);
             }
             attempts++;
         }
 
         Log.d("Game", "Generated " + enemies.size() + " enemies for floor " + level.getFloorNumber());
-
         spawnChests();
     }
+
+    // =====================================================
+    //  CRITICAL: ADDING playerMove() METHOD
+    // =====================================================
+
+    public boolean playerMove(int dx, int dy) {
+        if (player == null || dungeon == null || !isPlaying()) return false;
+
+        int newX = player.getX() + dx;
+        int newY = player.getY() + dy;
+
+        if (newX &lt; 0 || newX &gt;= dungeon.getWidth() || newY &lt; 0 || newY &gt;= dungeon.getHeight()) {
+            return false;
+        }
+
+        if (!dungeon.isWalkable(newX, newY)) {
+            return false;
+        }
+
+        for (Enemy e : enemies) {
+            if (e != null &amp;&amp; !e.isDead() &amp;&amp; e.getX() == newX &amp;&amp; e.getY() == newY) {
+                encounteredEnemy = e;
+                Log.d("Game", "Encounter! " + e.getName() + " at (" + newX + "," + newY + ")");
+                return true;
+            }
+        }
+
+        char tile = dungeon.getTile(newX, newY);
+        if (tile == Dungeon.TILE_GOLD) {
+            int goldAmount = 5 + SecureRandomUtil.nextInt(20);
+            player.addGold(goldAmount);
+            lastPickupMessage = "Picked up " + goldAmount + " gold!";
+            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+            Log.d("Game", "Gold picked up: +" + goldAmount);
+        } else if (tile == 'C') {
+            int chestGold = 20 + SecureRandomUtil.nextInt(50);
+            player.addGold(chestGold);
+            lastPickupMessage = "Opened chest! Found " + chestGold + " gold!";
+            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
+            Log.d("Game", "Chest opened: +" + chestGold + " gold");
+        }
+
+        player.setX(newX);
+        player.setY(newY);
+        turnCount++;
+        return false;
+    }
+
+    // =====================================================
 
     public String consumePickupMessage() {
         String msg = lastPickupMessage;
@@ -3138,47 +3171,8 @@ public class Game {
 
     public boolean isPlaying() { return state == GameState.PLAYING; }
 
-    // === ADDED METHODS ===
-    public boolean playerMove(int dx, int dy) {
-        if (player == null || dungeon == null || !isPlaying()) return false;
-
-        int newX = player.getX() + dx;
-        int newY = player.getY() + dy;
-
-        if (newX &lt; 0 || newX &gt;= dungeon.getWidth() || newY &lt; 0 || newY &gt;= dungeon.getHeight()) {
-            return false;
-        }
-
-        if (!dungeon.isWalkable(newX, newY)) {
-            return false;
-        }
-
-        for (Enemy e : enemies) {
-            if (e != null &amp;&amp; !e.isDead() &amp;&amp; e.getX() == newX &amp;&amp; e.getY() == newY) {
-                encounteredEnemy = e;
-                return false;
-            }
-        }
-
-        char currentTile = dungeon.getTile(newX, newY);
-        if (currentTile == Dungeon.TILE_GOLD) {
-            lastPickupMessage = "🪙 Picked up gold!";
-            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
-        } else if (currentTile == 'C') {
-            lastPickupMessage = "📦 Opened chest!";
-            dungeon.setTile(newX, newY, Dungeon.TILE_FLOOR);
-        }
-
-        player.setX(newX);
-        player.setY(newY);
-        turnCount++;
-
-        return true;
-    }
-
     public boolean descendStairs() {
         if (player == null || dungeon == null) return false;
-
         if (player.getX() != stairsX || player.getY() != stairsY) {
             return false;
         }
@@ -3192,25 +3186,20 @@ public class Game {
             return true;
         }
 
-        // FIXED: Use progressFloor() instead of goToNextFloor()
         if (!mgr.progressFloor()) {
             Log.e("Game", "Failed to advance floor");
             return false;
         }
 
-        // FIXED: Use generateDungeon() instead of generateLevel()
         dungeon.resetForFloor();
         dungeon.setCurrentFloor(mgr.getCurrentFloor());
-
         generateEnemiesForNewFloor();
         generateStairs();
-
         encounteredEnemy = null;
 
         Log.d("Game", "Descended to floor " + mgr.getCurrentFloor());
         return true;
     }
-    // ====================
 }</code></pre>
 </div>
 <div class="file" id="gamebalance">
@@ -3317,7 +3306,7 @@ public class GameBalance {
 }</code></pre>
 </div>
 <div class="file" id="gameview">
-<div class="file-header"><h2>GameView.java</h2><span class="file-meta">917 lines | 39786 bytes</span></div>
+<div class="file-header"><h2>GameView.java</h2><span class="file-meta">933 lines | 40795 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -3337,7 +3326,10 @@ import java.util.List;
 public class GameView extends View {
     private static final float ENEMY_RADIUS = 0.4f;
 
-    private static final int BUTTON_AREA_HEIGHT_PERCENT = 25;
+    // Layout: 60% game view / 20% equipment / 20% controls
+    private static final int GAME_VIEW_HEIGHT_PERCENT = 60;
+    private static final int EQUIPMENT_HEIGHT_PERCENT = 20;
+    private static final int CONTROLS_HEIGHT_PERCENT = 20;
     private static final int STATUS_BAR_HEIGHT = 35;
     private static final int VIEWPORT_TILES = 7;
     private static final int VIEWPORT_RADIUS = 3;
@@ -3406,6 +3398,9 @@ public class GameView extends View {
     private static final long REPEAT_DELAY_MS = 100;
 
     private boolean showFullMap = false;
+
+    // Cached layout values
+    private int cachedGameViewHeight = 0;
 
     public enum Direction {
         UP_LEFT(-1, -1), UP(0, -1), UP_RIGHT(1, -1), LEFT(-1, 0),
@@ -3612,18 +3607,20 @@ public class GameView extends View {
         int width = getWidth(), height = getHeight();
         if (width &lt;= 0 || height &lt;= 0) return;
 
-        int buttonAreaHeight = (int) (height * BUTTON_AREA_HEIGHT_PERCENT / 100.0f);
+        int gameViewHeight = (int)(height * GAME_VIEW_HEIGHT_PERCENT / 100.0f);
+        int equipmentBandHeight = (int)(height * EQUIPMENT_HEIGHT_PERCENT / 100.0f);
+        int controlsBandHeight = height - gameViewHeight - equipmentBandHeight;
         int statusBarHeight = STATUS_BAR_HEIGHT;
-        int gameAreaHeight = height - buttonAreaHeight;
 
-        drawGameViewport(canvas, gameAreaHeight, player);
+        cachedGameViewHeight = gameViewHeight;
+
+        drawGameViewport(canvas, gameViewHeight, statusBarHeight, player);
         drawStatusBar(canvas, statusBarHeight, player);
-        drawDPadButtons(canvas, gameAreaHeight, buttonAreaHeight);
-        drawActionButtons(canvas, gameAreaHeight, buttonAreaHeight);
-        drawEquipmentSlots(canvas, gameAreaHeight, buttonAreaHeight);
+        drawEquipmentSlots(canvas, gameViewHeight, equipmentBandHeight);
+        drawDPadButtons(canvas, gameViewHeight + equipmentBandHeight, controlsBandHeight);
+        drawActionButtons(canvas, gameViewHeight + equipmentBandHeight, controlsBandHeight);
         drawDebugModeButton(canvas);
 
-        // NEW: Show pickup toast if available
         String pickupMsg = game.consumePickupMessage();
         if (pickupMsg != null &amp;&amp; getContext() != null) {
             Toast.makeText(getContext(), pickupMsg, Toast.LENGTH_LONG).show();
@@ -3631,7 +3628,7 @@ public class GameView extends View {
 
         Game.GameState state = game.getState();
         if (state != Game.GameState.PLAYING) {
-            drawGameOverOverlay(canvas, width, gameAreaHeight + statusBarHeight);
+            drawGameOverOverlay(canvas, width, gameViewHeight);
         }
     }
 
@@ -3647,9 +3644,9 @@ public class GameView extends View {
         canvas.drawText(message, getWidth() / 2f, getHeight() / 2f, txt);
     }
 
-    private void drawGameViewport(Canvas canvas, int gameAreaHeight, Player player) {
+    private void drawGameViewport(Canvas canvas, int gameViewHeight, int statusBarHeight, Player player) {
         if (showFullMap) {
-            drawFullMap(canvas);
+            drawFullMap(canvas, gameViewHeight, statusBarHeight);
             return;
         }
 
@@ -3664,12 +3661,12 @@ public class GameView extends View {
         int camY = Math.max(0, Math.min(playerY - VIEWPORT_RADIUS, dungeon.getHeight() - viewportHeight));
 
         float availableWidth = getWidth();
-        float availableHeight = gameAreaHeight;
+        float availableHeight = gameViewHeight - statusBarHeight;
         float tileW = availableWidth / viewportWidth;
         float tileH = availableHeight / viewportHeight;
         tileSize = Math.min(tileW, tileH);
         float offsetX = (availableWidth - viewportWidth * tileSize) / 2;
-        float offsetY = 0;
+        float offsetY = statusBarHeight;
 
         emojiPaint.setTextSize(tileSize * 0.9f);
 
@@ -3681,13 +3678,13 @@ public class GameView extends View {
     private void drawStatusBar(Canvas canvas, int statusHeight, Player player) {
         if (player == null) return;
         int floor = (game != null &amp;&amp; game.getDungeonManager() != null)
-                            ? game.getDungeonManager().getCurrentFloor()
-                            : 1;
+                        ? game.getDungeonManager().getCurrentFloor()
+                        : 1;
         String status = String.format("LVL:%d (XP:%d) HP:%d/%d Gold:%d Potions:%d Floor:%d",
-                                            player.getLevel(), player.getExperience(), player.getCurrentHealth(),
-                                            player.getMaxHealth(), player.getGoldCollected(),
-                                            player.getInventory() != null ? player.getInventory().getHealthPotions() : 0,
-                                            floor);
+                                        player.getLevel(), player.getExperience(), player.getCurrentHealth(),
+                                        player.getMaxHealth(), player.getGoldCollected(),
+                                        player.getInventory() != null ? player.getInventory().getHealthPotions() : 0,
+                                        floor);
         Paint sp = new Paint(textPaint);
         sp.setTextSize(22);
         sp.setColor(Color.WHITE);
@@ -3720,23 +3717,22 @@ public class GameView extends View {
                     canvas.drawRect(tileRect, tileFloorPaint);
                     Paint ge = new Paint(emojiPaint);
                     ge.setTextSize(tileSize * 0.7f);
-                    canvas.drawText("💰", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.3f, ge);
+                    canvas.drawText("\uD83D\uDCB0", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.3f, ge);
                 } else if (tile == 'B') {
                     canvas.drawRect(tileRect, tileFloorPaint);
                     Paint be = new Paint(emojiPaint);
                     be.setTextSize(tileSize * 1.5f);
-                    canvas.drawText("🐉", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, be);
+                    canvas.drawText("\uD83D\uDC09", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, be);
                 } else if (tile == 'S') {
                     canvas.drawRect(tileRect, tileStairsPaint);
                     Paint se = new Paint(emojiPaint);
                     se.setTextSize(tileSize * 1.5f);
-                    canvas.drawText("🚪", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, se);
+                    canvas.drawText("\uD83D\uDEAA", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, se);
                 } else if (tile == 'C') {
-                    // FIXED: Draw chests in normal viewport too!
                     canvas.drawRect(tileRect, tileChestPaint);
                     Paint ce = new Paint(emojiPaint);
                     ce.setTextSize(tileSize * 1.5f);
-                    canvas.drawText("📦", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, ce);
+                    canvas.drawText("\uD83D\uDCE6", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, ce);
                 } else {
                     canvas.drawRect(tileRect, tileFloorPaint);
                 }
@@ -3752,7 +3748,7 @@ public class GameView extends View {
         float y = offsetY + ry * tileSize + tileSize / 2;
         Paint he = new Paint(emojiPaint);
         he.setTextSize(tileSize * 0.8f);
-        canvas.drawText("🧙‍♂️", x, y + tileSize * 0.3f, he);
+        canvas.drawText("\uD83E\uDDD9\u200D\u2642\uFE0F", x, y + tileSize * 0.3f, he);
     }
 
     private void drawEnemies(Canvas canvas, float offsetX, float offsetY, int camX, int camY,
@@ -3768,7 +3764,7 @@ public class GameView extends View {
             if (enemy.isDead()) {
                 Paint se = new Paint(emojiPaint);
                 se.setTextSize(tileSize * 0.7f);
-                canvas.drawText("⚱️", x, y + tileSize * 0.3f, se);
+                canvas.drawText("\u26B0\uFE0F", x, y + tileSize * 0.3f, se);
             } else {
                 String emoji = enemy.getEmoji();
                 if (emoji != null &amp;&amp; !emoji.isEmpty()) {
@@ -3782,116 +3778,135 @@ public class GameView extends View {
         }
     }
 
-    private void drawDPadButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
-        int startY = gameAreaHeight + 5;
+    private void drawEquipmentSlots(Canvas canvas, int bandStartY, int bandHeight) {
+        String[] slotEmojis = {
+            "\uD83E\uDDB4", "\uD83D\uDC55", "\uD83D\uDC56", "\uD83D\uDC62", "\uD83E\uDD7E",
+            "\u2694\uFE0F", "\uD83D\uDEE1\uFE0F", "\uD83D\uDCFF", "\uD83D\uDC8D", "\uD83E\uDDE5", "\u2728"
+        };
 
-        int dpadTotalWidth = (int)(getWidth() * 0.45);
-        int btnSpacing = dpadTotalWidth / 3;
-
-        int dx = 5;
-        int dy = startY + 5;
-        int btnSize = (dpadTotalWidth - 15) / 3;
-
-        btnUpLeft.set(dx, dy, dx+btnSize, dy+btnSize);
-        btnUp.set(dx+btnSpacing, dy, dx+btnSpacing+btnSize, dy+btnSize);
-        btnUpRight.set(dx+btnSpacing*2, dy, dx+btnSpacing*3, dy+btnSize);
-
-        btnLeft.set(dx, dy+btnSpacing, dx+btnSize, dy+btnSpacing+btnSize);
-        btnCenter.set(dx+btnSpacing, dy+btnSpacing, dx+btnSpacing+btnSize, dy+btnSpacing+btnSize);
-        btnRight.set(dx+btnSpacing*2, dy+btnSpacing, dx+btnSpacing*3, dy+btnSpacing+btnSize);
-
-        btnDownLeft.set(dx, dy+btnSpacing*2, dx+btnSize, dy+btnSpacing*3);
-        btnDown.set(dx+btnSpacing, dy+btnSpacing*2, dx+btnSpacing+btnSize, dy+btnSpacing*3);
-        btnDownRight.set(dx+btnSpacing*2, dy+btnSpacing*2, dx+btnSpacing*3, dy+btnSpacing*3);
-
-        synchronized (buttonLock) {
-            drawCachedBtn(canvas, btnUpLeft, "↖️", btnUpLeftPressedPaint, btnUpLeftPaint, btnUpLeftPressed);
-            drawCachedBtn(canvas, btnUp, "⬆️", btnUpPressedPaint, btnUpPaint, btnUpPressed);
-            drawCachedBtn(canvas, btnUpRight, "↗️", btnUpRightPressedPaint, btnUpRightPaint, btnUpRightPressed);
-            drawCachedBtn(canvas, btnLeft, "⬅️", btnLeftPressedPaint, btnLeftPaint, btnLeftPressed);
-            drawCachedBtn(canvas, btnCenter, "⏸️", btnCenterPaint, btnCenterPaint, false);
-            drawCachedBtn(canvas, btnRight, "➡️", btnRightPressedPaint, btnRightPaint, btnRightPressed);
-            drawCachedBtn(canvas, btnDownLeft, "↙️", btnDownLeftPressedPaint, btnDownLeftPaint, btnDownLeftPressed);
-            drawCachedBtn(canvas, btnDown, "⬇️", btnDownPressedPaint, btnDownPaint, btnDownPressed);
-            drawCachedBtn(canvas, btnDownRight, "↘️", btnDownRightPressedPaint, btnDownRightPaint, btnDownRightPressed);
-        }
-    }
-
-    private void drawActionButtons(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
-        int startY = gameAreaHeight + 5;
-        int leftMargin = (int)(getWidth() * 0.45) + 10;
-        int rightSideWidth = getWidth() - leftMargin - 100;
-
-        int btnWidth = rightSideWidth / 3;
-        int btnHeight = 50;
-
-        btnHeal.set(leftMargin, startY, leftMargin + btnWidth, startY + btnHeight);
-        btnInventory.set(leftMargin + btnWidth + 5, startY, leftMargin + btnWidth*2 + 5, startY + btnHeight);
-        btnZoom.set(leftMargin + btnWidth*2 + 10, startY, leftMargin + btnWidth*3 + 10, startY + btnHeight);
-
-        int row2Y = startY + btnHeight + 5;
-        btnStairs.set(leftMargin, row2Y, leftMargin + btnWidth, row2Y + btnHeight);
-        btnSave.set(leftMargin + btnWidth + 5, row2Y, leftMargin + btnWidth*2 + 5, row2Y + btnHeight);
-
-        canvas.drawRect(btnHeal, btnHealPressed ? healPaintPressed : healPaint);
-        drawBtnBorder(canvas, btnHeal, "#008844");
-        drawBtnText(canvas, btnHeal, "🧪");
-
-        canvas.drawRect(btnInventory, btnInventoryPressed ? invPressedPaint : inventoryPaint);
-        drawBtnBorder(canvas, btnInventory, "#6A0DAD");
-        drawBtnText(canvas, btnInventory, "🎒");
-
-        canvas.drawRect(btnZoom, btnZoomPressed ? btnZoomPressedPaint : btnZoomPaint);
-        drawBtnBorder(canvas, btnZoom, "#2266DD");
-        drawBtnText(canvas, btnZoom, showFullMap ? "📍" : "🔍");
-
-        canvas.drawRect(btnStairs, btnStairsPressed ? btnStairsPressedPaint : btnStairsPaint);
-        drawBtnBorder(canvas, btnStairs, "#FF6600");
-        drawBtnText(canvas, btnStairs, "🚪");
-
-        canvas.drawRect(btnSave, btnSavePressed ? btnSavePressedPaint : btnSavePaint);
-        drawBtnBorder(canvas, btnSave, "#666666");
-        drawBtnText(canvas, btnSave, "💾");
-    }
-
-    private void drawEquipmentSlots(Canvas canvas, int gameAreaHeight, int buttonAreaHeight) {
-        int rightMargin = getWidth() - 100;
-        int startY = gameAreaHeight + 5;
-        int slotSize = 35;
-        int slotGap = 5;
-
+        int gap = 6;
         int cols = 6;
         int rows = 2;
-        int totalWidth = cols * slotSize + (cols-1) * slotGap;
-        int totalHeight = rows * slotSize + (rows-1) * slotGap;
+        int padding = 8;
 
-        int startX = rightMargin - totalWidth;
-        // Kept original offset to avoid pushing off-screen
-        int startYOffset = startY + 55;
+        int usableWidth = getWidth() - padding * 2;
+        int usableHeight = bandHeight - padding * 2;
 
-        String[] slotEmojis = {"🪖","👕","👖","👢","🧤","⚔️","🛡️","📿","💍","🧥","✨"};
+        int slotSizeW = (usableWidth - (cols - 1) * gap) / cols;
+        int slotSizeH = (usableHeight - (rows - 1) * gap) / rows;
+        int slotSize = Math.min(slotSizeW, slotSizeH);
+
+        int totalGridWidth = cols * slotSize + (cols - 1) * gap;
+        int totalGridHeight = rows * slotSize + (rows - 1) * gap;
+        int startX = (getWidth() - totalGridWidth) / 2;
+        int startY = bandStartY + (bandHeight - totalGridHeight) / 2;
 
         for (int i = 0; i &lt; 11; i++) {
             int col = i % cols;
             int row = i / cols;
-            int sx = startX + col * (slotSize + slotGap);
-            int sy = startYOffset + row * (slotSize + slotGap);
+            int sx = startX + col * (slotSize + gap);
+            int sy = startY + row * (slotSize + gap);
 
-            equipmentSlots[i].set(sx, sy, sx+slotSize, sy+slotSize);
+            equipmentSlots[i].set(sx, sy, sx + slotSize, sy + slotSize);
 
             Paint slotBg = new Paint();
-            if (slotPressed[i]) {
-                slotBg.setColor(Color.parseColor("#4466AA"));
-            } else {
-                slotBg.setColor(Color.parseColor("#333333"));
-            }
-            canvas.drawRect(sx, sy, sx+slotSize, sy+slotSize, slotBg);
+            slotBg.setColor(slotPressed[i] ? Color.parseColor("#4466AA") : Color.parseColor("#333333"));
+            canvas.drawRect(sx, sy, sx + slotSize, sy + slotSize, slotBg);
             drawBtnBorder(canvas, equipmentSlots[i], "#888888");
 
             Paint emoji = new Paint(emojiPaint);
-            emoji.setTextSize(slotSize * 0.7f);
-            canvas.drawText(slotEmojis[i], sx + slotSize/2, sy + slotSize*0.7f, emoji);
+            emoji.setTextSize(slotSize * 0.55f);
+            canvas.drawText(slotEmojis[i], sx + slotSize / 2f, sy + slotSize * 0.65f, emoji);
         }
+    }
+
+    private void drawDPadButtons(Canvas canvas, int controlsStartY, int controlsHeight) {
+        int halfWidth = getWidth() / 2;
+        int gap = 4;
+
+        int btnSizeW = (halfWidth - 4 * gap) / 3;
+        int btnSizeH = (controlsHeight - 4 * gap) / 3;
+        int btnSize = Math.min(btnSizeW, btnSizeH);
+
+        int totalGrid = 3 * btnSize + 2 * gap;
+        int startX = (halfWidth - totalGrid) / 2;
+        int startY = controlsStartY + (controlsHeight - totalGrid) / 2;
+
+        int dx = startX;
+        int dy = startY;
+        int sp = btnSize + gap;
+
+        btnUpLeft.set(dx, dy, dx + btnSize, dy + btnSize);
+        btnUp.set(dx + sp, dy, dx + sp + btnSize, dy + btnSize);
+        btnUpRight.set(dx + sp * 2, dy, dx + sp * 2 + btnSize, dy + btnSize);
+
+        btnLeft.set(dx, dy + sp, dx + btnSize, dy + sp + btnSize);
+        btnCenter.set(dx + sp, dy + sp, dx + sp + btnSize, dy + sp + btnSize);
+        btnRight.set(dx + sp * 2, dy + sp, dx + sp * 2 + btnSize, dy + sp + btnSize);
+
+        btnDownLeft.set(dx, dy + sp * 2, dx + btnSize, dy + sp * 2 + btnSize);
+        btnDown.set(dx + sp, dy + sp * 2, dx + sp + btnSize, dy + sp * 2 + btnSize);
+        btnDownRight.set(dx + sp * 2, dy + sp * 2, dx + sp * 2 + btnSize, dy + sp * 2 + btnSize);
+
+        synchronized (buttonLock) {
+            drawCachedBtn(canvas, btnUpLeft, "\u2196\uFE0F", btnUpLeftPressedPaint, btnUpLeftPaint, btnUpLeftPressed);
+            drawCachedBtn(canvas, btnUp, "\u2B06\uFE0F", btnUpPressedPaint, btnUpPaint, btnUpPressed);
+            drawCachedBtn(canvas, btnUpRight, "\u2197\uFE0F", btnUpRightPressedPaint, btnUpRightPaint, btnUpRightPressed);
+            drawCachedBtn(canvas, btnLeft, "\u2B05\uFE0F", btnLeftPressedPaint, btnLeftPaint, btnLeftPressed);
+            drawCachedBtn(canvas, btnCenter, "\u23F8\uFE0F", btnCenterPaint, btnCenterPaint, false);
+            drawCachedBtn(canvas, btnRight, "\u27A1\uFE0F", btnRightPressedPaint, btnRightPaint, btnRightPressed);
+            drawCachedBtn(canvas, btnDownLeft, "\u2199\uFE0F", btnDownLeftPressedPaint, btnDownLeftPaint, btnDownLeftPressed);
+            drawCachedBtn(canvas, btnDown, "\u2B07\uFE0F", btnDownPressedPaint, btnDownPaint, btnDownPressed);
+            drawCachedBtn(canvas, btnDownRight, "\u2198\uFE0F", btnDownRightPressedPaint, btnDownRightPaint, btnDownRightPressed);
+        }
+    }
+
+    private void drawActionButtons(Canvas canvas, int controlsStartY, int controlsHeight) {
+        int halfWidth = getWidth() / 2;
+        int startX = halfWidth;
+        int gap = 6;
+        int padding = 8;
+
+        int usableWidth = halfWidth - padding * 2;
+        int usableHeight = controlsHeight - padding * 2;
+
+        int btnW = (usableWidth - 2 * gap) / 3;
+        int btnH = (usableHeight - gap) / 2;
+        int size = Math.min(btnW, btnH);
+
+        int totalW = 3 * size + 2 * gap;
+        int totalH = 2 * size + gap;
+        int originX = startX + (halfWidth - totalW) / 2;
+        int originY = controlsStartY + (controlsHeight - totalH) / 2;
+
+        int r1y = originY;
+        btnHeal.set(originX, r1y, originX + size, r1y + size);
+        btnInventory.set(originX + size + gap, r1y, originX + 2 * size + gap, r1y + size);
+        btnZoom.set(originX + 2 * (size + gap), r1y, originX + 3 * size + 2 * gap, r1y + size);
+
+        int r2y = originY + size + gap;
+        btnStairs.set(originX, r2y, originX + size, r2y + size);
+        btnSave.set(originX + size + gap, r2y, originX + 2 * size + gap, r2y + size);
+
+        canvas.drawRect(btnHeal, btnHealPressed ? healPaintPressed : healPaint);
+        drawBtnBorder(canvas, btnHeal, "#008844");
+        drawBtnText(canvas, btnHeal, "\uD83E\uDDEA");
+
+        canvas.drawRect(btnInventory, btnInventoryPressed ? invPressedPaint : inventoryPaint);
+        drawBtnBorder(canvas, btnInventory, "#6A0DAD");
+        drawBtnText(canvas, btnInventory, "\uD83C\uDF92");
+
+        canvas.drawRect(btnZoom, btnZoomPressed ? btnZoomPressedPaint : btnZoomPaint);
+        drawBtnBorder(canvas, btnZoom, "#2266DD");
+        drawBtnText(canvas, btnZoom, showFullMap ? "\uD83D\uDCCD" : "\uD83D\uDD0D");
+
+        canvas.drawRect(btnStairs, btnStairsPressed ? btnStairsPressedPaint : btnStairsPaint);
+        drawBtnBorder(canvas, btnStairs, "#FF6600");
+        drawBtnText(canvas, btnStairs, "\uD83D\uDEAA");
+
+        canvas.drawRect(btnSave, btnSavePressed ? btnSavePressedPaint : btnSavePaint);
+        drawBtnBorder(canvas, btnSave, "#666666");
+        drawBtnText(canvas, btnSave, "\uD83D\uDCBE");
     }
 
     private void drawDebugModeButton(Canvas canvas) {
@@ -3900,20 +3915,15 @@ public class GameView extends View {
         int x = getWidth() - size - padding;
         int y = padding;
 
-        btnDebugMode.set(x, y, x+size, y+size);
+        btnDebugMode.set(x, y, x + size, y + size);
 
         Paint bgPaint = new Paint();
-        if (debugModeActive) {
-            bgPaint.setColor(debugModePressedPaint.getColor());
-        } else {
-            bgPaint.setColor(debugModePaint.getColor());
-        }
-        canvas.drawRoundRect(x, y, x+size, y+size, 10, 10, bgPaint);
-        drawBtnText(canvas, x+size/2, y+size*0.7f, "⚡");
+        bgPaint.setColor(debugModeActive ? debugModePressedPaint.getColor() : debugModePaint.getColor());
+        canvas.drawRoundRect(x, y, x + size, y + size, 10, 10, bgPaint);
+        drawBtnText(canvas, x + size / 2, y + size * 0.7f, "\u26A1");
     }
 
-    private void drawCachedBtn(Canvas canvas, Rect r, String emoji,
-                               Paint pressed, Paint normal, boolean isPressed) {
+    private void drawCachedBtn(Canvas canvas, Rect r, String emoji, Paint pressed, Paint normal, boolean isPressed) {
         canvas.drawRect(r, isPressed ? pressed : normal);
         Paint border = new Paint();
         border.setColor(Color.parseColor("#003399"));
@@ -3945,27 +3955,23 @@ public class GameView extends View {
 
     private void drawGameOverOverlay(Canvas canvas, int width, int gameAreaHeight) {
         canvas.drawRect(0, 0, width, gameAreaHeight, overlayPaint);
-        String msg = game.getState() == Game.GameState.WON ? "🏆 YOU WIN!" : "💀 GAME OVER";
+        String msg = game.getState() == Game.GameState.WON ? "\uD83C\uDFC6 YOU WIN!" : "\uD83D\uDC80 GAME OVER";
         canvas.drawText(msg, width / 2f, gameAreaHeight / 2f, gameOverTextPaint);
     }
 
-    private void drawFullMap(Canvas canvas) {
+    private void drawFullMap(Canvas canvas, int gameViewHeight, int statusBarHeight) {
         Dungeon dungeon = game.getDungeon();
         if (dungeon == null) return;
 
         int width = getWidth();
-        int height = getHeight();
+        int mapHeight = gameViewHeight - statusBarHeight;
 
-        int statusHeight = STATUS_BAR_HEIGHT;
-        int controlsHeight = (int)(height * BUTTON_AREA_HEIGHT_PERCENT / 100.0f);
-        int mapHeight = height - statusHeight - controlsHeight;
-
-        float tileW = (float)width / dungeon.getWidth();
-        float tileH = (float)mapHeight / dungeon.getHeight();
+        float tileW = (float) width / dungeon.getWidth();
+        float tileH = (float) mapHeight / dungeon.getHeight();
         float tileSizeLocal = Math.min(tileW, tileH);
 
-        int offsetX = 0;
-        int offsetY = statusHeight;
+        int offsetX = (width - (int)(dungeon.getWidth() * tileSizeLocal)) / 2;
+        int offsetY = statusBarHeight;
 
         Paint textPaintSmall = new Paint(textPaint);
         textPaintSmall.setTextSize(14);
@@ -3982,62 +3988,60 @@ public class GameView extends View {
 
                 char tile = dungeon.getTile(x, y);
                 if (tile == Dungeon.TILE_WALL) {
-                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileWallPaint);
+                    canvas.drawRect(xp, yp, xp + tileSizeLocal, yp + tileSizeLocal, tileWallPaint);
                 } else if (tile == Dungeon.TILE_FLOOR) {
-                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileFloorPaint);
+                    canvas.drawRect(xp, yp, xp + tileSizeLocal, yp + tileSizeLocal, tileFloorPaint);
                 } else if (tile == Dungeon.TILE_GOLD) {
-                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileGoldPaint);
+                    canvas.drawRect(xp, yp, xp + tileSizeLocal, yp + tileSizeLocal, tileGoldPaint);
                 } else if (tile == 'B') {
                     Paint be = new Paint(emojiPaint);
                     be.setTextSize(tileSizeLocal * 1.2f);
-                    canvas.drawText("🐉", xp + tileSizeLocal/2, yp + tileSizeLocal*0.3f, be);
+                    canvas.drawText("\uD83D\uDC09", xp + tileSizeLocal / 2, yp + tileSizeLocal * 0.3f, be);
                 } else if (tile == 'S') {
-                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileStairsPaint);
+                    canvas.drawRect(xp, yp, xp + tileSizeLocal, yp + tileSizeLocal, tileStairsPaint);
                     Paint se = new Paint(emojiPaint);
                     se.setTextSize(tileSizeLocal * 1.2f);
-                    canvas.drawText("🚪", xp + tileSizeLocal/2, yp + tileSizeLocal*0.3f, se);
+                    canvas.drawText("\uD83D\uDEAA", xp + tileSizeLocal / 2, yp + tileSizeLocal * 0.3f, se);
                 } else if (tile == 'C') {
-                    // FIXED: Draw chests in full map too
-                    canvas.drawRect(xp, yp, xp+tileSizeLocal, yp+tileSizeLocal, tileChestPaint);
+                    canvas.drawRect(xp, yp, xp + tileSizeLocal, yp + tileSizeLocal, tileChestPaint);
                     Paint ce = new Paint(emojiPaint);
                     ce.setTextSize(tileSizeLocal * 1.2f);
-                    canvas.drawText("📦", xp + tileSizeLocal/2, yp + tileSizeLocal*0.3f, ce);
+                    canvas.drawText("\uD83D\uDCE6", xp + tileSizeLocal / 2, yp + tileSizeLocal * 0.3f, ce);
                 }
             }
         }
 
         Player player = game.getPlayer();
         if (player != null) {
-            float px = offsetX + player.getX() * tileSizeLocal + tileSizeLocal/2;
-            float py = offsetY + player.getY() * tileSizeLocal + tileSizeLocal*0.5f;
+            float px = offsetX + player.getX() * tileSizeLocal + tileSizeLocal / 2;
+            float py = offsetY + player.getY() * tileSizeLocal + tileSizeLocal * 0.5f;
 
             Paint he = new Paint(emojiPaint);
             he.setTextSize(tileSizeLocal * 1.0f);
-            canvas.drawText("🧙‍♂️", px, py, he);
+            canvas.drawText("\uD83E\uDDD9\u200D\u2642\uFE0F", px, py, he);
 
             Paint highlight = new Paint();
             highlight.setColor(Color.parseColor("#00FF00"));
             highlight.setStyle(Paint.Style.STROKE);
             highlight.setStrokeWidth(3);
-            canvas.drawCircle(px, py, tileSizeLocal/2, highlight);
+            canvas.drawCircle(px, py, tileSizeLocal / 2, highlight);
         }
 
-        // FIXED: Draw enemies on full map
         List&lt;Enemy&gt; enemies = game.getEnemies();
         if (enemies != null) {
             for (Enemy enemy : enemies) {
                 if (enemy == null || enemy.isDead()) continue;
-                float ex = offsetX + enemy.getX() * tileSizeLocal + tileSizeLocal/2;
-                float ey = offsetY + enemy.getY() * tileSizeLocal + tileSizeLocal*0.5f;
+                float ex = offsetX + enemy.getX() * tileSizeLocal + tileSizeLocal / 2;
+                float ey = offsetY + enemy.getY() * tileSizeLocal + tileSizeLocal * 0.5f;
                 String emoji = enemy.getEmoji();
                 Paint ee = new Paint(emojiPaint);
                 ee.setTextSize(tileSizeLocal * 0.9f);
-                canvas.drawText(emoji != null ? emoji : "\ud83d\udc79", ex, ey, ee);
+                canvas.drawText(emoji != null ? emoji : "\uD83D\uDC79", ex, ey, ee);
             }
         }
 
-        canvas.drawText("FULL MAP - Tap 🔍 to toggle back | Stairs = 🚪 to descend",
-            width/2, height - 30, textPaintSmall);
+        canvas.drawText("FULL MAP - Tap \uD83D\uDD0D to toggle back | Stairs = \uD83D\uDEAA to descend",
+            width / 2f, gameViewHeight + 20, textPaintSmall);
     }
 
     private final Object buttonLock = new Object();
@@ -4054,6 +4058,8 @@ public class GameView extends View {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
             case MotionEvent.ACTION_CANCEL:
+                // FIXED: Call stopAutoMove AND handleTouchUp ONCE each
+                for (int i = 0; i &lt; 9; i++) stopAutoMove(i);
                 handleTouchUp();
                 break;
         }
@@ -4069,7 +4075,7 @@ public class GameView extends View {
         else if (btnUp.contains((int)x, (int)y)) { synchronized(buttonLock){btnUpPressed=true;} bi=1; dir=Direction.UP; }
         else if (btnUpRight.contains((int)x, (int)y)) { synchronized(buttonLock){btnUpRightPressed=true;} bi=2; dir=Direction.UP_RIGHT; }
         else if (btnLeft.contains((int)x, (int)y)) { synchronized(buttonLock){btnLeftPressed=true;} bi=3; dir=Direction.LEFT; }
-        else if (btnRight.contains((int)x, (int)y)) { synchronized(buttonLock){btnRightPressed=true;} bi=5; dir=Direction.RIGHT; }
+        else if (btnRight.contains((int)x, (int)y)) { synchronized(buttonLock){btnRightPressed=true;} bi=4; dir=Direction.RIGHT; }
         else if (btnDownLeft.contains((int)x, (int)y)) { synchronized(buttonLock){btnDownLeftPressed=true;} bi=6; dir=Direction.DOWN_LEFT; }
         else if (btnDown.contains((int)x, (int)y)) { synchronized(buttonLock){btnDownPressed=true;} bi=7; dir=Direction.DOWN; }
         else if (btnDownRight.contains((int)x, (int)y)) { synchronized(buttonLock){btnDownRightPressed=true;} bi=8; dir=Direction.DOWN_RIGHT; }
@@ -4095,10 +4101,8 @@ public class GameView extends View {
             return;
         }
 
-        int buttonAreaHeight = (int)(getHeight() * BUTTON_AREA_HEIGHT_PERCENT / 100.0f);
         int statusBarHeight = STATUS_BAR_HEIGHT;
-        int gameAreaHeight = getHeight() - buttonAreaHeight;
-        if (y &gt;= statusBarHeight &amp;&amp; y &lt; gameAreaHeight + statusBarHeight) {
+        if (y &gt;= statusBarHeight &amp;&amp; y &lt; cachedGameViewHeight) {
             handleTapMove((int)x, y);
             return;
         }
@@ -4133,8 +4137,12 @@ public class GameView extends View {
         }
     }
 
+    // FIXED: Cancel old callback before starting new one
     private void startAutoMove(int idx, Direction dir) {
-        if (dir == null || moveRepeatables[idx] != null) return;
+        if (dir == null) return;
+        stopAutoMove(idx);  // CRITICAL FIX
+        
+        if (moveRepeatables[idx] != null) return;
         moveRepeatables[idx] = () -&gt; {
             handleSingleMove(dir);
             if (moveRepeatables[idx] != null) handler.postDelayed(moveRepeatables[idx], REPEAT_DELAY_MS);
@@ -4185,10 +4193,6 @@ public class GameView extends View {
         if (player == null || dungeon == null) return;
 
         int statusBarHeight = STATUS_BAR_HEIGHT;
-        int buttonAreaHeight = (int)(getHeight() * BUTTON_AREA_HEIGHT_PERCENT / 100.0f);
-        int gameAreaHeight = getHeight() - buttonAreaHeight;
-
-        if (y &lt; statusBarHeight || y &gt;= gameAreaHeight + statusBarHeight) return;
 
         int viewportWidth = Math.min(VIEWPORT_TILES, dungeon.getWidth());
         int viewportHeight = Math.min(VIEWPORT_TILES, dungeon.getHeight());
@@ -4197,7 +4201,7 @@ public class GameView extends View {
         int camY = Math.max(0, Math.min(player.getY() - VIEWPORT_RADIUS, dungeon.getHeight() - viewportHeight));
 
         float availableWidth = getWidth();
-        float availableHeight = gameAreaHeight;
+        float availableHeight = cachedGameViewHeight - statusBarHeight;
         float tileSizeCalc = Math.min(availableWidth / viewportWidth, availableHeight / viewportHeight);
         float offsetX = (availableWidth - viewportWidth * tileSizeCalc) / 2;
         float offsetY = statusBarHeight;
@@ -4228,7 +4232,8 @@ public class GameView extends View {
         for (int i = 0; i &lt; 9; i++) stopAutoMove(i);
         synchronized(buttonLock) {
             btnUpPressed=false; btnDownPressed=false; btnLeftPressed=false; btnRightPressed=false;
-            btnUpLeftPressed=false; btnUpRightPressed=false; btnDownLeftPressed=false; btnDownPressed=false; btnDownRightPressed=false;
+            btnUpLeftPressed=false; btnUpRightPressed=false; btnDownLeftPressed=false; btnDownPressed=false;
+            btnDownRightPressed=false;
             btnHealPressed=false; btnInventoryPressed=false; btnZoomPressed=false; btnStairsPressed=false; btnSavePressed=false;
             debugModeActive = false;
             for (int i = 0; i &lt; 11; i++) slotPressed[i] = false;
@@ -4516,7 +4521,7 @@ public class Inventory implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="inventoryactivity">
-<div class="file-header"><h2>InventoryActivity.java</h2><span class="file-meta">176 lines | 5875 bytes</span></div>
+<div class="file-header"><h2>InventoryActivity.java</h2><span class="file-meta">170 lines | 5745 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.app.Activity;
@@ -4661,25 +4666,19 @@ public class InventoryActivity extends Activity {
             }
         }
 
+        // FIXED: This method MUST exist inside InventoryListAdapter
         private void equipOrUnequipItem(int index) {
             Equipment item = items.get(index);
             ItemType type = item.getType();
+            Equipment currentlyEquipped = inventory.getEquipped(type);
 
-            // Find the item in the full inventory to get correct index
-            List&lt;Equipment&gt; fullInv = inventory.getInventory();
-            int realIndex = -1;
-            for (int i = 0; i &lt; fullInv.size(); i++) {
-                if (fullInv.get(i) == item) {
-                    realIndex = i;
-                    break;
-                }
-            }
-
-            if (realIndex &gt;= 0) {
-                if (inventory.hasEquipped(type)) {
-                    inventory.unequip(type);
-                }
-                inventory.equip(type, realIndex);
+            if (currentlyEquipped == item) {
+                inventory.unequip(type);
+            } else if (currentlyEquipped != null) {
+                inventory.unequip(type);
+                inventory.equip(type, index);
+            } else {
+                inventory.equip(type, index);
             }
 
             Intent result = new Intent();
@@ -5167,7 +5166,7 @@ public class LootTable {
 }</code></pre>
 </div>
 <div class="file" id="mainactivity">
-<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">562 lines | 23267 bytes</span></div>
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">557 lines | 22770 bytes</span></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -5183,6 +5182,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements GameView.GameListener {
     private static final String TAG = "MainActivity";
@@ -5200,7 +5200,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     private Dungeon dungeon;
     private Handler handler = new Handler(Looper.getMainLooper());
 
-    // DEBUG MODE FLAG
     private boolean debugModeActive = false;
 
     public static LootTable getLootTableInstance() {
@@ -5211,6 +5210,9 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
         instance = this;
 
         gameView = findViewById(R.id.game_view);
@@ -5343,13 +5345,12 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
         totalEnemiesDefeated = saveData.totalEnemiesDefeated;
         bossSpawned = saveData.bossSpawned;
-        
-        // ========== CRITICAL FIX: Recalculate stats after load ==========
+
+        // CRITICAL FIX: Recalculate stats after load
         Player gamePlayer = game.getPlayer();
         if (gamePlayer != null) {
             gamePlayer.recalculateStatsFromEquipment();
         }
-        // ================================================================
     }
 
     @Override
@@ -5358,6 +5359,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         if (requestCode == BATTLE_REQUEST_CODE) {
             handleBattleResult(resultCode, data);
         } else if (requestCode == EQUIPMENT_REQUEST_CODE) {
+            // FIXED: Removed undefined gamePlayer references
             gameView.invalidate();
         }
     }
@@ -5407,25 +5409,23 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                         Log.w(TAG, "Reflection failed, copying manually: " + e.getMessage());
                         InventorySystem gameInv = gamePlayer.getInventory();
                         if (gameInv != null) {
-                            // Copy backpack items
                             for (Equipment eq : battleInv.getInventory()) {
                                 gameInv.addEquipment(eq);
                             }
-                            
-                            // ========== CRITICAL FIX: Copy equipped items too ==========
+
+                            // Copy equipped items too
                             for (Equipment eq : battleInv.getEquippedItems()) {
                                 if (eq != null &amp;&amp; eq.getType() != null) {
                                     gameInv.forceEquip(eq);
                                     Log.d(TAG, "Force-equipped from battle: " + eq.getName());
                                 }
                             }
-                            // =========================================================
-                            
+
                             // Copy pending loot
                             for (Equipment eq : updatedPlayer.getPendingLoot()) {
                                 gameInv.addEquipment(eq);
                             }
-                            Log.d(TAG, "Manual inventory copy completed. Backpack: " + gameInv.getItemCount() 
+                            Log.d(TAG, "Manual inventory copy completed. Backpack: " + gameInv.getItemCount()
                                 + " | Equipped: " + gameInv.getEquippedItems().size());
                         }
                     }
@@ -5462,12 +5462,11 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 }
             }
 
-            // ========== CRITICAL FIX: Always recalculate stats after battle ==========
+            // CRITICAL FIX: Always recalculate stats after battle
             if (gamePlayer != null) {
                 gamePlayer.recalculateStatsFromEquipment();
                 Log.d(TAG, "战后 recalculateStatsFromEquipment() called");
             }
-            // ==========================================================================
 
             gameView.invalidate();
         } catch (Exception e) {
@@ -5523,7 +5522,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             return;
         }
 
-        int[] bossPos = floorTiles.get(SecureRandomUtil.nextInt(floorTiles.size()));
+        Random rand = new Random();
+        int[] bossPos = floorTiles.get(rand.nextInt(floorTiles.size()));
         int bossX = bossPos[0], bossY = bossPos[1];
         int playerLevel = (player != null) ? player.getLevel() : 1;
         int bossMaxHealth = GameBalance.BOSS_BASE_HEALTH + (playerLevel * GameBalance.BOSS_HEALTH_PER_LEVEL);
@@ -5539,8 +5539,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         Log.d(TAG, "BOSS SPAWNED at (" + bossX + "," + bossY + ") HP:" + bossMaxHealth);
         Toast.makeText(this, "DRAGON BOSS HAS APPEARED!", Toast.LENGTH_LONG).show();
     }
-
-    // ===================== LISTENER IMPLEMENTATIONS =====================
 
     @Override
     public void onEncounter(Enemy enemy) {
@@ -5607,8 +5605,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             gameView.invalidate();
         }
     }
-
-    // ===================== STAIRS HANDLER WITH BOSS RESET =====================
 
     @Override
     public void onStairsRequested() {
@@ -5697,8 +5693,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Toast.makeText(this, "❌ Cannot save: Game not initialized", Toast.LENGTH_SHORT).show();
         }
     }
-
-    // ===================== DEBUG MODE HANDLER =====================
 
     @Override
     public void onToggleDebugMode() {
