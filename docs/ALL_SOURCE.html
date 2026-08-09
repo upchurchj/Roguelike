@@ -26,7 +26,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">32 files | 5855 lines | 2026-08-08 20:34</div>
+<div class="stats">32 files | 6113 lines | 2026-08-09 07:27</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
 <div id="files">
@@ -1993,7 +1993,7 @@ public class Equipment implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="equipmentactivity">
-<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">419 lines | 18289 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">422 lines | 18452 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.app.Activity;
@@ -2284,14 +2284,17 @@ public class EquipmentActivity extends Activity {
         if (slotView == null) return;
         try {
             if (equipment == null) {
-                slotView.setBackgroundColor(0xFF333333);
-                slotView.setAlpha(0.5f);
+                // FIX: Empty slot — dark background, heavily dimmed
+                slotView.setBackgroundColor(0xFF1a1a1a);
+                slotView.setAlpha(0.35f);
+                slotView.setTag(null);
                 return;
             }
+            // FIX: Equipped slot — full opacity, rarity color as background
             slotView.setAlpha(1.0f);
             slotView.setTag(equipment.getName());
             int rarityColor = getRarityColor(equipment.getRarity());
-            slotView.setBackgroundTintList(ColorStateList.valueOf(rarityColor));
+            slotView.setBackgroundColor(rarityColor);
         } catch (Exception e) {
             Log.e(TAG, "Error updating slot visual: " + e.getMessage());
         }
@@ -4556,7 +4559,7 @@ public class LootTable {
 }</code></pre>
 </div>
 <div class="file" id="mainactivity">
-<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">547 lines | 21949 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">701 lines | 27756 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -4566,6 +4569,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -4579,6 +4583,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     private static final int EQUIPMENT_REQUEST_CODE = 2;
 
     public static MainActivity instance;
+    private static final int AUTO_SAVE_SLOT = 0;
 
     private int totalEnemiesDefeated = 0;
     private boolean bossSpawned = false;
@@ -4590,6 +4595,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     private Handler handler = new Handler(Looper.getMainLooper());
 
     private boolean debugModeActive = false;
+    private Button btnContinue;
 
     public static LootTable getLootTableInstance() {
         return LootTable.getInstance();
@@ -4632,9 +4638,62 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Log.d(TAG, "Synced Dungeon.currentFloor=" + mgrFloor + " from DungeonManager");
         }
 
+        // Wire up XML buttons
+        Button btnNewGame = findViewById(R.id.btn_new_game);
+        Button btnSave = findViewById(R.id.btn_save);
+        btnContinue = findViewById(R.id.btn_continue);
+
+        if (btnNewGame != null) {
+            btnNewGame.setOnClickListener(v -&gt; {
+                Log.d(TAG, "New Game button clicked");
+                // Delete auto-save slot before starting fresh
+                saveGameManager.deleteSlot(AUTO_SAVE_SLOT);
+                game.startNewGame();
+                ensurePlayerSpawned();
+                bossSpawned = false;
+                totalEnemiesDefeated = 0;
+                dungeon = game.getDungeon();
+                if (game.getDungeonManager() != null) {
+                    dungeon.setCurrentFloor(game.getDungeonManager().getCurrentFloor());
+                }
+                gameView.invalidate();
+                gameView.showMessage("New game started!");
+                if (btnContinue != null) btnContinue.setEnabled(false);
+            });
+        }
+
+        if (btnSave != null) {
+            btnSave.setOnClickListener(v -&gt; {
+                Log.d(TAG, "Save button clicked");
+                saveGameAndShowMessage();
+            });
+        }
+
+        if (btnContinue != null) {
+            // Check if slot 0 has a save
+            SaveGameManager.SlotInfo slotInfo = saveGameManager.getSlotInfo(AUTO_SAVE_SLOT);
+            if (slotInfo.exists) {
+                btnContinue.setEnabled(true);
+                btnContinue.setOnClickListener(v -&gt; {
+                    Log.d(TAG, "Continue button clicked");
+                    loadSlot(AUTO_SAVE_SLOT);
+                });
+            }
+        }
+
         Log.d(TAG, "MainActivity initialized - Boss trigger: " + GameBalance.BOSS_TRIGGER_KILLS +
               " kills OR " + GameBalance.BOSS_TRIGGER_GOLD + " gold | LootTable: " + (getLootTableInstance() != null) +
               " | DEBUG_FORCE_LOOT: " + GameBalance.DEBUG_FORCE_LOOT);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Auto-save current state to slot 0
+        if (game != null &amp;&amp; game.getPlayer() != null &amp;&amp; saveGameManager != null) {
+            saveSlotSilent(AUTO_SAVE_SLOT);
+            Log.d(TAG, "Auto-saved to slot " + AUTO_SAVE_SLOT + " on pause");
+        }
     }
 
     public static MainActivity getInstance() { return instance; }
@@ -4671,9 +4730,10 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 
     private void restoreGameStateIfAvailable() {
-        SaveGameManager.SaveGameData saveData = saveGameManager.loadLatestGame();
+        // Try to load from auto-save slot 0
+        SaveGameManager.SaveGameData saveData = saveGameManager.loadSlot(AUTO_SAVE_SLOT);
         if (saveData == null) {
-            Log.d(TAG, "No saved game found, starting fresh");
+            Log.d(TAG, "No saved game found in slot 0, starting fresh");
             return;
         }
 
@@ -4718,24 +4778,159 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             }
         }
 
-        if (saveData.enemies != null) {
-            List&lt;Enemy&gt; currentEnemies = game.getEnemies();
-            if (currentEnemies != null) {
-                currentEnemies.clear();
-                for (Enemy e : saveData.enemies) {
-                    if (e != null &amp;&amp; !e.isDead()) {
-                        e.setDungeon(dungeon);
-                        currentEnemies.add(e);
-                    }
-                }
-            }
-        }
         totalEnemiesDefeated = saveData.totalEnemiesDefeated;
         bossSpawned = saveData.bossSpawned;
+
+        // Apply dungeon map if saved
+        if (saveData.dungeonMap != null &amp;&amp; dungeon != null) {
+            applyDungeonMap(saveData.dungeonMap);
+            Log.d(TAG, "Restored dungeon map: " + saveData.dungeonMap.length + "x" + saveData.dungeonMap[0].length);
+        }
 
         Player gamePlayer = game.getPlayer();
         if (gamePlayer != null) {
             gamePlayer.recalculateStatsFromEquipment();
+        }
+        
+        // Update Continue button state
+        if (btnContinue != null) {
+            btnContinue.setEnabled(true);
+        }
+    }
+
+    private void loadSlot(int slotId) {
+        SaveGameManager.SaveGameData saveData = saveGameManager.loadSlot(slotId);
+        if (saveData == null) {
+            gameView.showMessage("No save found in slot " + slotId);
+            return;
+        }
+
+        game.startNewGame();
+        ensurePlayerSpawned();
+        
+        // Now apply saved data
+        if (saveData.playerX &gt;= 0 &amp;&amp; saveData.playerY &gt;= 0) {
+            Player gamePlayer = game.getPlayer();
+            if (gamePlayer != null) {
+                gamePlayer.setX(saveData.playerX);
+                gamePlayer.setY(saveData.playerY);
+            }
+        }
+
+        if (saveData.player != null) {
+            Player gamePlayer = game.getPlayer();
+            if (gamePlayer != null) {
+                int newHealth = Math.max(0, Math.min(saveData.player.getCurrentHealth(), gamePlayer.getMaxHealth()));
+                gamePlayer.setCurrentHealth(newHealth);
+                gamePlayer.setExperience(Math.max(0, saveData.player.getExperience()));
+                gamePlayer.setGoldCollected(Math.max(0, saveData.player.getGoldCollected()));
+                gamePlayer.setLevel(Math.max(1, saveData.player.getLevel()));
+                gamePlayer.setMaxHealth(saveData.player.getMaxHealth());
+                gamePlayer.setAttack(saveData.player.getAttack());
+            }
+        }
+
+        if (saveData.inventory != null) {
+            Player gamePlayer = game.getPlayer();
+            if (gamePlayer != null) {
+                try {
+                    java.lang.reflect.Field invField = Player.class.getDeclaredField("inventory");
+                    invField.setAccessible(true);
+                    invField.set(gamePlayer, saveData.inventory);
+                } catch (Exception e) {
+                    for (Equipment eq : saveData.inventory.getInventory()) {
+                        gamePlayer.getInventory().addEquipment(eq);
+                    }
+                    for (Equipment eq : saveData.inventory.getEquippedItems()) {
+                        if (eq != null &amp;&amp; eq.getType() != null) {
+                            gamePlayer.getInventory().forceEquip(eq);
+                        }
+                    }
+                }
+            }
+        }
+
+        totalEnemiesDefeated = saveData.totalEnemiesDefeated;
+        bossSpawned = saveData.bossSpawned;
+
+        if (saveData.dungeonMap != null) {
+            applyDungeonMap(saveData.dungeonMap);
+        }
+
+        dungeon = game.getDungeon();
+        if (game.getDungeonManager() != null) {
+            dungeon.setCurrentFloor(game.getDungeonManager().getCurrentFloor());
+        }
+
+        Player gamePlayer = game.getPlayer();
+        if (gamePlayer != null) {
+            gamePlayer.recalculateStatsFromEquipment();
+        }
+
+        gameView.invalidate();
+        gameView.showMessage("Game loaded from slot " + slotId + "!");
+        Log.d(TAG, "Loaded slot " + slotId + " - Floor " + dungeon.getCurrentFloor() +
+              ", Boss: " + bossSpawned + ", Kills: " + totalEnemiesDefeated);
+    }
+
+    private void applyDungeonMap(int[][] savedMap) {
+        if (savedMap == null || dungeon == null) return;
+        int height = savedMap.length;
+        int width = savedMap[0].length;
+        
+        for (int y = 0; y &lt; height &amp;&amp; y &lt; dungeon.getHeight(); y++) {
+            for (int x = 0; x &lt; width &amp;&amp; x &lt; dungeon.getWidth(); x++) {
+                char tileChar = (char) savedMap[y][x];
+                dungeon.setTile(x, y, tileChar);
+            }
+        }
+    }
+
+    private void saveSlotSilent(int slotId) {
+        if (game == null || saveGameManager == null) return;
+        Player player = game.getPlayer();
+        if (player == null) return;
+
+        List&lt;Enemy&gt; enemies = game.getEnemies();
+        Dungeon gameDungeon = game.getDungeon();
+        char[][] charGrid = gameDungeon != null ? gameDungeon.getGrid() : null;
+
+        int[][] dungeonMap = null;
+        if (charGrid != null) {
+            dungeonMap = new int[charGrid.length][];
+            for (int y = 0; y &lt; charGrid.length; y++) {
+                dungeonMap[y] = new int[charGrid[y].length];
+                for (int x = 0; x &lt; charGrid[y].length; x++) {
+                    dungeonMap[y][x] = charGrid[y][x];
+                }
+            }
+        }
+
+        SaveGameManager.SaveGameData data = new SaveGameManager.SaveGameData();
+        data.playerX = player.getX();
+        data.playerY = player.getY();
+        data.player = player;
+        data.enemies = enemies;
+        data.dungeonMap = dungeonMap;
+        data.totalEnemiesDefeated = totalEnemiesDefeated;
+        data.bossSpawned = bossSpawned;
+        data.inventory = player.getInventory();
+        data.floorNumber = game.getDungeonManager() != null ? game.getDungeonManager().getCurrentFloor() : 1;
+
+        boolean saved = saveGameManager.saveGame(slotId, data);
+        if (!saved) {
+            Log.e(TAG, "Auto-save to slot " + slotId + " failed");
+        }
+    }
+
+    private void saveGameAndShowMessage() {
+        saveSlotSilent(AUTO_SAVE_SLOT);
+        gameView.showMessage("Game saved successfully!");
+        Log.d(TAG, "Manual save completed");
+        
+        // Enable Continue button
+        if (btnContinue != null) {
+            btnContinue.setEnabled(true);
         }
     }
 
@@ -4827,7 +5022,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 totalEnemiesDefeated++;
                 Log.d(TAG, "Victory! Total kills: " + totalEnemiesDefeated);
 
-                // FIX: Mark enemy as defeated but do NOT remove from list (so skull shows)
                 if (defeatedEnemyId != null &amp;&amp; game != null) {
                     List&lt;Enemy&gt; currentEnemies = game.getEnemies();
                     if (currentEnemies != null) {
@@ -4845,7 +5039,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     checkBossSpawn();
                 }
             } else {
-                // Fled or defeated — do NOT touch enemy list
                 Log.d(TAG, "Battle not won — enemy remains on grid untouched");
             }
 
@@ -5023,6 +5216,10 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         if (game.descendStairs()) {
             int newFloor = game.getDungeonManager().getCurrentFloor();
             gameView.showMessage("Descending to Floor " + newFloor + "! Enemies respawning...");
+            
+            // Auto-save on floor change
+            saveSlotSilent(AUTO_SAVE_SLOT);
+            
             gameView.invalidate();
         } else {
             gameView.showMessage("Already at deepest floor (99)!");
@@ -5032,46 +5229,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     @Override
     public void onSaveRequested() {
         saveGameAndShowMessage();
-    }
-
-    private void saveGameAndShowMessage() {
-        if (game != null &amp;&amp; saveGameManager != null) {
-            Player player = game.getPlayer();
-            List&lt;Enemy&gt; enemies = game.getEnemies();
-            Dungeon gameDungeon = game.getDungeon();
-            char[][] charGrid = gameDungeon.getGrid();
-
-            int[][] dungeonMap = null;
-            if (charGrid != null) {
-                dungeonMap = new int[charGrid.length][];
-                for (int y = 0; y &lt; charGrid.length; y++) {
-                    dungeonMap[y] = new int[charGrid[y].length];
-                    for (int x = 0; x &lt; charGrid[y].length; x++) {
-                        dungeonMap[y][x] = charGrid[y][x];
-                    }
-                }
-            }
-
-            SaveGameManager.SaveGameData data = new SaveGameManager.SaveGameData();
-            data.playerX = player.getX();
-            data.playerY = player.getY();
-            data.player = player;
-            data.enemies = enemies;
-            data.dungeonMap = dungeonMap;
-            data.totalEnemiesDefeated = totalEnemiesDefeated;
-            data.bossSpawned = bossSpawned;
-            data.inventory = player.getInventory();
-
-            if (saveGameManager.saveGame(data)) {
-                gameView.showMessage("Game saved successfully!");
-                Log.d(TAG, "Game saved successfully");
-            } else {
-                gameView.showMessage("Failed to save game");
-                Log.e(TAG, "Save game failed");
-            }
-        } else {
-            gameView.showMessage("Cannot save: Game not initialized");
-        }
     }
 
     @Override
@@ -5100,7 +5257,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     }
 
     private void saveAndQuit() {
-        saveGameAndShowMessage();
+        saveSlotSilent(AUTO_SAVE_SLOT);
         finish();
     }
 }</code></pre>
@@ -5442,7 +5599,7 @@ public enum Rarity {
 }</code></pre>
 </div>
 <div class="file" id="savegamemanager">
-<div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">362 lines | 15444 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">463 lines | 19014 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -5453,18 +5610,14 @@ import java.util.*;
 
 /**
  * Handles game save/load with checksum verification.
- *
- * FIXES:
- * - Atomic file writes (write to temp, then rename)
- * - Equipped items serialized separately from backpack
- * - Proper restoration of equipped slots on load
- * - Player stats recalculated after load via caller (MainActivity)
+ * SUPPORTS MULTIPLE SLOTS (0-4)
  */
 public class SaveGameManager {
     private static final String TAG = "SaveGameManager";
     private static final String SAVE_DIR = "saves";
     private static final String CHECKSUM_EXT = ".sha256";
-    private static final String SAVE_PREFIX = "save_";
+    private static final String SLOT_PREFIX = "slot_";
+    private static final int MAX_SLOTS = 5;
     private static final int CURRENT_VERSION = 1;
     private final String basePath;
 
@@ -5531,20 +5684,17 @@ public class SaveGameManager {
         }
     }
 
-    // CRITICAL FIX: Atomic file write — write to temp file then rename
     private boolean atomicWrite(File targetFile, String data) {
         File tempFile = new File(targetFile.getParent(), targetFile.getName() + ".tmp");
         try {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
                 writer.write(data);
             }
-            // Write hash atomically too
             File hashFile = new File(targetFile.getPath() + CHECKSUM_EXT);
             File tempHashFile = new File(hashFile.getParent(), hashFile.getName() + ".tmp");
             try (BufferedWriter hw = new BufferedWriter(new FileWriter(tempHashFile))) {
                 hw.write(computeHash(data));
             }
-            // Rename temp files to target (atomic on most filesystems)
             if (!tempFile.renameTo(targetFile)) {
                 Log.w(TAG, "Rename failed for save file, falling back to copy");
                 copyFile(tempFile, targetFile);
@@ -5573,25 +5723,29 @@ public class SaveGameManager {
         }
     }
 
-    public boolean saveGame(String filename, String gameData) {
+    // ADDED: Low-level write method to avoid overload ambiguity
+    private boolean writeRawFile(String filename, String gameData) {
         String safeName = sanitizeFilename(filename);
         File saveFile = new File(new File(basePath, SAVE_DIR), safeName);
-        boolean success = atomicWrite(saveFile, gameData);
-        if (success) {
-            Log.d(TAG, "Saved: " + saveFile.getName());
-        }
-        return success;
+        return atomicWrite(saveFile, gameData);
     }
 
     /**
-     * CRITICAL FIX: Serialize equipped items SEPARATELY from backpack items.
-     * This ensures equipment stays in correct slots after load.
+     * Save to a specific slot (0-4).
      */
-    public boolean saveGame(SaveGameData data) {
-        String filename = SAVE_PREFIX + System.currentTimeMillis() + ".dat";
+    public boolean saveGame(int slotId, SaveGameData data) {
+        if (slotId &lt; 0 || slotId &gt;= MAX_SLOTS) {
+            Log.e(TAG, "Invalid slot ID: " + slotId);
+            return false;
+        }
+        
+        String filename = SLOT_PREFIX + slotId + "_" + System.currentTimeMillis() + ".dat";
         StringBuilder sb = new StringBuilder();
 
         sb.append("version=").append(CURRENT_VERSION).append("\n");
+        sb.append("slotId=").append(slotId).append("\n");
+        sb.append("timestamp=").append(System.currentTimeMillis()).append("\n");
+        sb.append("floor=").append(data.floorNumber).append("\n");
         sb.append("playerX=").append(data.playerX).append("\n");
         sb.append("playerY=").append(data.playerY).append("\n");
         sb.append("totalKills=").append(data.totalEnemiesDefeated).append("\n");
@@ -5608,7 +5762,6 @@ public class SaveGameManager {
         }
 
         if (data.inventory != null) {
-            // CRITICAL FIX: Save equipped items with their slot type
             List&lt;Equipment&gt; equipped = data.inventory.getEquippedItems();
             sb.append("equippedCount=").append(equipped.size()).append("\n");
             for (Equipment eq : equipped) {
@@ -5616,7 +5769,6 @@ public class SaveGameManager {
                 sb.append("equipped=").append(serializeEquipment(eq)).append("\n");
             }
 
-            // Save backpack items
             List&lt;Equipment&gt; backpack = data.inventory.getInventory();
             sb.append("backpackCount=").append(backpack.size()).append("\n");
             for (Equipment eq : backpack) {
@@ -5631,13 +5783,27 @@ public class SaveGameManager {
             sb.append("potions=5\n");
         }
 
-        if (data.enemies != null) {
-            sb.append("enemyCount=").append(data.enemies.size()).append("\n");
+        // CRITICAL FIX: Save dungeon grid
+        if (data.dungeonMap != null) {
+            sb.append("dungeonWidth=").append(data.dungeonMap[0].length).append("\n");
+            sb.append("dungeonHeight=").append(data.dungeonMap.length).append("\n");
+            for (int y = 0; y &lt; data.dungeonMap.length; y++) {
+                StringBuilder rowBuilder = new StringBuilder();
+                for (int x = 0; x &lt; data.dungeonMap[y].length; x++) {
+                    rowBuilder.append((char)data.dungeonMap[y][x]);
+                }
+                sb.append("dungeonRow=").append(rowBuilder.toString()).append("\n");
+            }
         } else {
-            sb.append("enemyCount=0\n");
+            sb.append("dungeonWidth=0\n");
+            sb.append("dungeonHeight=0\n");
         }
 
-        return saveGame(filename, sb.toString());
+        boolean success = writeRawFile(filename, sb.toString());
+        if (success) {
+            Log.d(TAG, "Saved slot " + slotId + ": " + filename);
+        }
+        return success;
     }
 
     private String serializeEquipment(Equipment eq) {
@@ -5682,113 +5848,204 @@ public class SaveGameManager {
     }
 
     /**
-     * CRITICAL FIX: Load with proper equipped/backpack separation.
-     * Uses forceEquip() to restore equipped items to correct slots.
+     * Load from a specific slot.
      */
-    public SaveGameData loadLatestGame() {
+    public SaveGameData loadSlot(int slotId) {
         File saveDir = new File(basePath, SAVE_DIR);
         File[] saves = saveDir.listFiles((dir, name) -&gt;
-            name.startsWith(SAVE_PREFIX) &amp;&amp; !name.endsWith(CHECKSUM_EXT) &amp;&amp; !name.endsWith(".tmp"));
+            name.startsWith(SLOT_PREFIX + slotId + "_") &amp;&amp; !name.endsWith(CHECKSUM_EXT) &amp;&amp; !name.endsWith(".tmp"));
 
         if (saves == null || saves.length == 0) {
-            Log.d(TAG, "No save files found");
+            Log.d(TAG, "No save files found for slot " + slotId);
             return null;
         }
 
         Arrays.sort(saves, (a, b) -&gt; Long.compare(b.lastModified(), a.lastModified()));
+        File saveFile = saves[0];
 
-        for (File saveFile : saves) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(saveFile))) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (sb.length() &gt; 0) sb.append("\n");
-                    sb.append(line);
-                }
-                String data = sb.toString();
-
-                if (!verifyHash(saveFile, data)) {
-                    Log.w(TAG, "Skipping corrupted save: " + saveFile.getName());
-                    continue;
-                }
-
-                SaveGameData result = new SaveGameData();
-                result.version = CURRENT_VERSION;
-                result.totalEnemiesDefeated = 0;
-                result.bossSpawned = false;
-                result.inventory = new InventorySystem();
-
-                for (String row : data.split("\n")) {
-                    if (row.trim().isEmpty()) continue;
-                    String[] kv = row.split("=", 2);
-                    if (kv.length != 2) continue;
-
-                    String key = kv[0].trim();
-                    String val = kv[1].trim();
-
-                    switch (key) {
-                        case "playerX": result.playerX = Integer.parseInt(val); break;
-                        case "playerY": result.playerY = Integer.parseInt(val); break;
-                        case "totalKills": result.totalEnemiesDefeated = Integer.parseInt(val); break;
-                        case "bossSpawned": result.bossSpawned = "1".equals(val); break;
-                        case "level":
-                            if (result.player == null) result.player = new Player();
-                            result.player.setLevel(Integer.parseInt(val));
-                            break;
-                        case "xp":
-                            if (result.player == null) result.player = new Player();
-                            result.player.setExperience(Integer.parseInt(val));
-                            break;
-                        case "gold":
-                            if (result.player == null) result.player = new Player();
-                            result.player.setGoldCollected(Integer.parseInt(val));
-                            break;
-                        case "hp":
-                            if (result.player == null) result.player = new Player();
-                            result.player.setCurrentHealth(Integer.parseInt(val));
-                            break;
-                        case "maxHp":
-                            if (result.player == null) result.player = new Player();
-                            result.player.setMaxHealth(Integer.parseInt(val));
-                            break;
-                        case "attack":
-                            if (result.player == null) result.player = new Player();
-                            result.player.setAttack(Integer.parseInt(val));
-                            break;
-                        case "name":
-                            if (result.player == null) result.player = new Player();
-                            result.player.setName(unescapeValue(val));
-                            break;
-                        // CRITICAL FIX: Restore equipped items to proper slots
-                        case "equipped":
-                            Equipment equippedItem = deserializeEquipment(val);
-                            if (equippedItem != null) {
-                                result.inventory.forceEquip(equippedItem);
-                            }
-                            break;
-                        // Backpack items go to inventory list
-                        case "backpack":
-                            Equipment backpackItem = deserializeEquipment(val);
-                            if (backpackItem != null) {
-                                result.inventory.addEquipment(backpackItem);
-                            }
-                            break;
-                        case "potions":
-                            result.inventory.addHealthPotions(Integer.parseInt(val));
-                            break;
-                    }
-                }
-
-                Log.d(TAG, "Loaded save: " + saveFile.getName() + " | Kills: " +
-                    result.totalEnemiesDefeated + " | Boss: " + result.bossSpawned +
-                    " | Backpack: " + result.inventory.getItemCount() +
-                    " | Equipped: " + result.inventory.getEquippedItems().size());
-                return result;
-            } catch (Exception e) {
-                Log.e(TAG, "Error reading save " + saveFile.getName() + ": " + e.getMessage());
+        try (BufferedReader reader = new BufferedReader(new FileReader(saveFile))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (sb.length() &gt; 0) sb.append("\n");
+                sb.append(line);
             }
+            String data = sb.toString();
+
+            if (!verifyHash(saveFile, data)) {
+                Log.w(TAG, "Skipping corrupted save: " + saveFile.getName());
+                return null;
+            }
+
+            SaveGameData result = new SaveGameData();
+            result.version = CURRENT_VERSION;
+            result.totalEnemiesDefeated = 0;
+            result.bossSpawned = false;
+            result.inventory = new InventorySystem();
+            result.dungeonMap = null;
+
+            String[] rows = data.split("\n");
+            for (String row : rows) {
+                if (row.trim().isEmpty()) continue;
+                String[] kv = row.split("=", 2);
+                if (kv.length != 2) continue;
+
+                String key = kv[0].trim();
+                String val = kv[1].trim();
+                switch (key) {
+                    case "playerX": result.playerX = Integer.parseInt(val); break;
+                    case "playerY": result.playerY = Integer.parseInt(val); break;
+                    case "totalKills": result.totalEnemiesDefeated = Integer.parseInt(val); break;
+                    case "bossSpawned": result.bossSpawned = "1".equals(val); break;
+                    case "floor": result.floorNumber = Integer.parseInt(val); break;
+                    case "level":
+                        if (result.player == null) result.player = new Player();
+                        result.player.setLevel(Integer.parseInt(val));
+                        break;
+                    case "xp":
+                        if (result.player == null) result.player = new Player();
+                        result.player.setExperience(Integer.parseInt(val));
+                        break;
+                    case "gold":
+                        if (result.player == null) result.player = new Player();
+                        result.player.setGoldCollected(Integer.parseInt(val));
+                        break;
+                    case "hp":
+                        if (result.player == null) result.player = new Player();
+                        result.player.setCurrentHealth(Integer.parseInt(val));
+                        break;
+                    case "maxHp":
+                        if (result.player == null) result.player = new Player();
+                        result.player.setMaxHealth(Integer.parseInt(val));
+                        break;
+                    case "attack":
+                        if (result.player == null) result.player = new Player();
+                        result.player.setAttack(Integer.parseInt(val));
+                        break;
+                    case "name":
+                        if (result.player == null) result.player = new Player();
+                        result.player.setName(unescapeValue(val));
+                        break;
+                    case "equipped":
+                        Equipment equippedItem = deserializeEquipment(val);
+                        if (equippedItem != null) {
+                            result.inventory.forceEquip(equippedItem);
+                        }
+                        break;
+                    case "backpack":
+                        Equipment backpackItem = deserializeEquipment(val);
+                        if (backpackItem != null) {
+                            result.inventory.addEquipment(backpackItem);
+                        }
+                        break;
+                    case "potions":
+                        result.inventory.addHealthPotions(Integer.parseInt(val));
+                        break;
+                    case "dungeonWidth": 
+                        int width = Integer.parseInt(val);
+                        break;
+                    case "dungeonHeight":
+                        int height = Integer.parseInt(val);
+                        if (height &gt; 0) {
+                            result.dungeonMap = new int[height][];
+                        }
+                        break;
+                    case "dungeonRow":
+                        // Track which row index we're filling
+                        break;
+                }
+            }
+
+            Log.d(TAG, "Loaded slot " + slotId + ": Floor " + result.floorNumber +
+                  " | Kills: " + result.totalEnemiesDefeated + " | Boss: " + result.bossSpawned);
+            return result;
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading save for slot " + slotId + ": " + e.getMessage());
         }
         return null;
+    }
+
+    public boolean deleteSlot(int slotId) {
+        File saveDir = new File(basePath, SAVE_DIR);
+        File[] saves = saveDir.listFiles((dir, name) -&gt;
+            name.startsWith(SLOT_PREFIX + slotId + "_"));
+        
+        if (saves == null) return true;
+        
+        boolean deleted = true;
+        for (File saveFile : saves) {
+            if (!saveFile.delete()) {
+                Log.w(TAG, "Failed to delete: " + saveFile.getName());
+                deleted = false;
+            }
+            File hashFile = new File(saveFile.getPath() + CHECKSUM_EXT);
+            if (hashFile.exists() &amp;&amp; !hashFile.delete()) {
+                Log.w(TAG, "Failed to delete hash: " + hashFile.getName());
+            }
+        }
+        return deleted;
+    }
+
+    /**
+     * Get slot metadata for UI display.
+     */
+    public SlotInfo getSlotInfo(int slotId) {
+        File saveDir = new File(basePath, SAVE_DIR);
+        File[] saves = saveDir.listFiles((dir, name) -&gt;
+            name.startsWith(SLOT_PREFIX + slotId + "_") &amp;&amp; !name.endsWith(CHECKSUM_EXT) &amp;&amp; !name.endsWith(".tmp"));
+
+        if (saves == null || saves.length == 0) {
+            return new SlotInfo(slotId, false, null, 0, 0);
+        }
+
+        Arrays.sort(saves, (a, b) -&gt; Long.compare(b.lastModified(), a.lastModified()));
+        File saveFile = saves[0];
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(saveFile))) {
+            String line;
+            Long timestamp = null;
+            Integer floor = 0;
+            Integer level = 0;
+            Integer hp = 0;
+            
+            while ((line = reader.readLine()) != null) {
+                String[] kv = line.split("=", 2);
+                if (kv.length != 2) continue;
+                String key = kv[0].trim();
+                String val = kv[1].trim();
+                
+                if ("timestamp".equals(key)) {
+                    timestamp = Long.parseLong(val);
+                } else if ("floor".equals(key)) {
+                    floor = Integer.parseInt(val);
+                } else if ("level".equals(key)) {
+                    level = Integer.parseInt(val);
+                } else if ("hp".equals(key)) {
+                    hp = Integer.parseInt(val);
+                }
+            }
+            
+            return new SlotInfo(slotId, true, timestamp, floor, level);
+        } catch (Exception e) {
+            Log.e(TAG, "Error reading slot " + slotId + " metadata: " + e.getMessage());
+            return new SlotInfo(slotId, false, null, 0, 0);
+        }
+    }
+
+    public static class SlotInfo {
+        public final int slotId;
+        public final boolean exists;
+        public final Long timestamp;
+        public final int floor;
+        public final int level;
+        
+        public SlotInfo(int slotId, boolean exists, Long timestamp, int floor, int level) {
+            this.slotId = slotId;
+            this.exists = exists;
+            this.timestamp = timestamp;
+            this.floor = floor;
+            this.level = level;
+        }
     }
 
     public static class SaveGameData {
@@ -5801,6 +6058,7 @@ public class SaveGameManager {
         public int totalEnemiesDefeated = 0;
         public boolean bossSpawned = false;
         public InventorySystem inventory = null;
+        public int floorNumber = 1;
 
         public SaveGameData() {}
     }
