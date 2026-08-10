@@ -26,7 +26,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">32 files | 6489 lines | 2026-08-09 22:51</div>
+<div class="stats">32 files | 6553 lines | 2026-08-10 07:20</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
 <div id="files">
@@ -815,7 +815,7 @@ public class CombatResult {
 }</code></pre>
 </div>
 <div class="file" id="combatsystem">
-<div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">240 lines | 9425 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>CombatSystem.java</h2><span class="file-meta">250 lines | 10018 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -970,20 +970,29 @@ public class CombatSystem {
 
         appendLog("+" + scaledXp + " XP, +" + gold + " gold");
 
+        // --- LOOT DROP LOGIC (FIXED FOR MONSTERS) ---
         if (lootTable == null) {
             lootTable = LootTable.getInstance();
         }
         if (lootTable == null) {
             Log.e(TAG, "  ❌ CRITICAL: LootTable singleton also null!");
+            Log.d(TAG, "=== REWARDS DONE ===");
             return;
         }
 
         double lootRoll = SecureRandomUtil.nextDouble();
-        boolean shouldDrop = GameBalance.DEBUG_FORCE_LOOT || (lootRoll &lt; GameBalance.LOOT_DROP_CHANCE);
-
-        if (enemy.isBoss()) {
+        boolean shouldDrop;
+        
+        // FIX: Boss guaranteed, regular monsters use 70% chance (removed debug-only restriction)
+        if (GameBalance.DEBUG_FORCE_LOOT) {
+            shouldDrop = true;
+            Log.d(TAG, "  ★ DEBUG MODE — loot forced ON");
+        } else if (enemy.isBoss()) {
             shouldDrop = true;
             Log.d(TAG, "  ★ BOSS KILL — guaranteed loot drop!");
+        } else {
+            shouldDrop = lootRoll &lt; GameBalance.LOOT_DROP_CHANCE;  // 70% chance for monsters
+            Log.d(TAG, "  Regular monster: loot roll " + lootRoll + " vs threshold " + GameBalance.LOOT_DROP_CHANCE + " → " + (shouldDrop ? "DROP" : "NO DROP"));
         }
 
         if (shouldDrop) {
@@ -1047,6 +1056,7 @@ public class CombatSystem {
         } else {
             Log.d(TAG, "  No loot (roll " + lootRoll + " &gt;= " + GameBalance.LOOT_DROP_CHANCE + ")");
         }
+        // --- END LOOT DROP LOGIC ---
 
         Log.d(TAG, "=== REWARDS DONE === Player: Lvl=" + player.getLevel() + " XP=" + player.getExperience() + " Gold=" + player.getGoldCollected());
     }
@@ -4068,7 +4078,7 @@ public class Inventory implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="inventoryactivity">
-<div class="file-header"><h2>InventoryActivity.java</h2><span class="file-meta">227 lines | 8451 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>InventoryActivity.java</h2><span class="file-meta">281 lines | 11130 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.app.Activity;
@@ -4078,6 +4088,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -4102,7 +4113,7 @@ public class InventoryActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_inventory);
 
-        // CRITICAL FIX: Get player from intent FIRST
+        // CRITICAL: Get player from intent FIRST
         player = (Player) getIntent().getSerializableExtra("player");
 
         // Fallback to MainActivity if player not in intent
@@ -4130,7 +4141,7 @@ public class InventoryActivity extends Activity {
             }
         }
 
-        // NOW safe to initialize views
+        // Initialize views
         try {
             inventoryListView = findViewById(R.id.inventory_list_view);
             emptyMessage = findViewById(R.id.empty_message);
@@ -4150,6 +4161,7 @@ public class InventoryActivity extends Activity {
 
         targetType = getIntent().getStringExtra("target_type");
 
+        // CRITICAL FIX: Display ALL items - no filtering
         inventoryItems = inventory.getInventory();
         displayNames = new ArrayList&lt;&gt;();
 
@@ -4165,6 +4177,7 @@ public class InventoryActivity extends Activity {
             emptyMessage.setVisibility(inventoryItems.isEmpty() ? View.VISIBLE : View.GONE);
         }
 
+        // Item click listener
         inventoryListView.setOnItemClickListener((parent, view, position, id) -&gt; {
             selectedItemInfo.setVisibility(View.VISIBLE);
             Equipment selected = inventory.getItem(position);
@@ -4173,6 +4186,7 @@ public class InventoryActivity extends Activity {
             }
         });
 
+        // Long press dialog for equip options
         inventoryListView.setOnItemLongClickListener((parent, view, position, id) -&gt; {
             Equipment selected = inventory.getItem(position);
             if (selected != null) {
@@ -4182,10 +4196,60 @@ public class InventoryActivity extends Activity {
             return false;
         });
 
+        // Close button handler
         View closeButton = findViewById(R.id.close_button);
         if (closeButton != null) {
             closeButton.setOnClickListener(v -&gt; finish());
         }
+
+        // --- NEW: Equip/Unequip Button Handlers ---
+        Button btnEquip = findViewById(R.id.btn_equip);
+        Button btnUnequip = findViewById(R.id.btn_unequip);
+
+        if (btnEquip != null) {
+            btnEquip.setOnClickListener(v -&gt; {
+                int selectedPos = inventoryListView.getSelectedItemPosition();
+                if (selectedPos &gt;= 0 &amp;&amp; selectedPos &lt; inventoryItems.size()) {
+                    Equipment selected = inventory.getItem(selectedPos);
+                    if (selected != null) {
+                        equipItem(selectedPos, selected);
+                    } else {
+                        Toast.makeText(this, "Invalid item selected", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(this, "Select an item from the list first", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        if (btnUnequip != null) {
+            btnUnequip.setOnClickListener(v -&gt; {
+                // Try to unequip currently equipped item matching selected type
+                if (targetType != null) {
+                    ItemType type = ItemType.valueOf(targetType);
+                    if (inventory.hasEquipped(type)) {
+                        Equipment equipped = inventory.getEquipped(type);
+                        if (inventory.unequip(type)) {
+                            Toast.makeText(this, "Unequipped " + equipped.getName(), Toast.LENGTH_SHORT).show();
+                            player.recalculateStatsFromEquipment();
+                            // Refresh display - items moved to backpack
+                            inventoryItems = inventory.getInventory();
+                            displayNames.clear();
+                            for (Equipment eq : inventoryItems) {
+                                displayNames.add(formatEquipmentName(eq));
+                            }
+                            adapter.notifyDataSetChanged();
+                            emptyMessage.setVisibility(inventoryItems.isEmpty() ? View.VISIBLE : View.GONE);
+                        }
+                    } else {
+                        Toast.makeText(this, "Nothing equipped in " + type.getDisplayName() + " slot", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(this, "Select equipment slot first", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+        // --- END Button Handlers ---
 
         Log.d(TAG, "InventoryActivity opened. Items: " + inventoryItems.size());
     }
