@@ -26,7 +26,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">32 files | 6291 lines | 2026-08-09 13:44</div>
+<div class="stats">32 files | 6489 lines | 2026-08-09 22:51</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
 <div id="files">
@@ -2028,7 +2028,7 @@ public class Equipment implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="equipmentactivity">
-<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">422 lines | 18452 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>EquipmentActivity.java</h2><span class="file-meta">510 lines | 22585 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.app.Activity;
@@ -2057,6 +2057,19 @@ public class EquipmentActivity extends Activity {
     private TextView extraSlot1, extraSlot2, extraSlot3, extraSlot4;
     private TextView healthStat, attackStat, defenseStat, speedStat, critStat, dodgeStat;
     private TextView setBonusText;
+
+    // NEW: TextView references for item display in each slot
+    private TextView helmetIcon, helmetName;
+    private TextView chestIcon, chestName;
+    private TextView legIcon, legName;
+    private TextView bootIcon, bootName;
+    private TextView gloveIcon, gloveName;
+    private TextView weaponIcon, weaponName;
+    private TextView shieldIcon, shieldName;
+    private TextView amuletIcon, amuletName;
+    private TextView ringIcon, ringName;
+    private TextView cloakIcon, cloakName;
+    private TextView artifactIcon, artifactName;
 
     private static Map&lt;Integer, ItemType&gt; SLOT_ID_TO_ITEM_TYPE_MAP;
     private static Map&lt;Integer, String&gt; STAT_ID_TO_TITLE_MAP;
@@ -2144,6 +2157,30 @@ public class EquipmentActivity extends Activity {
         cloakSlot = findViewById(R.id.slot_cloak);
         artifactSlot = findViewById(R.id.slot_artifact);
 
+        // Initialize slot icon/name TextViews
+        helmetIcon = findViewById(R.id.slot_helmet_icon);
+        helmetName = findViewById(R.id.slot_helmet_name);
+        chestIcon = findViewById(R.id.slot_chestplate_icon);
+        chestName = findViewById(R.id.slot_chestplate_name);
+        legIcon = findViewById(R.id.slot_leggings_icon);
+        legName = findViewById(R.id.slot_leggings_name);
+        bootIcon = findViewById(R.id.slot_boots_icon);
+        bootName = findViewById(R.id.slot_boots_name);
+        gloveIcon = findViewById(R.id.slot_gloves_icon);
+        gloveName = findViewById(R.id.slot_gloves_name);
+        weaponIcon = findViewById(R.id.slot_weapon_icon);
+        weaponName = findViewById(R.id.slot_weapon_name);
+        shieldIcon = findViewById(R.id.slot_shield_icon);
+        shieldName = findViewById(R.id.slot_shield_name);
+        amuletIcon = findViewById(R.id.slot_amulet_icon);
+        amuletName = findViewById(R.id.slot_amulet_name);
+        ringIcon = findViewById(R.id.slot_ring_icon);
+        ringName = findViewById(R.id.slot_ring_name);
+        cloakIcon = findViewById(R.id.slot_cloak_icon);
+        cloakName = findViewById(R.id.slot_cloak_name);
+        artifactIcon = findViewById(R.id.slot_artifact_icon);
+        artifactName = findViewById(R.id.slot_artifact_name);
+
         healthStat = findViewById(R.id.stat_health);
         attackStat = findViewById(R.id.stat_attack);
         defenseStat = findViewById(R.id.stat_defense);
@@ -2167,6 +2204,17 @@ public class EquipmentActivity extends Activity {
         Log.d(TAG, "EquipmentActivity ready - Player Lvl " + player.getLevel() +
               " | Backpack: " + inventorySystem.getItemCount() +
               " | Equipped: " + inventorySystem.getEquippedItems().size());
+    }
+
+    // FIX: Add onResume to refresh stats when returning from inventory
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (player != null &amp;&amp; inventorySystem != null) {
+            player.recalculateStatsFromEquipment();
+            updateDisplay();
+            Log.d(TAG, "onResume: Stats recalculated, display updated");
+        }
     }
 
     private void setupClickListeners() {
@@ -2279,17 +2327,17 @@ public class EquipmentActivity extends Activity {
     private void updateDisplay() {
         if (player == null || inventorySystem == null) return;
 
-        updateSlotVisual(helmetSlot, inventorySystem.getEquipped(ItemType.HELMET));
-        updateSlotVisual(chestplateSlot, inventorySystem.getEquipped(ItemType.CHESTPLATE));
-        updateSlotVisual(leggingsSlot, inventorySystem.getEquipped(ItemType.LEGGINGS));
-        updateSlotVisual(bootsSlot, inventorySystem.getEquipped(ItemType.BOOTS));
-        updateSlotVisual(glovesSlot, inventorySystem.getEquipped(ItemType.GLOVES));
-        updateSlotVisual(weaponSlot, inventorySystem.getEquipped(ItemType.WEAPON));
-        updateSlotVisual(shieldSlot, inventorySystem.getEquipped(ItemType.SHIELD));
-        updateSlotVisual(amuletSlot, inventorySystem.getEquipped(ItemType.AMULET));
-        updateSlotVisual(ringSlot, inventorySystem.getEquipped(ItemType.RING));
-        updateSlotVisual(cloakSlot, inventorySystem.getEquipped(ItemType.CLOAK));
-        updateSlotVisual(artifactSlot, inventorySystem.getEquipped(ItemType.ARTIFACT));
+        updateSlotVisual(helmetSlot, helmetIcon, helmetName, inventorySystem.getEquipped(ItemType.HELMET));
+        updateSlotVisual(chestplateSlot, chestIcon, chestName, inventorySystem.getEquipped(ItemType.CHESTPLATE));
+        updateSlotVisual(leggingsSlot, legIcon, legName, inventorySystem.getEquipped(ItemType.LEGGINGS));
+        updateSlotVisual(bootsSlot, bootIcon, bootName, inventorySystem.getEquipped(ItemType.BOOTS));
+        updateSlotVisual(glovesSlot, gloveIcon, gloveName, inventorySystem.getEquipped(ItemType.GLOVES));
+        updateSlotVisual(weaponSlot, weaponIcon, weaponName, inventorySystem.getEquipped(ItemType.WEAPON));
+        updateSlotVisual(shieldSlot, shieldIcon, shieldName, inventorySystem.getEquipped(ItemType.SHIELD));
+        updateSlotVisual(amuletSlot, amuletIcon, amuletName, inventorySystem.getEquipped(ItemType.AMULET));
+        updateSlotVisual(ringSlot, ringIcon, ringName, inventorySystem.getEquipped(ItemType.RING));
+        updateSlotVisual(cloakSlot, cloakIcon, cloakName, inventorySystem.getEquipped(ItemType.CLOAK));
+        updateSlotVisual(artifactSlot, artifactIcon, artifactName, inventorySystem.getEquipped(ItemType.ARTIFACT));
 
         if (healthStat != null) healthStat.setText("\u2764\uFE0F " + player.getMaxHealth());
         if (attackStat != null) attackStat.setText("\u2694\uFE0F " + player.getAttack());
@@ -2315,23 +2363,62 @@ public class EquipmentActivity extends Activity {
               " ATK=" + player.getAttack() + " DEF=" + player.getArmor());
     }
 
-    private void updateSlotVisual(View slotView, Equipment equipment) {
+    // FIX: Enhanced updateSlotVisual with item name/icon display
+    private void updateSlotVisual(View slotView, TextView iconView, TextView nameView, Equipment equipment) {
         if (slotView == null) return;
         try {
             if (equipment == null) {
-                // FIX: Empty slot — dark background, heavily dimmed
+                // Empty slot - dark background, heavily dimmed
                 slotView.setBackgroundColor(0xFF1a1a1a);
                 slotView.setAlpha(0.35f);
                 slotView.setTag(null);
+                if (iconView != null) iconView.setText("");
+                if (nameView != null) {
+                    nameView.setText("");
+                    nameView.setVisibility(View.GONE);
+                }
                 return;
             }
-            // FIX: Equipped slot — full opacity, rarity color as background
+            // Equipped slot - full opacity, rarity color as background
             slotView.setAlpha(1.0f);
             slotView.setTag(equipment.getName());
             int rarityColor = getRarityColor(equipment.getRarity());
             slotView.setBackgroundColor(rarityColor);
+            
+            // Set icon based on equipment type
+            if (iconView != null) {
+                iconView.setText(getSlotIcon(equipment.getType()));
+            }
+            
+            // Set item name (truncated if too long)
+            if (nameView != null) {
+                String displayName = equipment.getName();
+                if (displayName.length() &gt; 14) {
+                    displayName = displayName.substring(0, 12) + "..";
+                }
+                nameView.setText(displayName);
+                nameView.setVisibility(View.VISIBLE);
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error updating slot visual: " + e.getMessage());
+        }
+    }
+
+    // FIX: Helper method to get slot icons
+    private String getSlotIcon(ItemType type) {
+        switch (type) {
+            case WEAPON: return "⚔️";
+            case HELMET: return "🪖";
+            case CHESTPLATE: return "🥋";
+            case LEGGINGS: return "👖";
+            case BOOTS: return "👢";
+            case SHIELD: return "🛡️";
+            case GLOVES: return "🧤";
+            case AMULET: return "📿";
+            case RING: return "💍";
+            case CLOAK: return "🧥";
+            case ARTIFACT: return "✨";
+            default: return "❓";
         }
     }
 
@@ -2433,21 +2520,22 @@ public class EquipmentActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == INVENTORY_REQUEST_CODE) {
             if (player != null) {
+                // CRITICAL: Process pending loot BEFORE recalculating stats
+                player.processPendingLoot();
                 player.recalculateStatsFromEquipment();
                 inventorySystem = player.getInventory();
                 updateDisplay();
                 invalidateMainActivity();
-                Log.d(TAG, "Inventory changed - stats recalculated");
+                Log.d(TAG, "Inventory changed - pending loot processed, stats recalculated");
             }
         }
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (player != null) {
+    protected void onPause() {
+        super.onPause();
+        if (player != null &amp;&amp; inventorySystem != null) {
             player.recalculateStatsFromEquipment();
-            updateDisplay();
         }
     }
 }</code></pre>
@@ -2872,7 +2960,7 @@ public class Game implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="gamebalance">
-<div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">43 lines | 1729 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">44 lines | 1816 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 public class GameBalance {
@@ -2880,7 +2968,8 @@ public class GameBalance {
         throw new AssertionError("Cannot instantiate GameBalance");
     }
 
-    public static final boolean DEBUG_FORCE_LOOT = false;
+    // TEMPORARY: Enable debug loot to test drops
+    public static final boolean DEBUG_FORCE_LOOT = true;  // CHANGE TO FALSE WHEN DONE TESTING
     public static final boolean DEBUG_MODE = false;
 
     public static final int PLAYER_MAX_HEALTH = 100;
@@ -4209,7 +4298,7 @@ public class InventoryActivity extends Activity {
 }</code></pre>
 </div>
 <div class="file" id="inventorysystem">
-<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">224 lines | 8211 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">310 lines | 11826 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -4219,14 +4308,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Improved inventory management with proper auto-equip fallback.
+ * Improved inventory management with proper auto-equip fallback and debug logging.
  * 
  * Fixed Issues:
  * - Full inventory now queues items to pending instead of dropping them
  * - Better artifact handling
+ * - Added comprehensive debug logging for troubleshooting
  */
 public class InventorySystem implements Serializable {
     private static final long serialVersionUID = 4L;
+    private static final String TAG = "InventorySystem";
 
     private Map&lt;Integer, Equipment&gt; equipmentSlots;
     private List&lt;Equipment&gt; inventory;
@@ -4238,20 +4329,27 @@ public class InventorySystem implements Serializable {
         this.inventory = new ArrayList&lt;&gt;();
         this.healthPotions = 5;
         this.maxItemCapacity = 50;
+        android.util.Log.d(TAG, "InventorySystem initialized: capacity=" + maxItemCapacity);
     }
 
     /**
      * Adds equipment to inventory. May auto-equip if slot empty.
      * @param item Item to add
-     * @return true if successfully added/equipped, false if inventory full (caller should queue)
+     * @return true if successfully added/equipped, false if inventory full (caller should queue to pending)
      */
     public boolean addEquipmentWithAutoEquip(Equipment item) {
-        if (item == null) return false;
+        if (item == null) {
+            android.util.Log.w(TAG, "addEquipmentWithAutoEquip: item is NULL");
+            return false;
+        }
+
+        android.util.Log.d(TAG, "=== addEquipmentWithAutoEquip: " + item.getName() 
+              + " [" + item.getRarity() + "] type=" + item.getType());
 
         // Artifacts always auto-equip
         if (item.getType().getSlotId() == ItemType.SLOT_ARTIFACT) {
             equipmentSlots.put(ItemType.SLOT_ARTIFACT, item);
-            android.util.Log.d("InventorySystem", "✅ Artifact auto-equipped: " + item.getName());
+            android.util.Log.d(TAG, "✅ Artifact auto-equipped: " + item.getName());
             return true;
         }
 
@@ -4260,23 +4358,30 @@ public class InventorySystem implements Serializable {
         // If slot is empty, equip immediately
         if (!hasEquipped(type)) {
             equipmentSlots.put(type.getSlotId(), item);
-            android.util.Log.d("InventorySystem", "✨ AUTO-EQUIPPED: " + item.getName() + " to " + type.getDisplayName() + " slot");
+            android.util.Log.d(TAG, "✨ AUTO-EQUIPPED: " + item.getName() + " to " + type.getDisplayName() + " slot");
+            logEquippedSlots();
             return true;
         }
 
         // Slot occupied - attempt swap
         Equipment currentlyEquipped = equipmentSlots.get(type.getSlotId());
+        android.util.Log.d(TAG, "Slot " + type.getDisplayName() + " already occupied by: " 
+              + (currentlyEquipped != null ? currentlyEquipped.getName() : "NULL"));
 
         // If we have backpack space, swap and move old to backpack
         if (inventory.size() &lt; maxItemCapacity) {
             equipmentSlots.put(type.getSlotId(), item);
             inventory.add(currentlyEquipped);
-            android.util.Log.d("InventorySystem", "💫 SWAPPED: " + item.getName() + " FOR " + currentlyEquipped.getName());
+            android.util.Log.d(TAG, "💫 SWAPPED: " + item.getName() + " FOR " + currentlyEquipped.getName());
+            android.util.Log.d(TAG, "Backpack size now: " + inventory.size() + "/" + maxItemCapacity);
+            logEquippedSlots();
             return true;
         }
 
         // STILL FULL - don't drop item, return false so caller can queue to pending
-        android.util.Log.w("InventorySystem", "⚠️ FULL - cannot add " + item.getName() + ", should queue to pending");
+        android.util.Log.w(TAG, "⚠️ INVENTORY FULL - cannot add " + item.getName() 
+              + " to backpack (size=" + inventory.size() + "/" + maxItemCapacity + ")");
+        android.util.Log.w(TAG, "Caller should queue this item to Player.pendingLoot instead");
         return false;
     }
 
@@ -4286,44 +4391,79 @@ public class InventorySystem implements Serializable {
      * @return true if added, false if full
      */
     public boolean addEquipment(Equipment item) {
-        if (item == null) return false;
+        if (item == null) {
+            android.util.Log.w(TAG, "addEquipment: item is NULL");
+            return false;
+        }
+
+        android.util.Log.d(TAG, "addEquipment (backpack only): " + item.getName());
+
         if (item.getType().getSlotId() == ItemType.SLOT_ARTIFACT) {
             equipmentSlots.put(ItemType.SLOT_ARTIFACT, item);
+            android.util.Log.d(TAG, "✅ Artifact placed in slot");
             return true;
         }
-        if (inventory.size() &gt;= maxItemCapacity) return false;
-        return inventory.add(item);
+
+        if (inventory.size() &gt;= maxItemCapacity) {
+            android.util.Log.w(TAG, "❌ Backpack full! Cannot add " + item.getName());
+            return false;
+        }
+
+        boolean added = inventory.add(item);
+        android.util.Log.d(TAG, (added ? "✅" : "❌") + " Added to backpack. New size: " + inventory.size());
+        return added;
     }
 
     public boolean equip(ItemType type, int index) {
-        if (index &lt; 0 || index &gt;= inventory.size()) return false;
+        if (index &lt; 0 || index &gt;= inventory.size()) {
+            android.util.Log.w(TAG, "equip: invalid index " + index);
+            return false;
+        }
         Equipment toEquip = inventory.get(index);
-        if (toEquip.getType().getSlotId() != type.getSlotId()) return false;
+        if (toEquip.getType().getSlotId() != type.getSlotId()) {
+            android.util.Log.w(TAG, "equip: wrong type - expected " + type + " got " + toEquip.getType());
+            return false;
+        }
 
         Equipment equipped = equipmentSlots.get(type.getSlotId());
         equipmentSlots.put(type.getSlotId(), toEquip);
         inventory.remove(index);
         if (equipped != null) inventory.add(equipped);
+        android.util.Log.d(TAG, "Equipped index " + index + ": " + toEquip.getName());
+        logEquippedSlots();
         return true;
     }
 
     public boolean unequip(ItemType type) {
         Equipment toUnequip = equipmentSlots.get(type.getSlotId());
-        if (toUnequip == null) return false;
-        if (inventory.size() &gt;= maxItemCapacity) return false;
+        if (toUnequip == null) {
+            android.util.Log.w(TAG, "unequip: nothing equipped in " + type.getDisplayName());
+            return false;
+        }
+        if (inventory.size() &gt;= maxItemCapacity) {
+            android.util.Log.w(TAG, "unequip: backpack full, cannot accept unequipped item");
+            return false;
+        }
 
         inventory.add(toUnequip);
         equipmentSlots.remove(type.getSlotId());
+        android.util.Log.d(TAG, "Unequipped: " + toUnequip.getName() + " → backpack");
+        logEquippedSlots();
         return true;
     }
 
     public Equipment getEquipped(ItemType type) {
         if (type == null) return null;
-        return equipmentSlots.get(type.getSlotId());
+        Equipment eq = equipmentSlots.get(type.getSlotId());
+        android.util.Log.d(TAG, "getEquipped(" + type + "): " + (eq != null ? eq.getName() : "NULL"));
+        return eq;
     }
 
     public boolean hasEquipped(ItemType type) {
-        return equipmentSlots.containsKey(type.getSlotId());
+        if (type == null) return false;
+        boolean has = equipmentSlots.containsKey(type.getSlotId());
+        android.util.Log.d(TAG, "hasEquipped(" + type + "): " + has);
+        return has;
     }
 
     public List&lt;Equipment&gt; getInventory() { return new ArrayList&lt;&gt;(inventory); }
@@ -4339,21 +4479,42 @@ public class InventorySystem implements Serializable {
         return false;
     }
 
-    public int getItemCount() { return inventory.size(); }
+    public int getItemCount() { 
+        int count = inventory.size();
+        android.util.Log.d(TAG, "getItemCount(): " + count);
+        return count; 
+    }
+
     public int getHealthPotions() { return healthPotions; }
-    public void addHealthPotions(int amount) { this.healthPotions += amount; }
+    public void addHealthPotions(int amount) { 
+        healthPotions += amount;
+        android.util.Log.d(TAG, "addHealthPotions(" + amount + "): total=" + healthPotions);
+    }
     
     public boolean usePotion() {
-        if (healthPotions &gt; 0) { healthPotions--; return true; }
+        if (healthPotions &gt; 0) { 
+            healthPotions--;
+            android.util.Log.d(TAG, "usePotion(): remaining=" + healthPotions);
+            return true; 
+        }
+        android.util.Log.d(TAG, "usePotion(): none left");
         return false;
     }
 
-    public List&lt;Equipment&gt; getEquippedItems() { return new ArrayList&lt;&gt;(equipmentSlots.values()); }
+    public List&lt;Equipment&gt; getEquippedItems() { 
+        List&lt;Equipment&gt; list = new ArrayList&lt;&gt;(equipmentSlots.values());
+        android.util.Log.d(TAG, "getEquippedItems(): " + list.size() + " items");
+        return list; 
+    }
 
     public void forceEquip(Equipment item) {
-        if (item == null || item.getType() == null) return;
+        if (item == null || item.getType() == null) {
+            android.util.Log.w(TAG, "forceEquip: null item or type");
+            return;
+        }
         equipmentSlots.put(item.getType().getSlotId(), item);
-        android.util.Log.d("InventorySystem", "⚡ FORCE EQUIP: " + item.getName() + " to " + item.getType().getDisplayName());
+        android.util.Log.d(TAG, "⚡ FORCE EQUIP: " + item.getName() + " to " + item.getType().getDisplayName());
+        logEquippedSlots();
     }
 
     public List&lt;Equipment&gt; getAllEquipment() {
@@ -4386,7 +4547,6 @@ public class InventorySystem implements Serializable {
 
     public Equipment getEquippedWeapon() { return getEquipped(ItemType.WEAPON); }
     public Equipment getEquippedRing() { return getEquipped(ItemType.RING); }
-
     public Equipment getEquippedArmor() { return getEquipped(ItemType.CHESTPLATE); }
 
     /**
@@ -4411,6 +4571,8 @@ public class InventorySystem implements Serializable {
                 }
             }
         }
+        
+        android.util.Log.d(TAG, "getActiveSetBonuses(): " + activeBonuses.size() + " bonuses");
         return activeBonuses.toArray(new Equipment.SetBonus[0]);
     }
 
@@ -4433,6 +4595,19 @@ public class InventorySystem implements Serializable {
     }
     
     public int getMaxItemCapacity() { return maxItemCapacity; }
+
+    /**
+     * Logs current equipped slots for debugging
+     */
+    private void logEquippedSlots() {
+        android.util.Log.d(TAG, "--- EQUIPPED SLOTS ---");
+        for (Map.Entry&lt;Integer, Equipment&gt; entry : equipmentSlots.entrySet()) {
+            if (entry.getValue() != null) {
+                android.util.Log.d(TAG, "  Slot " + entry.getKey() + ": " + entry.getValue().getName());
+            }
+        }
+        android.util.Log.d(TAG, "----------------------");
+    }
 }</code></pre>
 </div>
 <div class="file" id="itemtype">
@@ -4586,7 +4761,7 @@ public class LootTable {
 }</code></pre>
 </div>
 <div class="file" id="mainactivity">
-<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">713 lines | 28383 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">736 lines | 29769 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -4808,7 +4983,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Log.d(TAG, "Restored dungeon map: " + saveData.dungeonMap.length + "x" + saveData.dungeonMap[0].length);
         }
 
-        // Restore defeated enemy IDs
         if (saveData.defeatedEnemyIds != null &amp;&amp; game != null) {
             game.setDefeatedEnemyIds(saveData.defeatedEnemyIds);
             Log.d(TAG, "Restored " + saveData.defeatedEnemyIds.size() + " defeated enemy IDs");
@@ -4875,7 +5049,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             }
         }
 
-        // Restore pending loot
         if (saveData.player != null &amp;&amp; saveData.player.getPendingLoot() != null) {
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
@@ -4886,7 +5059,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             }
         }
 
-        // Restore defeated enemy IDs
         if (saveData.defeatedEnemyIds != null &amp;&amp; game != null) {
             game.setDefeatedEnemyIds(saveData.defeatedEnemyIds);
         }
@@ -4999,12 +5171,14 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
             if (!(playerExtra instanceof Player)) {
                 Log.w(TAG, "updatedPlayer is not a valid Player");
+                gameView.invalidate();
                 return;
             }
 
             Player updatedPlayer = (Player) playerExtra;
             if (updatedPlayer == null) {
                 Log.w(TAG, "updatedPlayer is null");
+                gameView.invalidate();
                 return;
             }
 
@@ -5018,6 +5192,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 gamePlayer.setMaxHealth(updatedPlayer.getMaxHealth());
                 gamePlayer.setAttack(updatedPlayer.getAttack());
 
+                // CRITICAL: Sync inventory FROM battle result
                 InventorySystem battleInv = updatedPlayer.getInventory();
                 if (battleInv != null) {
                     try {
@@ -5048,9 +5223,16 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                     }
                 }
 
+                // Add pending loot from battle
                 for (Equipment pending : updatedPlayer.getPendingLoot()) {
                     gamePlayer.addPendingLoot(pending);
                 }
+
+                // CRITICAL FIX: Process pending loot IMMEDIATELY before recalc
+                int itemsBefore = gamePlayer.getInventory().getItemCount();
+                gamePlayer.processPendingLoot();
+                int itemsAfter = gamePlayer.getInventory().getItemCount();
+                Log.d(TAG, "Processed pending loot after battle: " + (itemsAfter - itemsBefore) + " items acquired");
 
                 if (updatedPlayer.getLevel() &gt; oldLevel) {
                     gameView.showMessage("LEVEL UP! You are now level " + updatedPlayer.getLevel());
@@ -5060,6 +5242,16 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             if (battleWon) {
                 totalEnemiesDefeated++;
                 Log.d(TAG, "Victory! Total kills: " + totalEnemiesDefeated);
+
+                // ADDITIONAL DEBUG LOGGING FOR LOOT
+                if (gamePlayer != null) {
+                    Log.d(TAG, "=== POST-BATTLE DEBUG ===");
+                    Log.d(TAG, "Player ATK: " + gamePlayer.getAttack() + 
+                          " | DEF: " + gamePlayer.getArmor() + 
+                          " | HP: " + gamePlayer.getMaxHealth());
+                    Log.d(TAG, "Inventory: " + gamePlayer.getInventory().getItemCount() + " items");
+                    Log.d(TAG, "Pending loot: " + gamePlayer.getPendingLoot().size() + " items");
+                }
 
                 if (defeatedEnemyId != null &amp;&amp; game != null) {
                     List&lt;Enemy&gt; currentEnemies = game.getEnemies();
@@ -5083,8 +5275,14 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             }
 
             if (gamePlayer != null) {
+                // CRITICAL: Recalculate stats AFTER processing all changes
                 gamePlayer.recalculateStatsFromEquipment();
                 Log.d(TAG, "Post-battle recalculateStatsFromEquipment() called");
+                
+                // Final stat verification
+                Log.d(TAG, "FINAL STATS - ATK:" + gamePlayer.getAttack() + 
+                      " DEF:" + gamePlayer.getArmor() + 
+                      " HP:" + gamePlayer.getMaxHealth());
             }
 
             gameView.invalidate();
