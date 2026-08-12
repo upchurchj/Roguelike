@@ -26,9 +26,9 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">32 files | 7033 lines | 2026-08-11 22:55</div>
+<div class="stats">33 files | 7105 lines | 2026-08-12 16:39</div>
 </header>
-<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
+<nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#knightlightapplication">KnightLightApplication</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
 <div id="files">
 <div class="file" id="battle">
 <div class="file-header"><h2>Battle.java</h2><span class="file-meta">159 lines | 6436 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
@@ -3162,18 +3162,26 @@ public class Game implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="gamebalance">
-<div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">44 lines | 1816 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">57 lines | 2172 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
+/**
+ * Central game balance/configuration constants.
+ * 
+ * IMPORTANT FOR PRODUCTION:
+ * - Set DEBUG_FORCE_LOOT = false before releasing
+ * - Set DEBUG_MODE = false before releasing
+ */
 public class GameBalance {
     private GameBalance() {
         throw new AssertionError("Cannot instantiate GameBalance");
     }
 
-    // TEMPORARY: Enable debug loot to test drops
-    public static final boolean DEBUG_FORCE_LOOT = true;  // CHANGE TO FALSE WHEN DONE TESTING
+    // DEBUG SETTINGS - SET TO FALSE FOR PRODUCTION RELEASES
+    public static final boolean DEBUG_FORCE_LOOT = false;  // Changed from true → false
     public static final boolean DEBUG_MODE = false;
 
+    // Player base stats
     public static final int PLAYER_MAX_HEALTH = 100;
     public static final int PLAYER_BASE_ATTACK = 15;
     public static final int PLAYER_INITIAL_GOLD = 0;
@@ -3181,14 +3189,17 @@ public class GameBalance {
     public static final int POTION_HEAL_AMOUNT = 25;
     public static final int MAXIMUM_PLAYER_LEVEL = 99;
 
+    // Player combat probabilities
     public static final double CRIT_CHANCE_PLAYER = 0.15;
     public static final double CRIT_CHANCE_ENEMY = 0.10;
 
+    // Enemy base stats
     public static final int ENEMY_BASE_HEALTH = 30;
     public static final int ENEMY_BASE_ATTACK = 8;
     public static final int ENEMY_HEALTH_VARIANCE = 10;
     public static final int ENEMY_GOLD_REWARD = 50;
 
+    // Boss configuration
     public static final String BOSS_NAME = "DRAGON BOSS";
     public static final int BOSS_BASE_HEALTH = 200;
     public static final int BOSS_HEALTH_PER_LEVEL = 25;
@@ -3200,10 +3211,12 @@ public class GameBalance {
     public static final int BOSS_DODGE = 5;
     public static final int BOSS_CRIT = 15;
 
+    // Boss trigger thresholds
     public static final int BOSS_TRIGGER_KILLS = 10;
     public static final int BOSS_TRIGGER_GOLD = 200;
     public static final int BOSS_MINIMUM_DISTANCE = 10;
 
+    // Combat formulas
     public static final double DEFENSE_REDUCTION_MULTIPLIER = 0.8;
     public static final double LOOT_DROP_CHANCE = 0.70;
 }</code></pre>
@@ -4938,6 +4951,68 @@ public enum ItemType {
             if (type.getSlotId() == slotId) return type;
         }
         return null;
+    }
+}</code></pre>
+</div>
+<div class="file" id="knightlightapplication">
+<div class="file-header"><h2>KnightLightApplication.java</h2><span class="file-meta">59 lines | 1997 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<pre><code>package com.knightlight.game;
+
+import android.app.Application;
+import android.util.Log;
+import android.content.Context;
+
+/**
+ * Custom Application class to ensure crash handler initializes early.
+ * Fixes silent install failures caused by late/unavailable crash handling.
+ * 
+ * Registration required in AndroidManifest.xml:
+ * &lt;application android:name=".KnightLightApplication" ...&gt;
+ */
+public class KnightLightApplication extends Application {
+    private static final String TAG = "KnightLightApp";
+    private static KnightLightApplication instance;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        instance = this;
+        
+        Log.d(TAG, "=== Application onCreate() called ===");
+        Log.d(TAG, "Package: " + getPackageName());
+        Log.d(TAG, "SDK Version: " + android.os.Build.VERSION.SDK_INT);
+        
+        // CRITICAL: Install crash handler BEFORE any other initialization
+        try {
+            CrashHandler crashHandler = new CrashHandler(getApplicationContext());
+            Thread.setDefaultUncaughtExceptionHandler(crashHandler);
+            Log.d(TAG, "✅ CrashHandler installed successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Failed to install CrashHandler: " + e.getMessage(), e);
+        }
+        
+        // Verify LootTable singleton (early validation)
+        try {
+            LootTable lt = LootTable.getInstance();
+            if (lt != null) {
+                Log.d(TAG, "✅ LootTable singleton verified");
+            } else {
+                Log.e(TAG, "❌ LootTable.getInstance() returned null!");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "❌ LootTable verification failed: " + e.getMessage(), e);
+        }
+    }
+
+    public static KnightLightApplication getInstance() {
+        return instance;
+    }
+
+    @Override
+    public void onTerminate() {
+        super.onTerminate();
+        instance = null;
+        Log.d(TAG, "Application terminated");
     }
 }</code></pre>
 </div>
