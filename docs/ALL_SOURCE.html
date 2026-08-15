@@ -26,7 +26,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">33 files | 7105 lines | 2026-08-12 16:39</div>
+<div class="stats">33 files | 7214 lines | 2026-08-15 17:26</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#knightlightapplication">KnightLightApplication</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
 <div id="files">
@@ -6360,7 +6360,7 @@ public enum Rarity {
 }</code></pre>
 </div>
 <div class="file" id="savegamemanager">
-<div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">697 lines | 28639 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>SaveGameManager.java</h2><span class="file-meta">806 lines | 34409 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -6378,6 +6378,7 @@ public class SaveGameManager {
     public static final int CURRENT_VERSION = 2;
     public static final int PREVIOUS_VERSION = 1;
     private static final int MAX_BACKUP_SLOTS = 3;
+    private static final String EMERGENCY_SAVE = "emergency_save.dat";
     private final String basePath;
     private static final Object SAVE_LOCK = new Object();
 
@@ -6432,7 +6433,7 @@ public class SaveGameManager {
         File hashFile = new File(saveFile.getPath() + CHECKSUM_EXT);
         if (!hashFile.exists()) {
             Log.w(TAG, "No hash file for: " + saveFile.getName() + " - allowing load without verification (first install)");
-            return true;  // FIX: Allow load without hash on first install
+            return true;
         }
         try (BufferedReader reader = new BufferedReader(new FileReader(hashFile))) {
             String expected = reader.readLine();
@@ -6463,12 +6464,17 @@ public class SaveGameManager {
             int maxRetries = 3;
             for (int attempt = 0; attempt &lt; maxRetries; attempt++) {
                 try {
-                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
-                        writer.write(data);
-                    }
+                    // FIX #4: Force fsync after writing temp file
+                    FileOutputStream fos = new FileOutputStream(tempFile);
+                    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8));
+                    writer.write(data);
+                    writer.flush();
+                    fos.getFD().sync();
+                    writer.close();
 
                     try (BufferedWriter hw = new BufferedWriter(new FileWriter(tempHashFile))) {
                         hw.write(computeHash(data));
+                        hw.flush();
                     }
 
                     if (!tempFile.renameTo(targetFile)) {
@@ -6482,6 +6488,10 @@ public class SaveGameManager {
 
                     tempFile.delete();
                     tempHashFile.delete();
+
+                    // FIX #2: Create mirror copy as second backup layer
+                    createMirrorCopy(targetFile, data);
+
                     cleanupOldBackups(targetFile);
 
                     return true;
@@ -6496,6 +6506,34 @@ public class SaveGameManager {
                 }
             }
             return false;
+        }
+    }
+
+    /**
+     * FIX #2: Create mirror copy for additional backup redundancy
+     */
+    private void createMirrorCopy(File original, String data) {
+        File mirrorFile = new File(original.getParent(), original.getName() + ".mirror");
+        File mirrorHashFile = new File(mirrorFile.getPath() + CHECKSUM_EXT);
+
+        try {
+            FileOutputStream fos = new FileOutputStream(mirrorFile);
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8));
+            writer.write(data);
+            writer.flush();
+            fos.getFD().sync();
+            writer.close();
+
+            try (BufferedWriter hw = new BufferedWriter(new FileWriter(mirrorHashFile))) {
+                hw.write(computeHash(data));
+                hw.flush();
+            }
+
+            Log.d(TAG, "Created mirror copy: " + mirrorFile.getName());
+        } catch (IOException e) {
+            Log.w(TAG, "Mirror copy creation failed: " + e.getMessage());
+            mirrorFile.delete();
+            mirrorHashFile.delete();
         }
     }
 
@@ -6757,6 +6795,64 @@ public class SaveGameManager {
                     Log.d(TAG, "Attempting recovery from backup: " + backup.getName());
                     return loadFromBackupFile(backup);
                 }
+
+                // FIX #1: Lenient recovery - try parsing corrupted data anyway
+                Log.w(TAG, "No backup found. Attempting lenient recovery of: " + saveFile.getName());
+                try {
+                    SaveGameData recovered = parseSaveData(data);
+                    if (recovered != null &amp;&amp; recovered.player != null) {
+                        Log.d(TAG, "Lenient recovery succeeded — player Lvl " + recovered.player.getLevel());
+                        return new LoadSlotResult(recovered, true, "Recovered from corrupted save (partial)");
+                    }
+                } catch (Exception parseEx) {
+                    Log.e(TAG, "Lenient recovery also failed: " + parseEx.getMessage());
+                }
+
+                // FIX #3: Try mirror file as third fallback
+                File mirrorFile = new File(saveFile.getParent(), saveFile.getName() + ".mirror");
+                if (mirrorFile.exists()) {
+                    Log.d(TAG, "Attempting mirror recovery: " + mirrorFile.getName());
+                    try {
+                        StringBuilder mirrorData = new StringBuilder();
+                        try (BufferedReader mr = new BufferedReader(new FileReader(mirrorFile))) {
+                            String mline;
+                            while ((mline = mr.readLine()) != null) {
+                                if (mirrorData.length() &gt; 0) mirrorData.append("\n");
+                                mirrorData.append(mline);
+                            }
+                        }
+                        if (verifyHash(mirrorFile, mirrorData.toString())) {
+                            SaveGameData result = parseSaveData(mirrorData.toString());
+                            return new LoadSlotResult(result, true, "Recovered from mirror");
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Mirror recovery failed: " + e.getMessage());
+                    }
+                }
+
+                // Final fallback: emergency save
+                File emergencyFile = new File(new File(basePath, SAVE_DIR), EMERGENCY_SAVE);
+                if (emergencyFile.exists()) {
+                    Log.d(TAG, "Attempting emergency save recovery");
+                    try {
+                        Game emergencyGame = Game.loadFromSave(emergencyFile);
+                        if (emergencyGame != null &amp;&amp; emergencyGame.getPlayer() != null) {
+                            SaveGameData emergencyData = new SaveGameData();
+                            emergencyData.player = emergencyGame.getPlayer();
+                            emergencyData.playerX = emergencyGame.getPlayer().getX();
+                            emergencyData.playerY = emergencyGame.getPlayer().getY();
+                            emergencyData.inventory = emergencyGame.getPlayer().getInventory();
+                            emergencyData.floorNumber = emergencyGame.getCurrentFloor();
+                            emergencyData.defeatedEnemyIds = emergencyGame.getDefeatedEnemyIds();
+                            emergencyData.totalEnemiesDefeated = 0;
+                            emergencyData.bossSpawned = false;
+                            return new LoadSlotResult(emergencyData, true, "Recovered from emergency save");
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Emergency save recovery failed: " + e.getMessage());
+                    }
+                }
+
                 return new LoadSlotResult(null, false, "Corrupted save, no backup found");
             }
 
@@ -6966,6 +7062,19 @@ public class SaveGameManager {
             File hashFile = new File(saveFile.getPath() + CHECKSUM_EXT);
             if (hashFile.exists() &amp;&amp; !hashFile.delete()) {
                 Log.w(TAG, "Failed to delete hash: " + hashFile.getName());
+            }
+            // Also delete mirror and backup files
+            File mirrorFile = new File(saveFile.getPath() + ".mirror");
+            if (mirrorFile.exists() &amp;&amp; !mirrorFile.delete()) {
+                Log.w(TAG, "Failed to delete mirror: " + mirrorFile.getName());
+            }
+            File[] backups = saveDir.listFiles((d, n) -&gt; n.startsWith(saveFile.getName() + ".bak."));
+            if (backups != null) {
+                for (File b : backups) {
+                    if (!b.delete()) Log.w(TAG, "Failed to delete backup: " + b.getName());
+                    File bh = new File(b.getPath() + CHECKSUM_EXT);
+                    if (bh.exists() &amp;&amp; !bh.delete()) Log.w(TAG, "Failed to delete backup hash: " + bh.getName());
+                }
             }
         }
         return deleted;
