@@ -26,7 +26,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">33 files | 7564 lines | 2026-08-16 17:30</div>
+<div class="stats">33 files | 7609 lines | 2026-08-16 18:26</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#knightlightapplication">KnightLightApplication</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
 <div id="files">
@@ -2897,7 +2897,7 @@ public class ExperienceSystem implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="game">
-<div class="file-header"><h2>Game.java</h2><span class="file-meta">473 lines | 18262 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>Game.java</h2><span class="file-meta">483 lines | 18759 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.Context;
@@ -3115,8 +3115,12 @@ public class Game implements Serializable {
 
         // Track used positions to avoid spawning enemies on same tile
         Set&lt;String&gt; usedPositions = new HashSet&lt;&gt;();
+        int attempts = 0;
+        int maxAttempts = floorTiles.size() * 3;
         
-        for (int i = 0; i &lt; enemyCount &amp;&amp; !floorTiles.isEmpty(); i++) {
+        for (int i = 0; i &lt; enemyCount &amp;&amp; attempts &lt; maxAttempts; attempts++) {
+            if (floorTiles.isEmpty()) break;
+            
             int idx = SecureRandomUtil.nextInt(floorTiles.size());
             int[] pos = floorTiles.remove(idx);
             
@@ -3128,21 +3132,27 @@ public class Game implements Serializable {
             }
             usedPositions.add(posKey);
             
+            // DOUBLE-CHECK walkability right before spawning (failsafe)
+            if (!dungeon.isWalkable(pos[0], pos[1])) {
+                Log.w(TAG, "Spawn validation failed at (" + pos[0] + "," + pos[1] + "), skipping");
+                i--; // Don't count this enemy
+                continue;
+            }
+            
             EnemyType type = EnemyType.getRandomRegularMonster(floor);
             Enemy enemy = new Enemy(pos[0], pos[1], dungeon, type, type.getEmoji());
             enemy.setLevel(1 + (floor / 10));
 
-            if (defeatedEnemyIds.contains(enemy.getId())) {
-                Log.d(TAG, "Enemy " + enemy.getName() + " was already defeated - skipping");
+            if (defeatedEnemyIds != null &amp;&amp; defeatedEnemyIds.contains(enemy.getId())) {
+                Log.d(TAG, "Enemy " + enemy.getName() + " was already defeated - marking as such");
                 enemy.setDefeated(true);
-                continue;
             }
 
             enemies.add(enemy);
             Log.d(TAG, "✓ Spawned enemy " + enemy.getName() + " at (" + pos[0] + "," + pos[1] + 
                   "), walkable=" + dungeon.isWalkable(pos[0], pos[1]));
         }
-        Log.d(TAG, "Successfully spawned " + enemies.size() + " enemies on floor " + floor);
+        Log.d(TAG, "Successfully spawned " + enemies.size() + "/" + enemyCount + " enemies on floor " + floor);
     }
 
     public void saveToSaveFile(File saveFile) throws IOException {
@@ -5383,7 +5393,7 @@ public class LootTable {
 }</code></pre>
 </div>
 <div class="file" id="mainactivity">
-<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">904 lines | 36966 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">939 lines | 38463 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -5570,15 +5580,51 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
     }
 
+    /**
+     * FIX #5: Enhanced player spawn with emergency fallback
+     * - Validates spawn position is walkable BEFORE setting
+     * - Scans for any walkable tile if findSpawnPosition() fails
+     * - Prevents player spawning inside walls
+     */
     private void ensurePlayerSpawned() {
         Player player = game.getPlayer();
         Dungeon gameDungeon = game.getDungeon();
-        if (player == null || gameDungeon == null) return;
+        if (player == null || gameDungeon == null) {
+            Log.e(TAG, "ensurePlayerSpawned: player or dungeon is null!");
+            return;
+        }
+        
         int[] spawnPos = gameDungeon.findSpawnPosition();
+        
+        // SAFETY NET: If spawn position returned is invalid, force correction
+        if (spawnPos == null || spawnPos.length &lt; 2 || !gameDungeon.isWalkable(spawnPos[0], spawnPos[1])) {
+            Log.w(TAG, "findSpawnPosition() returned invalid position, searching for fallback");
+            
+            // Scan for ANY walkable tile as last resort
+            for (int y = 0; y &lt; gameDungeon.getHeight(); y++) {
+                for (int x = 0; x &lt; gameDungeon.getWidth(); x++) {
+                    if (gameDungeon.isWalkable(x, y)) {
+                        spawnPos = new int[]{x, y};
+                        Log.d(TAG, "Emergency spawn at (" + x + "," + y + ")");
+                        break;
+                    }
+                }
+                if (spawnPos != null) break;
+            }
+        }
+        
         if (spawnPos != null &amp;&amp; spawnPos.length &gt;= 2) {
-            player.setX(spawnPos[0]);
-            player.setY(spawnPos[1]);
-            Log.d(TAG, "Player spawned at (" + spawnPos[0] + ", " + spawnPos[1] + ")");
+            // FINAL VALIDATION before setting position
+            if (gameDungeon.isWalkable(spawnPos[0], spawnPos[1])) {
+                player.setX(spawnPos[0]);
+                player.setY(spawnPos[1]);
+                Log.d(TAG, "Player spawned at (" + spawnPos[0] + ", " + spawnPos[1] + ")");
+            } else {
+                Log.e(TAG, "EMERGENCY: Cannot spawn player - no walkable tiles found!");
+                // Last resort: set to corner position (better than crashing)
+                player.setX(1);
+                player.setY(1);
+            }
         }
     }
 
@@ -6002,7 +6048,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                         gameView.invalidate();
                         gameView.showMessage("💀 YOU HAVE BEEN DEFEATED!");
                     }
-                    // FIXED: Removed listener reference - GameListener interface handles this
                     onGameOver(Game.GameState.LOST);
                 }
             }
