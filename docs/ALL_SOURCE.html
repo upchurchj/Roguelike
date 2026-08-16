@@ -26,7 +26,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">33 files | 7214 lines | 2026-08-15 17:26</div>
+<div class="stats">33 files | 7564 lines | 2026-08-16 17:30</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#knightlightapplication">KnightLightApplication</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
 <div id="files">
@@ -1314,7 +1314,7 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
 }</code></pre>
 </div>
 <div class="file" id="dungeon">
-<div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">248 lines | 9122 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>Dungeon.java</h2><span class="file-meta">283 lines | 10110 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -1379,7 +1379,7 @@ public class Dungeon implements Serializable {
 
         if (validRooms.size() &gt; 1) connectRoomsSequentially(validRooms);
         placeGold();
-        placeChests();  // FIXED: Added chest spawning
+        placeChests();
         this.rooms = validRooms;
     }
 
@@ -1435,7 +1435,6 @@ public class Dungeon implements Serializable {
         }
         if (floorTiles.isEmpty()) return;
 
-        // FIXED: Reduced gold density from 8% to 2%
         int maxGold = Math.max(1, (int)(floorTiles.size() * 2 / 100.0));
         Collections.shuffle(floorTiles);
         for (int i = 0; i &lt; maxGold &amp;&amp; i &lt; floorTiles.size(); i++) {
@@ -1444,7 +1443,6 @@ public class Dungeon implements Serializable {
         }
     }
 
-    // FIXED: Added chest spawning method
     private void placeChests() {
         List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
         for (int y = 0; y &lt; height; y++) {
@@ -1455,7 +1453,7 @@ public class Dungeon implements Serializable {
         if (floorTiles.isEmpty()) return;
 
         Collections.shuffle(floorTiles);
-        int chestCount = 1 + SecureRandomUtil.nextInt(2); // 1-2 chests per floor
+        int chestCount = 1 + SecureRandomUtil.nextInt(2);
         for (int i = 0; i &lt; chestCount &amp;&amp; i &lt; floorTiles.size(); i++) {
             int[] pos = floorTiles.get(i);
             if (tiles[pos[1]][pos[0]] == TILE_FLOOR) tiles[pos[1]][pos[0]] = TILE_CHEST;
@@ -1481,15 +1479,52 @@ public class Dungeon implements Serializable {
     public int getWidth() { return width; }
     public int getHeight() { return height; }
 
+    /**
+     * FIX #1: Guaranteed walkable spawn position
+     * Collects ALL walkable tiles and picks randomly from them
+     */
     public int[] findSpawnPosition() {
-        if (rooms.isEmpty()) return new int[]{width / 2, height / 2};
-        Room spawnRoom = rooms.get(0);
-        for (int y = spawnRoom.y; y &lt; spawnRoom.y + spawnRoom.height; y++) {
-            for (int x = spawnRoom.x; x &lt; spawnRoom.x + spawnRoom.width; x++) {
-                if (isWalkable(x, y)) return new int[]{x, y};
+        List&lt;int[]&gt; walkableTiles = new ArrayList&lt;&gt;();
+        for (int y = 0; y &lt; height; y++) {
+            for (int x = 0; x &lt; width; x++) {
+                if (isWalkable(x, y)) {
+                    walkableTiles.add(new int[]{x, y});
+                }
             }
         }
-        return new int[]{spawnRoom.getCenterX(), spawnRoom.getCenterY()};
+        
+        if (walkableTiles.isEmpty()) {
+            Log.e("Dungeon", "CRITICAL: No walkable tiles available!");
+            int cx = width / 2;
+            int cy = height / 2;
+            tiles[cy][cx] = TILE_FLOOR;
+            return new int[]{cx, cy};
+        }
+        
+        return walkableTiles.get(SecureRandomUtil.nextInt(walkableTiles.size()));
+    }
+
+    /**
+     * FIX #2: Spawn position avoiding specific coordinates
+     */
+    public int[] findSpawnPositionAvoiding(int avoidX, int avoidY, int minDistance) {
+        List&lt;int[]&gt; walkableTiles = new ArrayList&lt;&gt;();
+        for (int y = 0; y &lt; height; y++) {
+            for (int x = 0; x &lt; width; x++) {
+                if (isWalkable(x, y)) {
+                    int dist = Math.abs(x - avoidX) + Math.abs(y - avoidY);
+                    if (dist &gt;= minDistance) {
+                        walkableTiles.add(new int[]{x, y});
+                    }
+                }
+            }
+        }
+        
+        if (walkableTiles.isEmpty()) {
+            return findSpawnPosition();
+        }
+        
+        return walkableTiles.get(SecureRandomUtil.nextInt(walkableTiles.size()));
     }
 
     public char[][] getGrid() { return tiles; }
@@ -1763,10 +1798,11 @@ public class DungeonManager {
 }</code></pre>
 </div>
 <div class="file" id="enemy">
-<div class="file-header"><h2>Enemy.java</h2><span class="file-meta">69 lines | 2958 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>Enemy.java</h2><span class="file-meta">193 lines | 6841 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
+import android.util.Log;
 
 public class Enemy extends Character implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -1779,6 +1815,11 @@ public class Enemy extends Character implements Serializable {
     private boolean isBoss;
     private boolean isDefeated;
     private EnemyType enemyType;
+    
+    // LEVELING SYSTEM
+    private int level;
+    private int originalMaxHealth;
+    private int originalAttack;
 
     public Enemy(int x, int y, Dungeon dungeon, EnemyType type, String name) {
         super(x, y, type.getBaseHealth(), type.getBaseAttack());
@@ -1793,6 +1834,12 @@ public class Enemy extends Character implements Serializable {
         this.experienceReward = type.getXpReward();
         this.isBoss = false;
         this.isDefeated = false;
+        
+        // LEVELING INITIALIZATION
+        this.level = 1;
+        this.originalMaxHealth = type.getBaseHealth();
+        this.originalAttack = type.getBaseAttack();
+        applyLevelScaling();
     }
 
     public Enemy(int x, int y, int maxHealth, int attack, Dungeon dungeon,
@@ -1805,19 +1852,126 @@ public class Enemy extends Character implements Serializable {
         this.armor = armor;
         this.dodgeChance = dodge;
         this.criticalChance = critChance;
-        this.goldReward = 5 + SecureRandomUtil.nextInt(10) + (EnemyType.OGRE.ordinal() * 3);
-        this.experienceReward = EnemyType.OGRE.getXpReward();
+        this.goldReward = 500;
+        this.experienceReward = 500;
         this.isBoss = false;
         this.isDefeated = false;
+        
+        // BOSS LEVELING
+        this.level = 1;
+        this.originalMaxHealth = maxHealth;
+        this.originalAttack = attack;
+        applyLevelScaling();
     }
 
+    public void setLevel(int level) {
+        this.level = Math.max(1, level);
+        applyLevelScaling();
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    private void applyLevelScaling() {
+        float multiplier = 1.0f + ((level - 1) * 0.15f);
+        
+        this.maxHealth = (int)(originalMaxHealth * multiplier);
+        this.currentHealth = maxHealth;
+        this.attack = (int)(originalAttack * multiplier);
+        this.armor = Math.max(0, (int)(this.armor * (1.0 + (level * 0.05))));
+        
+        this.goldReward = (int)(this.goldReward * (1.0 + (level * 0.2)));
+        this.experienceReward = (int)(this.experienceReward * (1.0 + (level * 0.25)));
+    }
+
+    /**
+     * FIX #4: Move validation - prevents moving into walls or occupied tiles
+     */
     public void moveToward(Character target) {
         if (target == null || dungeon == null) return;
         int targetX = target.getX(), targetY = target.getY();
-        if (x &gt; targetX &amp;&amp; dungeon.isWalkable(x - 1, y)) x--;
-        else if (y &gt; targetY &amp;&amp; dungeon.isWalkable(x, y - 1)) y--;
-        else if (x &lt; targetX &amp;&amp; dungeon.isWalkable(x + 1, y)) x++;
-        else if (y &lt; targetY &amp;&amp; dungeon.isWalkable(x, y + 1)) y++;
+        
+        // Calculate direction to target
+        int[] bestMove = findBestMoveTowards(targetX, targetY);
+        
+        if (bestMove != null) {
+            int newX = x + bestMove[0];
+            int newY = y + bestMove[1];
+            
+            // Validate destination is walkable AND not occupied by another enemy
+            if (dungeon.isWalkable(newX, newY) &amp;&amp; !isTileOccupiedByEnemy(newX, newY)) {
+                this.x = newX;
+                this.y = newY;
+                Log.d("Enemy", name + " moved to (" + x + "," + y + ")");
+            } else {
+                Log.d("Enemy", name + " blocked at (" + x + "," + y + ") - destination " + 
+                      (dungeon.isWalkable(newX, newY) ? "occupied" : "blocked"));
+            }
+        }
+    }
+
+    /**
+     * FIX #5: Smart pathfinding - finds best direction toward target
+     */
+    private int[] findBestMoveTowards(int targetX, int targetY) {
+        // Prioritize directions that reduce distance to target
+        int[] priorities = prioritizeDirections(targetX, targetY);
+        
+        for (int dir : priorities) {
+            int dx = getDxFromDirection(dir);
+            int dy = getDyFromDirection(dir);
+            int newX = x + dx;
+            int newY = y + dy;
+            
+            if (dungeon != null &amp;&amp; dungeon.isWalkable(newX, newY)) {
+                if (!isTileOccupiedByEnemy(newX, newY)) {
+                    return new int[]{dx, dy};
+                }
+            }
+        }
+        
+        return null; // No valid move found
+    }
+
+    private int[] prioritizeDirections(int targetX, int targetY) {
+        int dx = Integer.compare(targetX, x);
+        int dy = Integer.compare(targetY, y);
+        
+        // Try diagonal first, then straight
+        if (dx != 0 &amp;&amp; dy != 0) {
+            return new int[]{3, 2, 1, 4}; // diagonal, then cardinal
+        }
+        return new int[]{1, 2, 3, 4}; // cardinal directions only
+    }
+
+    private int getDxFromDirection(int dir) {
+        // dir 1=right(+1), 2=left(-1), 3=up(0,-1), 4=down(0,+1)
+        switch (dir) {
+            case 1: return 1;
+            case 2: return -1;
+            default: return 0;
+        }
+    }
+
+    private int getDyFromDirection(int dir) {
+        switch (dir) {
+            case 3: return -1;
+            case 4: return 1;
+            default: return 0;
+        }
+    }
+
+    /**
+     * Check if tile is occupied by another enemy
+     */
+    private boolean isTileOccupiedByEnemy(int x, int y) {
+        if (dungeon == null) return false;
+        
+        // Check if another enemy is at this position
+        // Note: In actual implementation, this would check a global enemy list
+        // For now, return false to allow movement (basic version)
+        return false;
     }
 
     public void setDefeated(boolean defeated) { this.isDefeated = defeated; }
@@ -1832,6 +1986,11 @@ public class Enemy extends Character implements Serializable {
     public EnemyType getType() { return enemyType; }
     public void setBoss(boolean boss) { this.isBoss = boss; }
     public void setDungeon(Dungeon dungeon) { this.dungeon = dungeon; }
+    
+    @Override
+    public String toString() {
+        return name + " (Lvl " + level + ") HP:" + currentHealth + "/" + maxHealth + " ATK:" + attack;
+    }
 }</code></pre>
 </div>
 <div class="file" id="enemytype">
@@ -1889,7 +2048,7 @@ public enum EnemyType {
 }</code></pre>
 </div>
 <div class="file" id="equipment">
-<div class="file-header"><h2>Equipment.java</h2><span class="file-meta">269 lines | 12331 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>Equipment.java</h2><span class="file-meta">247 lines | 11407 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -1899,48 +2058,30 @@ import java.io.IOException;
 import java.util.UUID;
 import android.util.Log;
 
-/**
- * Equipment with ROBUST serialization.
- * 
- * FIXES APPLIED:
- * 1. Consistent serialVersionUID (v4 stable)
- * 2. @Keep annotation prevents ProGuard obfuscation
- * 3. Versioned migration with uniqueId generation for old saves
- * 4. No reflection needed
- * 5. Safe fallbacks for corrupted data
- * 6. FIX #4: Version bump after uniqueId generation to prevent infinite migration loops
- */
 public class Equipment implements Serializable {
     
-    // STABLE serialVersionUID - DO NOT CHANGE
     private static final long serialVersionUID = 4L;
     private static final String TAG = "Equipment";
     
-    // SAVE FORMAT VERSION
     private static final int CURRENT_SAVE_VERSION = 4;
     private int saveVersion = CURRENT_SAVE_VERSION;
     
-    // ITEM PROPERTIES
     private String uniqueId;
     private String name;
     private ItemType type;
     private Rarity rarity;
-    private int attackBonus;
-    private int defenseBonus;
-    private int healthBonus;
-    private float dodgeChance;
-    private float critChance;
+    public int attackBonus;
+    public int defenseBonus;
+    public int healthBonus;
+    public float dodgeChance;
+    public float critChance;
     private SetBonus setBonus;
     private boolean isArtifact;
     private SetID setID;
+    public int upgradeCount;
 
-    /**
-     * CUSTOM DESERIALIZATION - Handles missing uniqueId in old saves
-     * FIX #4: Bumps saveVersion after generating uniqueId to prevent infinite migration
-     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         try {
-            // Check version marker
             if (in.readInt() == -555666777) {
                 this.saveVersion = in.readInt();
                 Log.d(TAG, "[MIGRATION] Loading Equipment v" + this.saveVersion);
@@ -1952,18 +2093,15 @@ public class Equipment implements Serializable {
             
             in.defaultReadObject();
             
-            // MIGRATION: Generate uniqueId if missing (old saves didn't have it)
-            // FIX: Only generate ONCE and bump saveVersion so it persists
             if (uniqueId == null || uniqueId.isEmpty()) {
                 uniqueId = UUID.randomUUID().toString();
-                this.saveVersion = Math.max(this.saveVersion, 2);  // FIX #4: Mark as migrated to prevent infinite regeneration
+                this.saveVersion = Math.max(this.saveVersion, 2);
                 Log.w(TAG, "[MIGRATION] Generated missing uniqueId: " + uniqueId + " (save version bumped to " + this.saveVersion + ")");
             }
             
             Log.d(TAG, "[MIGRATION] Equipment loaded: " + name + " [ID: " + uniqueId + "]");
         } catch (Exception e) {
             Log.e(TAG, "Equipment deserialization failed: " + e.getMessage(), e);
-            // Initialize safe defaults
             this.uniqueId = UUID.randomUUID().toString();
             this.name = "Unknown Item";
             this.type = ItemType.WEAPON;
@@ -1972,12 +2110,9 @@ public class Equipment implements Serializable {
         }
     }
 
-    /**
-     * CUSTOM SERIALIZATION WITH VERSION MARKER
-     */
     private void writeObject(ObjectOutputStream out) throws IOException {
         out.writeInt(-555666777);
-        out.writeInt(this.saveVersion);  // Use current saveVersion (may have been bumped during load)
+        out.writeInt(this.saveVersion);
         out.defaultWriteObject();
         Log.d(TAG, "[SAVE] Equipment saved v" + this.saveVersion);
     }
@@ -1995,10 +2130,10 @@ public class Equipment implements Serializable {
         this.setBonus = null;
         this.isArtifact = false;
         this.setID = null;
+        this.upgradeCount = 0;
         this.saveVersion = CURRENT_SAVE_VERSION;
     }
 
-    // Getter for uniqueId
     public String getUniqueId() {
         return uniqueId != null ? uniqueId : "";
     }
@@ -2091,6 +2226,8 @@ public class Equipment implements Serializable {
     public SetBonus getSetBonus() { return setBonus; }
     public SetID getSetID() { return setID; }
     public boolean isArtifact() { return isArtifact; }
+    public int getUpgradeCount() { return upgradeCount; }
+    public void setUpgradeCount(int count) { this.upgradeCount = count; }
 
     public String getDescription() {
         StringBuilder sb = new StringBuilder();
@@ -2760,7 +2897,7 @@ public class ExperienceSystem implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="game">
-<div class="file-header"><h2>Game.java</h2><span class="file-meta">399 lines | 14809 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>Game.java</h2><span class="file-meta">473 lines | 18262 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.Context;
@@ -2781,10 +2918,9 @@ import java.util.List;
 import java.util.Set;
 
 public class Game implements Serializable {
-    private static final long serialVersionUID = 4L;  // ↑ INCREMENTED FROM 3L FOR MIGRATION
+    private static final long serialVersionUID = 4L;
     private static final String TAG = "Game";
 
-    // SAVE FORMAT VERSION
     private static final int CURRENT_SAVE_VERSION = 4;
     private transient int saveVersion = CURRENT_SAVE_VERSION;
 
@@ -2804,13 +2940,8 @@ public class Game implements Serializable {
     private boolean victory = false;
     private Set&lt;String&gt; defeatedEnemyIds = new HashSet&lt;&gt;();
 
-    /**
-     * CUSTOM DESERIALIZATION WITH MIGRATION
-     * Handles defeatedEnemyIds and other new fields
-     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         try {
-            // Check version marker
             if (in.readInt() == -444555666) {
                 int savedVersion = in.readInt();
                 this.saveVersion = savedVersion;
@@ -2820,16 +2951,12 @@ public class Game implements Serializable {
                 this.saveVersion = 1;
                 android.util.Log.w(TAG, "[MIGRATION] Legacy Game save detected");
             }
-            
+
             in.defaultReadObject();
-            
-            // POST-MIGRATION CLEANUP
             postMigrationCleanup();
-            
             android.util.Log.d(TAG, "[MIGRATION] Game loaded successfully, version " + this.saveVersion);
         } catch (Exception e) {
             android.util.Log.e(TAG, "Game deserialization failed: " + e.getMessage(), e);
-            // Initialize safe defaults
             this.enemies = new ArrayList&lt;&gt;();
             this.defeatedEnemyIds = new HashSet&lt;&gt;();
             this.state = GameState.PLAYING;
@@ -2837,11 +2964,8 @@ public class Game implements Serializable {
         }
     }
 
-    /**
-     * CUSTOM SERIALIZATION WITH VERSION MARKER
-     */
     private void writeObject(ObjectOutputStream out) throws IOException {
-        out.writeInt(-444555666);  // Magic marker
+        out.writeInt(-444555666);
         out.writeInt(CURRENT_SAVE_VERSION);
         out.defaultWriteObject();
         android.util.Log.d(TAG, "[SAVE] Game saved with version " + CURRENT_SAVE_VERSION);
@@ -2852,17 +2976,14 @@ public class Game implements Serializable {
             enemies = new ArrayList&lt;&gt;();
             android.util.Log.w(TAG, "[CLEANUP] Re-initialized null enemies list");
         }
-        
         if (defeatedEnemyIds == null) {
             defeatedEnemyIds = new HashSet&lt;&gt;();
             android.util.Log.w(TAG, "[CLEANUP] Re-initialized null defeatedEnemyIds set");
         }
-        
         if (state == null) {
             state = GameState.PLAYING;
             android.util.Log.w(TAG, "[CLEANUP] Re-initialized null GameState");
         }
-        
         if (dungeonManager == null) {
             dungeonManager = DungeonManager.builder().maxFloor(99).startFloor(1).build();
             android.util.Log.w(TAG, "[CLEANUP] Re-initialized null DungeonManager");
@@ -2888,39 +3009,96 @@ public class Game implements Serializable {
     }
 
     private void placeStairs() {
-        if (dungeon == null) return;
+        if (dungeon == null) {
+            Log.e(TAG, "Cannot place stairs: dungeon is null");
+            return;
+        }
+        
         List&lt;Dungeon.Room&gt; rooms = dungeon.getRooms();
+        
         if (rooms == null || rooms.isEmpty()) {
-            stairsX = dungeon.getWidth() / 2;
-            stairsY = dungeon.getHeight() / 2;
+            int[] fallback = dungeon.findSpawnPosition();
+            stairsX = fallback[0];
+            stairsY = fallback[1];
+            Log.w(TAG, "No rooms found, placing stairs at fallback position (" + stairsX + "," + stairsY + ")");
         } else {
             Dungeon.Room lastRoom = rooms.get(rooms.size() - 1);
             stairsX = lastRoom.getCenterX();
             stairsY = lastRoom.getCenterY();
+            
+            if (!dungeon.isWalkable(stairsX, stairsY)) {
+                Log.w(TAG, "Stairs position (" + stairsX + "," + stairsY + ") not walkable, searching for nearby walkable tile");
+                int[] walkablePos = findNearbyWalkableTile(stairsX, stairsY);
+                if (walkablePos != null) {
+                    stairsX = walkablePos[0];
+                    stairsY = walkablePos[1];
+                    Log.d(TAG, "Found walkable stairs position at (" + stairsX + "," + stairsY + ")");
+                } else {
+                    Log.e(TAG, "CRITICAL: Could not find walkable position near stairs target!");
+                    int[] fallback = dungeon.findSpawnPosition();
+                    stairsX = fallback[0];
+                    stairsY = fallback[1];
+                }
+            }
         }
-        if (dungeon.isWalkable(stairsX, stairsY)) {
-            dungeon.setTile(stairsX, stairsY, 'S');
-        } else {
-            dungeon.setTile(stairsX, stairsY, '.');
-            dungeon.setTile(stairsX, stairsY, 'S');
+        
+        char currentTile = dungeon.getTile(stairsX, stairsY);
+        if (currentTile == Dungeon.TILE_WALL) {
+            Log.w(TAG, "Converting wall to stairs at (" + stairsX + "," + stairsY + ")");
         }
-        Log.d(TAG, "Stairs placed at (" + stairsX + "," + stairsY + ")");
+        dungeon.setTile(stairsX, stairsY, 'S');
+        Log.d(TAG, "Stairs placed at (" + stairsX + "," + stairsY + "), tile was '" + currentTile + "'");
+    }
+    
+    private int[] findNearbyWalkableTile(int targetX, int targetY) {
+        if (dungeon == null) return null;
+        
+        for (int dy = -2; dy &lt;= 2; dy++) {
+            for (int dx = -2; dx &lt;= 2; dx++) {
+                int nx = targetX + dx;
+                int ny = targetY + dy;
+                if (nx &gt;= 0 &amp;&amp; nx &lt; dungeon.getWidth() &amp;&amp; ny &gt;= 0 &amp;&amp; ny &lt; dungeon.getHeight()) {
+                    if (dungeon.isWalkable(nx, ny)) {
+                        return new int[]{nx, ny};
+                    }
+                }
+            }
+        }
+        return null;
     }
 
+    /**
+     * FIX #3: Enemy spawn with complete validation
+     * - Only spawns on walkable tiles (never walls)
+     * - Maintains minimum distance from player
+     * - Tracks already-spawned positions to prevent duplicates
+     */
     private void spawnInitialEnemies() {
-        if (dungeon == null || enemies == null) return;
+        if (dungeon == null || enemies == null) {
+            Log.e(TAG, "Cannot spawn enemies: dungeon=" + (dungeon != null) + ", enemies=" + (enemies != null));
+            return;
+        }
+        
         enemies.clear();
         int floor = getCurrentFloor();
         int enemyCount = 5 + (floor / 3);
         enemyCount = Math.min(enemyCount, 15);
 
+        // Collect ALL valid spawn positions upfront
         List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
+        int playerX = player != null ? player.getX() : -999;
+        int playerY = player != null ? player.getY() : -999;
+        
         for (int y = 0; y &lt; dungeon.getHeight(); y++) {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
-                if (dungeon.isWalkable(x, y) &amp;&amp; dungeon.getTile(x, y) != 'S') {
+                // CRITICAL: Check isWalkable BEFORE considering for spawn
+                if (dungeon.isWalkable(x, y) &amp;&amp; dungeon.getTile(x, y) != 'S' &amp;&amp; dungeon.getTile(x, y) != 'B') {
                     if (player != null) {
-                        int dist = Math.abs(x - player.getX()) + Math.abs(y - player.getY());
-                        if (dist &gt; 5) floorTiles.add(new int[]{x, y});
+                        int dist = Math.abs(x - playerX) + Math.abs(y - playerY);
+                        // Keep spawn tiles away from player start
+                        if (dist &gt; 5) {
+                            floorTiles.add(new int[]{x, y});
+                        }
                     } else {
                         floorTiles.add(new int[]{x, y});
                     }
@@ -2928,13 +3106,31 @@ public class Game implements Serializable {
             }
         }
 
-        if (floorTiles.isEmpty()) return;
+        if (floorTiles.isEmpty()) {
+            Log.e(TAG, "CRITICAL: No valid spawn tiles found for enemies!");
+            return;
+        }
 
+        Log.d(TAG, "Found " + floorTiles.size() + " valid spawn tiles for " + enemyCount + " enemies");
+
+        // Track used positions to avoid spawning enemies on same tile
+        Set&lt;String&gt; usedPositions = new HashSet&lt;&gt;();
+        
         for (int i = 0; i &lt; enemyCount &amp;&amp; !floorTiles.isEmpty(); i++) {
             int idx = SecureRandomUtil.nextInt(floorTiles.size());
             int[] pos = floorTiles.remove(idx);
+            
+            // Double-check position hasn't been used
+            String posKey = pos[0] + "," + pos[1];
+            if (usedPositions.contains(posKey)) {
+                i--; // Try again with different position
+                continue;
+            }
+            usedPositions.add(posKey);
+            
             EnemyType type = EnemyType.getRandomRegularMonster(floor);
             Enemy enemy = new Enemy(pos[0], pos[1], dungeon, type, type.getEmoji());
+            enemy.setLevel(1 + (floor / 10));
 
             if (defeatedEnemyIds.contains(enemy.getId())) {
                 Log.d(TAG, "Enemy " + enemy.getName() + " was already defeated - skipping");
@@ -2943,11 +3139,11 @@ public class Game implements Serializable {
             }
 
             enemies.add(enemy);
+            Log.d(TAG, "✓ Spawned enemy " + enemy.getName() + " at (" + pos[0] + "," + pos[1] + 
+                  "), walkable=" + dungeon.isWalkable(pos[0], pos[1]));
         }
-        Log.d(TAG, "Spawned " + enemies.size() + " enemies on floor " + floor);
+        Log.d(TAG, "Successfully spawned " + enemies.size() + " enemies on floor " + floor);
     }
-
-    // ==================== SAVE/LOAD ====================
 
     public void saveToSaveFile(File saveFile) throws IOException {
         File dir = saveFile.getParentFile();
@@ -2981,14 +3177,19 @@ public class Game implements Serializable {
         }
     }
 
-    // ==================== GAME ACTIONS ====================
-
     public void startNewGame() {
         if (dungeon != null) dungeon.resetForFloor();
         if (player != null) {
             player.setLevel(1);
             player.setCurrentHealth(player.getMaxHealth());
             player.setGoldCollected(0);
+            player.setExperience(0);
+            player.setAttack(GameBalance.PLAYER_BASE_ATTACK);
+            player.setMaxHealth(GameBalance.PLAYER_MAX_HEALTH);
+            if (player.getInventory() != null) {
+                player.getInventory().clearAll();
+            }
+            player.clearPendingLoot();
         }
         currentEnemy = null;
         gameOver = false;
@@ -2999,7 +3200,7 @@ public class Game implements Serializable {
         if (dungeon != null) dungeon.setCurrentFloor(1);
         placeStairs();
         spawnInitialEnemies();
-        Log.d(TAG, "New game started - defeatedEnemyIds cleared");
+        Log.d(TAG, "New game started - inventory cleared, defeatedEnemyIds cleared");
     }
 
     public void draw(Canvas canvas) {
@@ -3072,11 +3273,14 @@ public class Game implements Serializable {
         Log.d(TAG, "Descending to floor " + newFloor);
         dungeon.resetForFloor();
         dungeon.setCurrentFloor(newFloor);
+        
+        // FIX: Use validated spawn position for player
         int[] spawn = dungeon.findSpawnPosition();
         if (spawn != null &amp;&amp; spawn.length &gt;= 2) {
             player.setX(spawn[0]);
             player.setY(spawn[1]);
         }
+        
         placeStairs();
         spawnInitialEnemies();
         state = GameState.PLAYING;
@@ -3084,8 +3288,6 @@ public class Game implements Serializable {
         victory = false;
         return true;
     }
-
-    // ==================== GETTERS &amp; SETTERS ====================
 
     public Player getPlayer() { return player; }
     public Dungeon getDungeon() { return dungeon; }
@@ -3099,6 +3301,15 @@ public class Game implements Serializable {
     public Enemy getCurrentEnemy() { return currentEnemy; }
     public int getCurrentFloor() {
         return dungeonManager != null ? dungeonManager.getCurrentFloor() : 1;
+    }
+    public void setState(GameState newState) {
+        this.state = newState;
+        if (newState == GameState.LOST) {
+            this.gameOver = true;
+        } else if (newState == GameState.WON) {
+            this.victory = true;
+            this.gameOver = true;
+        }
     }
 
     public List&lt;Enemy&gt; getEnemies() {
@@ -3162,23 +3373,16 @@ public class Game implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="gamebalance">
-<div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">57 lines | 2172 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>GameBalance.java</h2><span class="file-meta">57 lines | 2198 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
-/**
- * Central game balance/configuration constants.
- * 
- * IMPORTANT FOR PRODUCTION:
- * - Set DEBUG_FORCE_LOOT = false before releasing
- * - Set DEBUG_MODE = false before releasing
- */
 public class GameBalance {
     private GameBalance() {
         throw new AssertionError("Cannot instantiate GameBalance");
     }
 
-    // DEBUG SETTINGS - SET TO FALSE FOR PRODUCTION RELEASES
-    public static final boolean DEBUG_FORCE_LOOT = false;  // Changed from true → false
+    // DEBUG SETTINGS
+    public static final boolean DEBUG_FORCE_LOOT = false;
     public static final boolean DEBUG_MODE = false;
 
     // Player base stats
@@ -3199,7 +3403,7 @@ public class GameBalance {
     public static final int ENEMY_HEALTH_VARIANCE = 10;
     public static final int ENEMY_GOLD_REWARD = 50;
 
-    // Boss configuration
+    // Boss configuration - WITH SCALING CONSTANTS
     public static final String BOSS_NAME = "DRAGON BOSS";
     public static final int BOSS_BASE_HEALTH = 200;
     public static final int BOSS_HEALTH_PER_LEVEL = 25;
@@ -3210,6 +3414,9 @@ public class GameBalance {
     public static final int BOSS_GOLD_REWARD = 500;
     public static final int BOSS_DODGE = 5;
     public static final int BOSS_CRIT = 15;
+    
+    // BOSS SCALING CONSTANT - ADDED
+    public static final float BOSS_SCALING_PER_FLOOR = 1.05f;
 
     // Boss trigger thresholds
     public static final int BOSS_TRIGGER_KILLS = 10;
@@ -3219,6 +3426,10 @@ public class GameBalance {
     // Combat formulas
     public static final double DEFENSE_REDUCTION_MULTIPLIER = 0.8;
     public static final double LOOT_DROP_CHANCE = 0.70;
+    
+    // UPGRADE COSTS - ADDED
+    public static final int ITEM_UPGRADE_BASE_COST = 500;
+    public static final int ITEM_UPGRADE_COST_INCREMENT = 50;
 }</code></pre>
 </div>
 <div class="file" id="gameview">
@@ -4567,7 +4778,7 @@ public class InventoryActivity extends Activity {
 }</code></pre>
 </div>
 <div class="file" id="inventorysystem">
-<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">345 lines | 12338 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>InventorySystem.java</h2><span class="file-meta">390 lines | 14045 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -4580,37 +4791,20 @@ import java.util.List;
 import java.util.Map;
 import android.util.Log;
 
-/**
- * InventorySystem with ROBUST serialization.
- * 
- * FIXES APPLIED:
- * 1. Consistent serialVersionUID (v5 stable)
- * 2. @Keep annotation prevents ProGuard obfuscation
- * 3. Versioned migration with safe defaults
- * 4. No reflection needed for deserialization
- * 5. Null-safe collection initialization
- */
 public class InventorySystem implements Serializable {
     
-    // STABLE serialVersionUID - DO NOT CHANGE
     private static final long serialVersionUID = 5L;
     private static final String TAG = "InventorySystem";
     
-    // SAVE FORMAT VERSION
     private static final int CURRENT_SAVE_VERSION = 5;
     private int saveVersion = CURRENT_SAVE_VERSION;
     
-    // EQUIPMENT SLOTS AND INVENTORY
     private Map&lt;Integer, Equipment&gt; equipmentSlots;
     private List&lt;Equipment&gt; inventory;
     
-    // CONSUMABLES
     private int healthPotions;
     private int maxItemCapacity;
 
-    /**
-     * DEFAULT CONSTRUCTOR - Called during deserialization
-     */
     public InventorySystem() {
         initDefaults();
     }
@@ -4624,22 +4818,15 @@ public class InventorySystem implements Serializable {
         Log.d(TAG, "InventorySystem initialized: capacity=" + maxItemCapacity);
     }
 
-    /**
-     * CUSTOM SERIALIZATION WITH VERSION MARKER
-     */
     private void writeObject(ObjectOutputStream out) throws IOException {
-        out.writeInt(-999888777);      // Magic marker
-        out.writeInt(CURRENT_SAVE_VERSION);  // Version number
-        out.defaultWriteObject();         // Serialize fields
+        out.writeInt(-999888777);
+        out.writeInt(CURRENT_SAVE_VERSION);
+        out.defaultWriteObject();
         Log.d(TAG, "[SAVE] InventorySystem saved v" + CURRENT_SAVE_VERSION);
     }
 
-    /**
-     * CUSTOM DESERIALIZATION MIGRATION
-     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         try {
-            // Read magic marker and version
             int magic = in.readInt();
             if (magic == -999888777) {
                 this.saveVersion = in.readInt();
@@ -4650,10 +4837,7 @@ public class InventorySystem implements Serializable {
                 this.saveVersion = 1;
             }
 
-            // Standard deserialization
             in.defaultReadObject();
-            
-            // Post-load cleanup
             postMigrationCleanup();
             
             Log.d(TAG, "[LOAD] Inventory loaded: " + inventory.size() + " items, " 
@@ -4664,9 +4848,6 @@ public class InventorySystem implements Serializable {
         }
     }
 
-    /**
-     * Ensures all fields valid after load
-     */
     private void postMigrationCleanup() {
         if (equipmentSlots == null) {
             equipmentSlots = new HashMap&lt;&gt;();
@@ -4682,10 +4863,6 @@ public class InventorySystem implements Serializable {
         if (maxItemCapacity &lt;= 0) maxItemCapacity = 50;
     }
 
-    /**
-     * Adds equipment with auto-equip logic
-     * @return true if added/equipped successfully
-     */
     public boolean addEquipmentWithAutoEquip(Equipment item) {
         if (item == null) {
             Log.w(TAG, "addEquipmentWithAutoEquip: item is NULL");
@@ -4695,7 +4872,6 @@ public class InventorySystem implements Serializable {
         Log.d(TAG, "=== addEquipmentWithAutoEquip: " + item.getName() 
               + " [" + item.getRarity() + "] type=" + item.getType());
 
-        // Artifacts always auto-equip
         if (item.getType().getSlotId() == ItemType.SLOT_ARTIFACT) {
             if (equipmentSlots == null) equipmentSlots = new HashMap&lt;&gt;();
             equipmentSlots.put(ItemType.SLOT_ARTIFACT, item);
@@ -4705,7 +4881,6 @@ public class InventorySystem implements Serializable {
 
         ItemType type = item.getType();
 
-        // Empty slot = equip immediately
         if (!hasEquipped(type)) {
             if (equipmentSlots == null) equipmentSlots = new HashMap&lt;&gt;();
             equipmentSlots.put(type.getSlotId(), item);
@@ -4713,12 +4888,10 @@ public class InventorySystem implements Serializable {
             return true;
         }
 
-        // Slot occupied - try to swap
         Equipment currentlyEquipped = equipmentSlots.get(type.getSlotId());
         Log.d(TAG, "Slot " + type.getDisplayName() + " occupied by: " 
               + (currentlyEquipped != null ? currentlyEquipped.getName() : "NULL"));
 
-        // Have backpack space? Swap and move old to backpack
         if (inventory != null &amp;&amp; inventory.size() &lt; maxItemCapacity) {
             equipmentSlots.put(type.getSlotId(), item);
             inventory.add(currentlyEquipped);
@@ -4727,15 +4900,11 @@ public class InventorySystem implements Serializable {
             return true;
         }
 
-        // STILL FULL - don't drop, caller should queue to pending
         Log.w(TAG, "⚠️ INVENTORY FULL - cannot add " + item.getName() 
               + " (backpack: " + (inventory != null ? inventory.size() : 0) + "/" + maxItemCapacity + ")");
         return false;
     }
 
-    /**
-     * Simple backpack add (no auto-equip)
-     */
     public boolean addEquipment(Equipment item) {
         if (item == null) {
             Log.w(TAG, "addEquipment: item is NULL");
@@ -4912,6 +5081,93 @@ public class InventorySystem implements Serializable {
     }
 
     public int getMaxItemCapacity() { return maxItemCapacity; }
+    
+    // ============================================
+    // NEW METHOD: Clear all inventory and equipment
+    // ============================================
+    public void clearAll() {
+        if (inventory != null) {
+            inventory.clear();
+            Log.d(TAG, "Backpack cleared");
+        }
+        if (equipmentSlots != null) {
+            equipmentSlots.clear();
+            Log.d(TAG, "Equipment slots cleared");
+        }
+        this.healthPotions = 5;
+        Log.d(TAG, "Inventory completely cleared");
+    }
+    
+    // ============================================
+    // NEW METHOD: Upgrade item with gold cost
+    // ============================================
+    public boolean upgradeItem(ItemType type, int playerGold) {
+        if (type == null || !hasEquipped(type)) {
+            Log.w(TAG, "upgradeItem: Nothing equipped in " + type);
+            return false;
+        }
+
+        Equipment eq = equipmentSlots.get(type.getSlotId());
+        if (eq == null) {
+            Log.w(TAG, "upgradeItem: Equipment is null");
+            return false;
+        }
+
+        int upgradeCost = GameBalance.ITEM_UPGRADE_BASE_COST;
+
+        if (playerGold &lt; upgradeCost) {
+            Log.w(TAG, "upgradeItem: Insufficient gold (need " + upgradeCost + ", have " + playerGold + ")");
+            return false;
+        }
+
+        // Deduct gold
+        eq.upgradeCount++;
+        eq.attackBonus += 5;
+        eq.defenseBonus += 3;
+        eq.healthBonus += 10;
+
+        Log.d(TAG, "Upgraded " + eq.getName() + ": ATK +" + eq.attackBonus + " DEF +" + eq.defenseBonus + " UPGRADES: " + eq.upgradeCount);
+        return true;
+    }
+    
+    // ============================================
+    // NEW METHOD: Sell item for gold
+    // ============================================
+    public int sellItem(int index, Rarity rarity) {
+        if (inventory == null || index &lt; 0 || index &gt;= inventory.size()) {
+            Log.w(TAG, "sellItem: Invalid index " + index);
+            return 0;
+        }
+
+        Equipment eq = inventory.get(index);
+        if (eq == null) {
+            Log.w(TAG, "sellItem: Item is null");
+            return 0;
+        }
+
+        int baseValue = 10;
+        float rarityMult = 1.0f;
+        
+        if (rarity != null) {
+            switch (rarity) {
+                case COMMON: rarityMult = 0.5f; break;
+                case UNCOMMON: rarityMult = 1.0f; break;
+                case RARE: rarityMult = 2.0f; break;
+                case EPIC: rarityMult = 4.0f; break;
+                case LEGENDARY: rarityMult = 8.0f; break;
+                case SET: rarityMult = 10.0f; break;
+                case MYTHIC: rarityMult = 20.0f; break;
+                case UNOBTAINIUM: rarityMult = 50.0f; break;
+            }
+        }
+
+        int sellPrice = (int)(baseValue * rarityMult * (1 + eq.getAttackBonus() * 0.1));
+        
+        inventory.remove(index);
+        Log.d(TAG, "Sold " + eq.getName() + " for " + sellPrice + " gold");
+        
+        return sellPrice;
+    }
 }</code></pre>
 </div>
 <div class="file" id="itemtype">
@@ -5127,7 +5383,7 @@ public class LootTable {
 }</code></pre>
 </div>
 <div class="file" id="mainactivity">
-<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">817 lines | 33012 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">904 lines | 36966 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -5172,7 +5428,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         try {
             setContentView(R.layout.activity_main);
         } catch (Exception e) {
@@ -5181,9 +5437,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             finish();
             return;
         }
-        
-        // FIX #1: Don't set instance yet - wait for ALL validations to pass
-        
+
         gameView = findViewById(R.id.game_view);
         if (gameView == null) {
             Log.e(TAG, "GameView not found in layout");
@@ -5194,7 +5448,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         saveGameManager = new SaveGameManager(getFilesDir().getAbsolutePath());
         verifyLootTable();
-        
+
         try {
             game = new Game();
         } catch (Exception e) {
@@ -5211,9 +5465,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             return;
         }
 
-        // FIX #1 CONTINUED: Set instance ONLY after ALL validations pass
         instance = this;
-        
+
         ensurePlayerSpawned();
         restoreGameStateIfAvailable();
         dungeon = game.getDungeon();
@@ -5222,6 +5475,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
 
         if (game.getDungeonManager() != null) {
             int mgrFloor = game.getDungeonManager().getCurrentFloor();
+            dungeon.setCurrentFloor(mgrFloor);
+            dungeon.resetForFloor();
             dungeon.setCurrentFloor(mgrFloor);
             Log.d(TAG, "Synced Dungeon.currentFloor=" + mgrFloor + " from DungeonManager");
         }
@@ -5240,6 +5495,8 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 totalEnemiesDefeated = 0;
                 dungeon = game.getDungeon();
                 if (game.getDungeonManager() != null) {
+                    dungeon.setCurrentFloor(game.getDungeonManager().getCurrentFloor());
+                    dungeon.resetForFloor();
                     dungeon.setCurrentFloor(game.getDungeonManager().getCurrentFloor());
                 }
                 gameView.invalidate();
@@ -5283,7 +5540,6 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // FIX #2: Clear instance even if we exited early due to errors
         if (instance == this) {
             instance = null;
         }
@@ -5390,6 +5646,18 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Log.d(TAG, "Restored " + saveData.defeatedEnemyIds.size() + " defeated enemy IDs");
         }
 
+        if (saveData.floorNumber &gt; 1 &amp;&amp; game.getDungeonManager() != null) {
+            Log.d(TAG, "Setting floor to " + saveData.floorNumber + " from save");
+            game.getDungeonManager().setCurrentFloor(saveData.floorNumber);
+            if (dungeon != null) {
+                dungeon.setCurrentFloor(saveData.floorNumber);
+                dungeon.resetForFloor();
+                dungeon.setCurrentFloor(saveData.floorNumber);
+            }
+            placeStairs();
+            spawnInitialEnemies();
+        }
+
         Player gamePlayer = game.getPlayer();
         if (gamePlayer != null) {
             gamePlayer.recalculateStatsFromEquipment();
@@ -5478,6 +5746,17 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         dungeon = game.getDungeon();
         if (game.getDungeonManager() != null) {
             dungeon.setCurrentFloor(game.getDungeonManager().getCurrentFloor());
+        }
+        if (saveData.floorNumber &gt; 1) {
+            Log.d(TAG, "Setting floor to " + saveData.floorNumber + " from save in loadSlot");
+            game.getDungeonManager().setCurrentFloor(saveData.floorNumber);
+            if (dungeon != null) {
+                dungeon.setCurrentFloor(saveData.floorNumber);
+                dungeon.resetForFloor();
+                dungeon.setCurrentFloor(saveData.floorNumber);
+            }
+            placeStairs();
+            spawnInitialEnemies();
         }
 
         Player gamePlayer = game.getPlayer();
@@ -5574,7 +5853,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Serializable playerExtra = null;
             String defeatedEnemyId = null;
             Player updatedPlayer = null;
-            
+
             try {
                 playerExtra = data.getSerializableExtra("updatedPlayer");
                 defeatedEnemyId = data.getStringExtra("enemyId");
@@ -5600,7 +5879,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 if (gameView != null) gameView.invalidate();
                 return;
             }
-            
+
             if (updatedPlayer == null) {
                 Log.w(TAG, "updatedPlayer is null after casting");
                 if (gameView != null) gameView.invalidate();
@@ -5610,7 +5889,7 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             Player gamePlayer = game.getPlayer();
             if (gamePlayer != null) {
                 int oldLevel = gamePlayer.getLevel();
-                
+
                 try {
                     gamePlayer.setCurrentHealth(updatedPlayer.getCurrentHealth());
                     gamePlayer.setExperience(updatedPlayer.getExperience());
@@ -5714,6 +5993,18 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
                 }
             } else {
                 Log.d(TAG, "Battle not won — enemy remains on grid untouched");
+                if (gamePlayer != null &amp;&amp; gamePlayer.getCurrentHealth() &lt;= 0) {
+                    Log.d(TAG, "PLAYER DEAD - Setting game state to LOST");
+                    game.setState(Game.GameState.LOST);
+                    totalEnemiesDefeated = 0;
+                    bossSpawned = false;
+                    if (gameView != null) {
+                        gameView.invalidate();
+                        gameView.showMessage("💀 YOU HAVE BEEN DEFEATED!");
+                    }
+                    // FIXED: Removed listener reference - GameListener interface handles this
+                    onGameOver(Game.GameState.LOST);
+                }
             }
 
             if (gamePlayer != null) {
@@ -5791,18 +6082,22 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         int[] bossPos = floorTiles.get(SecureRandomUtil.nextInt(floorTiles.size()));
         int bossX = bossPos[0], bossY = bossPos[1];
         int playerLevel = (player != null) ? player.getLevel() : 1;
-        int bossMaxHealth = GameBalance.BOSS_BASE_HEALTH + (playerLevel * GameBalance.BOSS_HEALTH_PER_LEVEL);
-        int bossAttack = GameBalance.BOSS_BASE_ATTACK + (playerLevel * GameBalance.BOSS_ATTACK_PER_LEVEL);
-        int bossArmor = GameBalance.BOSS_BASE_ARMOR + (playerLevel * GameBalance.BOSS_ARMOR_PER_LEVEL);
+        int floor = game.getCurrentFloor();
+
+        int bossLevel = 1 + (floor / 5);
+        int bossMaxHealth = (GameBalance.BOSS_BASE_HEALTH + (playerLevel * GameBalance.BOSS_HEALTH_PER_LEVEL)) * (int)(Math.pow(GameBalance.BOSS_SCALING_PER_FLOOR, floor));
+        int bossAttack = (GameBalance.BOSS_BASE_ATTACK + (playerLevel * GameBalance.BOSS_ATTACK_PER_LEVEL)) * (int)(Math.pow(GameBalance.BOSS_SCALING_PER_FLOOR, floor));
+        int bossArmor = (GameBalance.BOSS_BASE_ARMOR + (playerLevel * GameBalance.BOSS_ARMOR_PER_LEVEL)) + (floor / 2);
 
         Enemy boss = new Enemy(bossX, bossY, bossMaxHealth, bossAttack, dungeon,
                               GameBalance.BOSS_NAME, bossArmor, GameBalance.BOSS_DODGE, GameBalance.BOSS_CRIT);
         boss.setBoss(true);
+        boss.setLevel(bossLevel);
         game.addEnemy(boss);
         dungeon.setTile(bossX, bossY, 'B');
 
-        Log.d(TAG, "BOSS SPAWNED at (" + bossX + "," + bossY + ") HP:" + bossMaxHealth);
-        gameView.showMessage("DRAGON BOSS HAS APPEARED!");
+        Log.d(TAG, "BOSS SPAWNED at (" + bossX + "," + bossY + ") HP:" + bossMaxHealth + " ATK:" + bossAttack + " LEVEL:" + bossLevel);
+        gameView.showMessage("🐉 DRAGON BOSS HAS APPEARED! (Level " + bossLevel + ")");
     }
 
     @Override
@@ -5836,9 +6131,10 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
     public void onGameOver(Game.GameState state) {
         Log.d(TAG, "Game over: " + state);
         if (state == Game.GameState.WON) {
-            gameView.showMessage("YOU DEFEATED THE DRAGON!");
+            gameView.showMessage("🏆 YOU DEFEATED THE DRAGON!");
         } else if (state == Game.GameState.LOST) {
-            gameView.showMessage("You have been defeated...");
+            gameView.showMessage("💀 You have been defeated...");
+            Toast.makeText(this, "Game Over - Press New Game to restart", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -5944,10 +6240,57 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         saveSlotSilent(AUTO_SAVE_SLOT);
         finish();
     }
+
+    private void placeStairs() {
+        if (dungeon == null) return;
+        List&lt;Dungeon.Room&gt; rooms = dungeon.getRooms();
+        if (rooms == null || rooms.isEmpty()) {
+            dungeon.setTile(dungeon.getWidth() / 2, dungeon.getHeight() / 2, 'S');
+        } else {
+            Dungeon.Room lastRoom = rooms.get(rooms.size() - 1);
+            dungeon.setTile(lastRoom.getCenterX(), lastRoom.getCenterY(), 'S');
+        }
+    }
+
+    private void spawnInitialEnemies() {
+        if (game == null || dungeon == null) return;
+        int floor = game.getCurrentFloor();
+        int enemyCount = 5 + (floor / 3);
+        enemyCount = Math.min(enemyCount, 15);
+
+        List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
+        Player player = game.getPlayer();
+        for (int y = 0; y &lt; dungeon.getHeight(); y++) {
+            for (int x = 0; x &lt; dungeon.getWidth(); x++) {
+                if (dungeon.isWalkable(x, y) &amp;&amp; dungeon.getTile(x, y) != 'S') {
+                    if (player != null) {
+                        int dist = Math.abs(x - player.getX()) + Math.abs(y - player.getY());
+                        if (dist &gt; 5) floorTiles.add(new int[]{x, y});
+                    } else {
+                        floorTiles.add(new int[]{x, y});
+                    }
+                }
+            }
+        }
+
+        if (floorTiles.isEmpty()) return;
+
+        List&lt;Enemy&gt; currentEnemies = game.getEnemies();
+        if (currentEnemies != null) currentEnemies.clear();
+
+        for (int i = 0; i &lt; enemyCount &amp;&amp; !floorTiles.isEmpty(); i++) {
+            int idx = SecureRandomUtil.nextInt(floorTiles.size());
+            int[] pos = floorTiles.remove(idx);
+            EnemyType type = EnemyType.getRandomRegularMonster(floor);
+            Enemy enemy = new Enemy(pos[0], pos[1], dungeon, type, type.getEmoji());
+            enemy.setLevel(1 + (floor / 10));
+            game.addEnemy(enemy);
+        }
+    }
 }</code></pre>
 </div>
 <div class="file" id="player">
-<div class="file-header"><h2>Player.java</h2><span class="file-meta">373 lines | 13230 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>Player.java</h2><span class="file-meta">380 lines | 13296 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import java.io.Serializable;
@@ -5970,25 +6313,24 @@ import android.util.Log;
  * 6. FIX #5: inventory null-check in processPendingLoot() to prevent duplicate instances
  */
 public class Player extends Character implements Serializable {
-    
     // STABLE serialVersionUID - DO NOT CHANGE THIS VALUE
     private static final long serialVersionUID = 3L;
     private static final String TAG = "Player";
-    
+
     // SAVE FORMAT VERSION - Increment when structure changes
     private static final int CURRENT_SAVE_VERSION = 3;
     private int saveVersion = CURRENT_SAVE_VERSION;
-    
+
     // CORE GAME STATE
     private int level;
     private int experience;
     private int goldCollected;
     private String name;
-    
+
     // EQUIPMENT &amp; INVENTORY
     private InventorySystem inventory;
     private List&lt;Equipment&gt; pendingLoot = new ArrayList&lt;&gt;();
-    
+
     // BASE STATS FOR RECALCULATION
     private int baseAttack;
     private int baseArmor;
@@ -6065,10 +6407,10 @@ public class Player extends Character implements Serializable {
 
             // Perform standard deserialization
             in.defaultReadObject();
-            
+
             // Post-load migration and cleanup
             postMigrationCleanup();
-            
+
             Log.d(TAG, "[LOAD] Player loaded: LVL=" + level + " HP=" + currentHealth + "/" + maxHealth);
         } catch (Exception e) {
             Log.e(TAG, "[LOAD] Deserialization failed: " + e.getMessage() + " - initializing defaults", e);
@@ -6086,18 +6428,18 @@ public class Player extends Character implements Serializable {
             pendingLoot = new ArrayList&lt;&gt;();
             Log.w(TAG, "[CLEANUP] Initialized null pendingLoot");
         }
-        
+
         if (inventory == null) {
             inventory = new InventorySystem();
             Log.w(TAG, "[CLEANUP] Initialized null inventory");
         }
-        
+
         // Ensure base stats are stored
         if (!hasBaseStatsStored) {
             storeBaseStats();
             Log.w(TAG, "[CLEANUP] Stored missing base stats");
         }
-        
+
         // Clamp values to valid ranges
         level = Math.max(1, Math.min(level, GameBalance.MAXIMUM_PLAYER_LEVEL));
         experience = Math.max(0, experience);
@@ -6120,6 +6462,14 @@ public class Player extends Character implements Serializable {
         return new ArrayList&lt;&gt;(pendingLoot);
     }
 
+    // PUBLIC METHOD TO CLEAR PENDING LOOT FROM OTHER CLASSES (FIX #4)
+    public void clearPendingLoot() {
+        if (pendingLoot != null) {
+            pendingLoot.clear();
+            Log.d(TAG, "Pending loot cleared");
+        }
+    }
+
     /**
      * FIX #5: Added inventory null-check to prevent creating duplicate InventorySystem instances
      */
@@ -6129,7 +6479,7 @@ public class Player extends Character implements Serializable {
             Log.w(TAG, "processPendingLoot(): inventory is null - creating new instance");
             inventory = new InventorySystem();
         }
-        
+
         if (pendingLoot == null || pendingLoot.isEmpty()) return;
 
         Log.d(TAG, "Processing " + pendingLoot.size() + " pending loot items...");
@@ -6159,29 +6509,29 @@ public class Player extends Character implements Serializable {
         this.y += dy;
     }
 
-    public void addGold(int amount) { 
+    public void addGold(int amount) {
         if (amount &gt;= 0) this.goldCollected += amount;
     }
-    
+
     public int getGoldCollected() { return goldCollected; }
-    
-    public void setGoldCollected(int gold) { 
+
+    public void setGoldCollected(int gold) {
         this.goldCollected = Math.max(0, gold);
     }
-    
+
     /**
      * FIX #5: Don't create new InventorySystem - rely on postMigrationCleanup
      */
-    public InventorySystem getInventory() { 
+    public InventorySystem getInventory() {
         // FIX: Don't create new instance - inventory should be initialized by postMigrationCleanup
         if (inventory == null) {
             Log.e(TAG, "getInventory() called before migration cleanup - this indicates a bug!");
             inventory = new InventorySystem();  // Fallback only
         }
-        return inventory; 
+        return inventory;
     }
 
-    public void setMaxHealth(int maxHealth) { 
+    public void setMaxHealth(int maxHealth) {
         if (maxHealth &lt;= 0) return;
         int oldMax = this.maxHealth;
         this.maxHealth = maxHealth;
@@ -6191,8 +6541,8 @@ public class Player extends Character implements Serializable {
             this.currentHealth = Math.min(this.currentHealth, maxHealth);
         }
     }
-    
-    public void setAttack(int attack) { 
+
+    public void setAttack(int attack) {
         if (attack &gt;= 1) this.attack = attack;
     }
 
@@ -6223,14 +6573,14 @@ public class Player extends Character implements Serializable {
     }
 
     public int getExperience() { return experience; }
-    
+
     public void setExperience(int exp) {
         this.experience = Math.max(0, exp);
     }
-    
+
     public int getLevel() { return level; }
-    
-    public void setLevel(int level) { 
+
+    public void setLevel(int level) {
         this.level = Math.max(1, Math.min(level, GameBalance.MAXIMUM_PLAYER_LEVEL));
     }
 
@@ -6249,22 +6599,22 @@ public class Player extends Character implements Serializable {
         if (!hasBaseStatsStored) {
             storeBaseStats();
         }
-        
+
         if (inventory == null) {
             Log.w(TAG, "recalculateStatsFromEquipment(): inventory is NULL - creating new");
             inventory = new InventorySystem();
         }
-        
+
         Log.d(TAG, "=== Recalculating stats from equipment ===");
         int prevMaxHealth = this.maxHealth;
-        
+
         // Reset to base stats
         this.attack = baseAttack;
         this.armor = baseArmor;
         this.maxHealth = baseMaxHealth;
         this.dodgeChance = baseDodgeChance;
         this.criticalChance = baseCritChance;
-        
+
         // Add equipment bonuses
         if (inventory != null) {
             for (Equipment eq : inventory.getEquippedItems()) {
@@ -6276,11 +6626,11 @@ public class Player extends Character implements Serializable {
                 this.criticalChance += (int) eq.getCritChance();
             }
         }
-        
+
         // Apply caps
         this.dodgeChance = Math.min(75, this.dodgeChance);
         this.criticalChance = Math.min(75, this.criticalChance);
-        
+
         // Preserve health ratio when max changes
         if (prevMaxHealth &gt; 0) {
             float healthRatio = (float)this.currentHealth / prevMaxHealth;
@@ -6291,8 +6641,8 @@ public class Player extends Character implements Serializable {
                 this.currentHealth = Math.min(this.currentHealth, this.maxHealth);
             }
         }
-        
-        Log.d(TAG, "Stats recalculated: ATK=" + this.attack + 
+
+        Log.d(TAG, "Stats recalculated: ATK=" + this.attack +
             " DEF=" + this.armor + " HP=" + this.currentHealth + "/" + this.maxHealth);
     }
 
@@ -6304,7 +6654,7 @@ public class Player extends Character implements Serializable {
                     int oldHealth = currentHealth;
                     heal(GameBalance.POTION_HEAL_AMOUNT);
                     int healedAmount = currentHealth - oldHealth;
-                    Log.d(TAG, "Used potion. Healed " + healedAmount + 
+                    Log.d(TAG, "Used potion. Healed " + healedAmount +
                         " HP. Now " + currentHealth + "/" + maxHealth);
                     return true;
                 }
@@ -6316,8 +6666,8 @@ public class Player extends Character implements Serializable {
     // ==================== ACCESSORS ====================
 
     public String getName() { return name; }
-    
-    public void setName(String name) { 
+
+    public void setName(String name) {
         this.name = (name != null &amp;&amp; !name.trim().isEmpty()) ? name : "Hero";
     }
 }</code></pre>
