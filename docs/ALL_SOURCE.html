@@ -26,7 +26,7 @@ footer { padding: 25px; color: #666; text-align: center; border-top: 1px solid #
 <body>
 <header>
 <h1>KnightLight - Complete Source Code</h1>
-<div class="stats">33 files | 7609 lines | 2026-08-16 18:26</div>
+<div class="stats">33 files | 7650 lines | 2026-08-17 15:19</div>
 </header>
 <nav><a href="#battle">Battle</a> <a href="#battleactivity">BattleActivity</a> <a href="#battleview">BattleView</a> <a href="#character">Character</a> <a href="#combatresult">CombatResult</a> <a href="#combatsystem">CombatSystem</a> <a href="#crashhandler">CrashHandler</a> <a href="#dungeon">Dungeon</a> <a href="#dungeonlevel">DungeonLevel</a> <a href="#dungeonmanager">DungeonManager</a> <a href="#enemy">Enemy</a> <a href="#enemytype">EnemyType</a> <a href="#equipment">Equipment</a> <a href="#equipmentactivity">EquipmentActivity</a> <a href="#equipmentview">EquipmentView</a> <a href="#experiencesystem">ExperienceSystem</a> <a href="#game">Game</a> <a href="#gamebalance">GameBalance</a> <a href="#gameview">GameView</a> <a href="#inputvalidator">InputValidator</a> <a href="#inventory">Inventory</a> <a href="#inventoryactivity">InventoryActivity</a> <a href="#inventorysystem">InventorySystem</a> <a href="#itemtype">ItemType</a> <a href="#knightlightapplication">KnightLightApplication</a> <a href="#loottable">LootTable</a> <a href="#mainactivity">MainActivity</a> <a href="#player">Player</a> <a href="#rarity">Rarity</a> <a href="#savegamemanager">SaveGameManager</a> <a href="#securerandomutil">SecureRandomUtil</a> <a href="#setbonusmanager">SetBonusManager</a> <a href="#simplelogger">SimpleLogger</a> </nav>
 <div id="files">
@@ -2897,7 +2897,7 @@ public class ExperienceSystem implements Serializable {
 }</code></pre>
 </div>
 <div class="file" id="game">
-<div class="file-header"><h2>Game.java</h2><span class="file-meta">483 lines | 18759 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>Game.java</h2><span class="file-meta">489 lines | 19110 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.Context;
@@ -3072,6 +3072,8 @@ public class Game implements Serializable {
      * - Only spawns on walkable tiles (never walls)
      * - Maintains minimum distance from player
      * - Tracks already-spawned positions to prevent duplicates
+     * 
+     * CHANGED: Reduced enemy count formula and increased min distance from 5 to 8
      */
     private void spawnInitialEnemies() {
         if (dungeon == null || enemies == null) {
@@ -3081,8 +3083,12 @@ public class Game implements Serializable {
         
         enemies.clear();
         int floor = getCurrentFloor();
-        int enemyCount = 5 + (floor / 3);
-        enemyCount = Math.min(enemyCount, 15);
+        
+        // BEST PRACTICE: Progressive scaling with LOW caps
+        // Early floors: 3-4 enemies, Mid floors: 5-8, Late floors: 10-12
+        int baseEnemyCount = 3 + (floor / 10);
+        int maxEnemies = Math.min(8 + (floor / 5), 12);
+        int enemyCount = Math.max(3, Math.min(baseEnemyCount, maxEnemies));
 
         // Collect ALL valid spawn positions upfront
         List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
@@ -3095,8 +3101,8 @@ public class Game implements Serializable {
                 if (dungeon.isWalkable(x, y) &amp;&amp; dungeon.getTile(x, y) != 'S' &amp;&amp; dungeon.getTile(x, y) != 'B') {
                     if (player != null) {
                         int dist = Math.abs(x - playerX) + Math.abs(y - playerY);
-                        // Keep spawn tiles away from player start
-                        if (dist &gt; 5) {
+                        // Keep spawn tiles away from player start (MIN 8 tiles instead of 5)
+                        if (dist &gt; 8) {
                             floorTiles.add(new int[]{x, y});
                         }
                     } else {
@@ -3443,7 +3449,7 @@ public class GameBalance {
 }</code></pre>
 </div>
 <div class="file" id="gameview">
-<div class="file-header"><h2>GameView.java</h2><span class="file-meta">991 lines | 42748 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>GameView.java</h2><span class="file-meta">999 lines | 43423 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.util.Log;
@@ -3518,7 +3524,6 @@ public class GameView extends View {
 
     private Rect[] equipmentSlots = new Rect[11];
     private boolean[] slotPressed = new boolean[11];
-
     private SparseArray&lt;Integer&gt; activePointerButtons = new SparseArray&lt;&gt;();
     private static int[] buttonPointerIds = new int[9];
     private static final int INVALID_POINTER_ID = -1;
@@ -3900,10 +3905,16 @@ public class GameView extends View {
                     Paint be = new Paint(emojiPaint);
                     be.setTextSize(tileSize * 1.5f);
                     canvas.drawText("\uD83D\uDC09", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, be);
-                } else if (tile == 'S') {
-                    canvas.drawRect(tileRect, tileStairsPaint);
+                } else if (tile == 'S') {  // STAIRS - ENHANCED VISIBILITY
+                    // Draw brighter background for stairs
+                    Paint stairsBg = new Paint(tileStairsPaint);
+                    stairsBg.setColor(Color.parseColor("#FF6600"));  // Bright orange
+                    canvas.drawRect(tileRect, stairsBg);
+                    
+                    // Add door emoji with glow effect
                     Paint se = new Paint(emojiPaint);
-                    se.setTextSize(tileSize * 1.5f);
+                    se.setTextSize(tileSize * 1.8f);
+                    se.setShadowLayer(4, 0, 0, Color.WHITE);  // Glow effect
                     canvas.drawText("\uD83D\uDEAA", xp + tileSize/2, yp + tileSize/2 + tileSize * 0.4f, se);
                 } else if (tile == 'C') {
                     canvas.drawRect(tileRect, tileChestPaint);
@@ -4184,7 +4195,10 @@ public class GameView extends View {
                     be.setTextSize(tileSizeLocal * 1.2f);
                     canvas.drawText("\uD83D\uDC09", xp + tileSizeLocal / 2, yp + tileSizeLocal * 0.3f, be);
                 } else if (tile == 'S') {
-                    canvas.drawRect(xp, yp, xp + tileSizeLocal, yp + tileSizeLocal, tileStairsPaint);
+                    // ENHANCED: Bright orange background on full map too
+                    Paint stairsBg = new Paint();
+                    stairsBg.setColor(Color.parseColor("#FF6600"));
+                    canvas.drawRect(xp, yp, xp + tileSizeLocal, yp + tileSizeLocal, stairsBg);
                     Paint se = new Paint(emojiPaint);
                     se.setTextSize(tileSizeLocal * 1.2f);
                     canvas.drawText("\uD83D\uDEAA", xp + tileSizeLocal / 2, yp + tileSizeLocal * 0.3f, se);
@@ -4354,7 +4368,8 @@ public class GameView extends View {
 
             char tile = d.getTile(newX, newY);
             if (tile == 'S') {
-                showMessage("Standing on stairs! Tap door button to descend");
+                // ENHANCED: More prominent stairs notification
+                showMessage("\uD83D\uDEAA STAND ON DOOR BUTTON TO DESCEND TO FLOOR " + (game.getCurrentFloor() + 1));
             }
         }
 
@@ -4374,7 +4389,6 @@ public class GameView extends View {
         if (player == null || dungeon == null) return;
 
         int statusBarHeight = STATUS_BAR_HEIGHT;
-
         int viewportWidth = Math.min(VIEWPORT_TILES, dungeon.getWidth());
         int viewportHeight = Math.min(VIEWPORT_TILES, dungeon.getHeight());
 
@@ -5393,7 +5407,7 @@ public class LootTable {
 }</code></pre>
 </div>
 <div class="file" id="mainactivity">
-<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">939 lines | 38463 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+<div class="file-header"><h2>MainActivity.java</h2><span class="file-meta">966 lines | 39617 bytes</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
 <pre><code>package com.knightlight.game;
 
 import android.content.DialogInterface;
@@ -5409,7 +5423,9 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity implements GameView.GameListener {
     private static final String TAG = "MainActivity";
@@ -6297,20 +6313,31 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
         }
     }
 
+    /**
+     * FIXED: Synced spawn logic with Game.java
+     * - Reduced enemy count formula (3 + floor/10, capped at 12)
+     * - Excludes 'B' (boss) tiles from spawn candidates
+     * - Increased min distance from player from 5 to 8
+     * - Added usedPositions tracking to prevent duplicate spawns
+     */
     private void spawnInitialEnemies() {
         if (game == null || dungeon == null) return;
         int floor = game.getCurrentFloor();
-        int enemyCount = 5 + (floor / 3);
-        enemyCount = Math.min(enemyCount, 15);
+        
+        // BEST PRACTICE: Same formula as Game.java
+        int baseEnemyCount = 3 + (floor / 10);
+        int maxEnemies = Math.min(8 + (floor / 5), 12);
+        int enemyCount = Math.max(3, Math.min(baseEnemyCount, maxEnemies));
 
         List&lt;int[]&gt; floorTiles = new ArrayList&lt;&gt;();
         Player player = game.getPlayer();
         for (int y = 0; y &lt; dungeon.getHeight(); y++) {
             for (int x = 0; x &lt; dungeon.getWidth(); x++) {
-                if (dungeon.isWalkable(x, y) &amp;&amp; dungeon.getTile(x, y) != 'S') {
+                // STRICT: Must be walkable AND not stairs/boss
+                if (dungeon.isWalkable(x, y) &amp;&amp; dungeon.getTile(x, y) != 'S' &amp;&amp; dungeon.getTile(x, y) != 'B') {
                     if (player != null) {
                         int dist = Math.abs(x - player.getX()) + Math.abs(y - player.getY());
-                        if (dist &gt; 5) floorTiles.add(new int[]{x, y});
+                        if (dist &gt; 8) floorTiles.add(new int[]{x, y});  // Increased from 5 to 8
                     } else {
                         floorTiles.add(new int[]{x, y});
                     }
@@ -6318,18 +6345,32 @@ public class MainActivity extends AppCompatActivity implements GameView.GameList
             }
         }
 
-        if (floorTiles.isEmpty()) return;
+        if (floorTiles.isEmpty()) {
+            Log.e(TAG, "CRITICAL: No valid spawn tiles in MainActivity!");
+            return;
+        }
 
         List&lt;Enemy&gt; currentEnemies = game.getEnemies();
         if (currentEnemies != null) currentEnemies.clear();
 
+        Set&lt;String&gt; usedPositions = new HashSet&lt;&gt;();
         for (int i = 0; i &lt; enemyCount &amp;&amp; !floorTiles.isEmpty(); i++) {
             int idx = SecureRandomUtil.nextInt(floorTiles.size());
             int[] pos = floorTiles.remove(idx);
+            
+            // PREVENT DUPLICATE SPAWNS
+            String posKey = pos[0] + "," + pos[1];
+            if (usedPositions.contains(posKey)) {
+                i--; continue;
+            }
+            usedPositions.add(posKey);
+            
             EnemyType type = EnemyType.getRandomRegularMonster(floor);
             Enemy enemy = new Enemy(pos[0], pos[1], dungeon, type, type.getEmoji());
             enemy.setLevel(1 + (floor / 10));
             game.addEnemy(enemy);
+            
+            Log.d(TAG, "MainActivity spawned: " + enemy.getName() + " at (" + pos[0] + "," + pos[1] + ")");
         }
     }
 }</code></pre>
